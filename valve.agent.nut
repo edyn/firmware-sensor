@@ -32,7 +32,7 @@ device.on("action_request", function(data) {
     //     {"Content-Type":"text/csv", "User-Agent":"Imp"},
     //     http.jsonencode(data));
     local req = http.post(
-        "http://soil-iq-stag-zhipffkaue.elasticbeanstalk.com/api/valve/", 
+        "http://edynbackendpythonstag.elasticbeanstalk.com/api/valve/", 
         {"Content-Type":"text/csv", "User-Agent":"Imp"},
         http.jsonencode(data));
     local res = req.sendsync();

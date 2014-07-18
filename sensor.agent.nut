@@ -15,7 +15,8 @@ function send_data(data) {
     server.log(body);
 
     // Send to Edyn server
-    local soil_url = "https://edyn.com/api/v1/readings?" + body;
+    // local soil_url = "https://edyn.com/api/v1/readings?" + body;
+    local soil_url = "http://edynbackendpythonstag.elasticbeanstalk.com/api/readings/?" + body;
     local req = http.post(soil_url, {"Content-Type":"text/csv", "User-Agent":"Imp"}, body);
     local res = req.sendsync();
     if (res.statuscode != 200) {
