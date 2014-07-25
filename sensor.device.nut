@@ -259,8 +259,7 @@ function magnetic_switch_activated() {
 
         // Enable blinkup for 30s
         imp.enableblinkup(true);
-        imp.sleep(30);
-        imp.enableblinkup(false);
+        imp.wakeup(30, function() { imp.enableblinkup(false); });
     }
 }
 
@@ -274,9 +273,17 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 
     // send updates more often when the battery is full
     if (data_current.b >= 4.3)      send_interval_s = 60*0;   // battery overcharge
-    else if (data_current.b >= 4.1) send_interval_s = 60*5;   // battery full
-    else if (data_current.b >= 3.9) send_interval_s = 60*20;  // battery high
-    else if (data_current.b >= 3.7) send_interval_s = 60*60;  // battery nominal
+    
+    // DEBUG settings (toggle comment with below)
+    else if (data_current.b >= 4.1) send_interval_s = 60*2;   // battery full
+    else if (data_current.b >= 3.9) send_interval_s = 60*2;  // battery high
+    else if (data_current.b >= 3.7) send_interval_s = 60*2;  // battery nominal
+    
+    // Production settings (toggle comment with above)
+    // else if (data_current.b >= 4.1) send_interval_s = 60*5;   // battery full
+    // else if (data_current.b >= 3.9) send_interval_s = 60*20;  // battery high
+    // else if (data_current.b >= 3.7) send_interval_s = 60*60;  // battery nominal
+    
     else if (data_current.b >= 3.6) send_interval_s = 60*120; // battery low
     else if (data_current.b >= 3.5) return false;             // battery critical
     else {
@@ -315,11 +322,13 @@ function send_data(status) {
             nv.data.clear();
         } else {
             // error: blink led
-            led.blink(1.0);
+            led.blink(5.0);
+            server.log("Error: Server connected, but no success.");
         }
     } else {
         // error: blink led
         led.blink(1.0);
+        server.log("Error: Server is not connected.");
     }
     
     // Sleep until next sensor sampling
