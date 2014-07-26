@@ -5,6 +5,19 @@
 // It forwards data from the Imp Device to the Edyn server.
 ////////////////////////////////////////////////////////////
 
+// Send data to Edyn server
+function send_data_json(data) {
+    // local soil_url = "https://edyn.com/api/v1/readings?" + "impee_id=" + data.device;
+    // local soil_url = "http://edynbackendpythonstag.elasticbeanstalk.com/api/readings/?" + "impee_id=" + data.device;
+    local soil_url = "http://edynbackendpythonstag.elasticbeanstalk.com/api/readings/";
+    local req = http.post(soil_url, {"Content-Type":"application/json", "User-Agent":"Imp"}, http.jsonencode(data));
+    local res = req.sendsync();
+    if (res.statuscode != 200) {
+        // TODO: retry?
+        server.log("error sending message: " + res.body);
+    }
+}
+
 // Convert data to Edyn format and send to Edyn server
 function send_data(data) {
     // Convert data to Edyn format
@@ -25,24 +38,16 @@ function send_data(data) {
     }
 }
 
-// Send data to Edyn server
-function send_data_json(data) {
-    // local soil_url = "https://edyn.com/api/v1/readings?" + "impee_id=" + data.device;
-    local soil_url = "http://soil-iq-stag-zhipffkaue.elasticbeanstalk.com/api/readings/?" + "impee_id=" + data.device;
-    local req = http.post(soil_url, {"Content-Type":"application/json", "User-Agent":"Imp"}, http.jsonencode(data));
-    local res = req.sendsync();
-    if (res.statuscode != 200) {
-        // TODO: retry?
-        server.log("error sending message: " + res.body);
-    }
-}
-
 // Invoked when the device calls agent.send("data", ...)
 device.on("data", function(data) {
+    // data[sd] <- [1, 2];
+    local dataToSend = data;
+    // temp code to work with back end expectation of sd key
+    dataToSend.data[0].sd <- [1, 2];
     //data_buffer.extend(data.data); // for debug
-    server.log(http.jsonencode(data));
+    server.log(http.jsonencode(dataToSend));
     //send_data(data); // legacy API
-    send_data_json(data); // JSON API
+    send_data_json(dataToSend); // JSON API
 });
 
 // Debug code used to allow data monitoring via JSON API

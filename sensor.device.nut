@@ -56,7 +56,7 @@ class led {
 
 // Battery voltage sensor
 class battery {
-    static pin = hardware.pinB;
+    static pin = haradware.pinB;
 
     function configure() {
         pin.configure(ANALOG_IN);
