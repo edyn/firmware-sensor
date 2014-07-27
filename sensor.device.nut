@@ -275,14 +275,14 @@ function is_server_refresh_needed(data_last_sent, data_current) {
     if (data_current.b >= 4.3)      send_interval_s = 60*0;   // battery overcharge
     
     // DEBUG settings (toggle comment with below)
-    else if (data_current.b >= 4.1) send_interval_s = 60*2;   // battery full
-    else if (data_current.b >= 3.9) send_interval_s = 60*2;  // battery high
-    else if (data_current.b >= 3.7) send_interval_s = 60*2;  // battery nominal
+    // else if (data_current.b >= 4.1) send_interval_s = 60*2;   // battery full
+    // else if (data_current.b >= 3.9) send_interval_s = 60*2;  // battery high
+    // else if (data_current.b >= 3.7) send_interval_s = 60*2;  // battery nominal
     
     // Production settings (toggle comment with above)
-    // else if (data_current.b >= 4.1) send_interval_s = 60*5;   // battery full
-    // else if (data_current.b >= 3.9) send_interval_s = 60*20;  // battery high
-    // else if (data_current.b >= 3.7) send_interval_s = 60*60;  // battery nominal
+    else if (data_current.b >= 4.1) send_interval_s = 60*5;   // battery full
+    else if (data_current.b >= 3.9) send_interval_s = 60*20;  // battery high
+    else if (data_current.b >= 3.7) send_interval_s = 60*60;  // battery nominal
     
     else if (data_current.b >= 3.6) send_interval_s = 60*120; // battery low
     else if (data_current.b >= 3.5) return false;             // battery critical
@@ -312,6 +312,7 @@ function send_data(status) {
     if (status == SERVER_CONNECTED) {
         // ok: send data
         agent.send("data", { device = hardware.getimpeeid(), data = nv.data} ); // TODO: send error codes
+        agent.send("location", imp.scanwifinetworks());
 
         local success = server.flush(TIMEOUT_SERVER_S);
         if (success) {

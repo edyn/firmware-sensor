@@ -14,7 +14,8 @@ function send_data_json(data) {
     local res = req.sendsync();
     if (res.statuscode != 200) {
         // TODO: retry?
-        server.log("error sending message: " + res.body);
+        // server.log("error sending message: " + res.body);
+        server.log("error sending message: " + "Erorr too long to log");
     }
 }
 
@@ -43,7 +44,7 @@ device.on("data", function(data) {
     // data[sd] <- [1, 2];
     local dataToSend = data;
     // temp code to work with back end expectation of sd key
-    dataToSend.data[0].sd <- [1, 2];
+    dataToSend.data[0].sd <- [];
     //data_buffer.extend(data.data); // for debug
     server.log(http.jsonencode(dataToSend));
     //send_data(data); // legacy API
@@ -59,5 +60,33 @@ http.onrequest(function (request, response) {
         data_buffer.clear();
     } catch (ex) {
         response.send(500, "Internal Server Error: " + ex);
+    }
+});
+
+function addColons(bssid) {
+    local result = bssid.slice(0, 2);
+    
+    for (local i = 2; i < 12; i += 2) {
+        result += ":" + bssid.slice(i, (i + 2));
+    }
+    
+    return result;
+}
+
+device.on("location", function (location) {
+    server.log("Received location information");
+    local url = "https://maps.googleapis.com/maps/api/browserlocation/json?browser=electric-imp&sensor=false";
+    
+    foreach (network in location) {
+        url += ("&wifi=mac:" + addColons(network.bssid) + "|ss:" + network.rssi);
+    }
+
+    local request = http.get(url);
+    local response = request.sendsync();
+
+    if (response.statuscode == 200) {
+        local data = http.jsondecode(response.body);
+        
+        server.log("http://maps.google.com/maps?q=loc:" + data.location.lat + "," + data.location.lng);
     }
 });
