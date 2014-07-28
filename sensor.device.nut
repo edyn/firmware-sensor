@@ -56,7 +56,7 @@ class led {
 
 // Battery voltage sensor
 class battery {
-    static pin = haradware.pinB;
+    static pin = hardware.pinB;
 
     function configure() {
         pin.configure(ANALOG_IN);
@@ -259,15 +259,20 @@ function magnetic_switch_activated() {
 
         // Enable blinkup for 30s
         imp.enableblinkup(true);
-        imp.wakeup(30, function() { imp.enableblinkup(false); });
+        
+        // Old method
+        imp.sleep(30);
+        imp.enableblinkup(false);
+        
+        // Method recommended by Hugo from Electric Imp
+        // imp.wakeup(30, function() { imp.enableblinkup(false); });
     }
 }
 
 // return true iff the collected data should be sent to the server
 function is_server_refresh_needed(data_last_sent, data_current) {
     // first boot, always send
-    if (data_last_sent == null)
-        return true;
+    if (data_last_sent == null)     return true;
 
     local send_interval_s = 0;
 
@@ -275,14 +280,14 @@ function is_server_refresh_needed(data_last_sent, data_current) {
     if (data_current.b >= 4.3)      send_interval_s = 60*0;   // battery overcharge
     
     // DEBUG settings (toggle comment with below)
-    // else if (data_current.b >= 4.1) send_interval_s = 60*2;   // battery full
-    // else if (data_current.b >= 3.9) send_interval_s = 60*2;  // battery high
-    // else if (data_current.b >= 3.7) send_interval_s = 60*2;  // battery nominal
+    else if (data_current.b >= 4.1) send_interval_s = 60*2;   // battery full
+    else if (data_current.b >= 3.9) send_interval_s = 60*2;  // battery high
+    else if (data_current.b >= 3.7) send_interval_s = 60*2;  // battery nominal
     
     // Production settings (toggle comment with above)
-    else if (data_current.b >= 4.1) send_interval_s = 60*5;   // battery full
-    else if (data_current.b >= 3.9) send_interval_s = 60*20;  // battery high
-    else if (data_current.b >= 3.7) send_interval_s = 60*60;  // battery nominal
+    // else if (data_current.b >= 4.1) send_interval_s = 60*5;   // battery full
+    // else if (data_current.b >= 3.9) send_interval_s = 60*20;  // battery high
+    // else if (data_current.b >= 3.7) send_interval_s = 60*60;  // battery nominal
     
     else if (data_current.b >= 3.6) send_interval_s = 60*120; // battery low
     else if (data_current.b >= 3.5) return false;             // battery critical
@@ -311,8 +316,8 @@ function send_data(status) {
     
     if (status == SERVER_CONNECTED) {
         // ok: send data
-        agent.send("data", { device = hardware.getimpeeid(), data = nv.data} ); // TODO: send error codes
-        agent.send("location", imp.scanwifinetworks());
+        // server.log(imp.scanwifinetworks());
+        agent.send("data", { device = hardware.getimpeeid(), loc = imp.scanwifinetworks(), data = nv.data} ); // TODO: send error codes
 
         local success = server.flush(TIMEOUT_SERVER_S);
         if (success) {
@@ -323,12 +328,12 @@ function send_data(status) {
             nv.data.clear();
         } else {
             // error: blink led
-            led.blink(5.0);
+            led.blink(0.1,5);
             server.log("Error: Server connected, but no success.");
         }
     } else {
         // error: blink led
-        led.blink(1.0);
+        led.blink(0.3,3);
         server.log("Error: Server is not connected.");
     }
     

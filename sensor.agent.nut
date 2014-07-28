@@ -15,7 +15,7 @@ function send_data_json(data) {
     if (res.statuscode != 200) {
         // TODO: retry?
         // server.log("error sending message: " + res.body);
-        server.log("error sending message: " + "Erorr too long to log");
+        server.log("error sending message: " + "Error too long to log");
     }
 }
 
@@ -44,7 +44,35 @@ device.on("data", function(data) {
     // data[sd] <- [1, 2];
     local dataToSend = data;
     // temp code to work with back end expectation of sd key
-    dataToSend.data[0].sd <- [];
+    // dataToSend.data[0].sd <- [];
+
+    server.log("Received location information");
+    local url = "https://maps.googleapis.com/maps/api/browserlocation/json?browser=electric-imp&sensor=false";
+    
+    foreach (network in dataToSend.loc) {
+        url += ("&wifi=mac:" + addColons(network.bssid) + "|ss:" + network.rssi);
+    }
+    // server.log(url);
+
+    // local request = http.get(url);
+    // local response = request.sendsync();
+
+    // if (response.statuscode == 200) {
+    //     // server.log(response.body);
+    //     local googleData = response.body;
+    //     server.log(googleData);
+    //     server.log(googleData["location"]);
+    //     lat = googleData["location"].lat;
+    //     lng = googleData["location"].lng;
+    //     // temp code to work with back end expectation of sd key
+    //     dataToSend.data[0].sd <- [];
+        
+    //     server.log("http://maps.google.com/maps?q=loc:" + googleData["location"].lat + "," + googleData["location"].lng);
+    // }
+    
+    dataToSend.lat <- 37.8049851;
+    dataToSend.lng <- -122.2696578;
+    
     //data_buffer.extend(data.data); // for debug
     server.log(http.jsonencode(dataToSend));
     //send_data(data); // legacy API
@@ -72,21 +100,3 @@ function addColons(bssid) {
     
     return result;
 }
-
-device.on("location", function (location) {
-    server.log("Received location information");
-    local url = "https://maps.googleapis.com/maps/api/browserlocation/json?browser=electric-imp&sensor=false";
-    
-    foreach (network in location) {
-        url += ("&wifi=mac:" + addColons(network.bssid) + "|ss:" + network.rssi);
-    }
-
-    local request = http.get(url);
-    local response = request.sendsync();
-
-    if (response.statuscode == 200) {
-        local data = http.jsondecode(response.body);
-        
-        server.log("http://maps.google.com/maps?q=loc:" + data.location.lat + "," + data.location.lng);
-    }
-});
