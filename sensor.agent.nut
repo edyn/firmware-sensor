@@ -45,15 +45,28 @@ device.on("data", function(data) {
     local dataToSend = data;
     // temp code to work with back end expectation of sd key
     // dataToSend.data[0].sd <- [];
+    
+    dataToSend.lat <- 37.8049851;
+    dataToSend.lng <- -122.2696578;
+    
+    //data_buffer.extend(data.data); // for debug
+    server.log(http.jsonencode(dataToSend));
+    //send_data(data); // legacy API
+    send_data_json(dataToSend); // JSON API
+});
 
-    server.log("Received location information");
+// Invoked when the device calls agent.send("location", ...)
+device.on("location", function(data) {
+  server.log("Received location information");
     local url = "https://maps.googleapis.com/maps/api/browserlocation/json?browser=electric-imp&sensor=false";
     
-    foreach (network in dataToSend.loc) {
+    foreach (network in data.loc) {
         url += ("&wifi=mac:" + addColons(network.bssid) + "|ss:" + network.rssi);
     }
-    // server.log(url);
+    server.log(url);
 
+    // If this is the first time we've received location data
+    
     // local request = http.get(url);
     // local response = request.sendsync();
 
@@ -64,19 +77,11 @@ device.on("data", function(data) {
     //     server.log(googleData["location"]);
     //     lat = googleData["location"].lat;
     //     lng = googleData["location"].lng;
-    //     // temp code to work with back end expectation of sd key
-    //     dataToSend.data[0].sd <- [];
-        
+
     //     server.log("http://maps.google.com/maps?q=loc:" + googleData["location"].lat + "," + googleData["location"].lng);
     // }
     
-    dataToSend.lat <- 37.8049851;
-    dataToSend.lng <- -122.2696578;
-    
-    //data_buffer.extend(data.data); // for debug
-    server.log(http.jsonencode(dataToSend));
-    //send_data(data); // legacy API
-    send_data_json(dataToSend); // JSON API
+    // Else use old value
 });
 
 // Debug code used to allow data monitoring via JSON API
@@ -100,3 +105,23 @@ function addColons(bssid) {
     
     return result;
 }
+
+function main() {
+  // Any new blinkup will create a new agent, and hence the agent storage
+  // (accessed with server.load/save) will be empty.
+  // When the agent starts it can check to see if this is empty and
+  // if so, send a message to the device.
+  device.send("location_request",{});
+  server.log("Initiated location information request");
+}
+
+device.onconnect(function() {
+  // Any new blinkup will create a new agent, and hence the agent storage
+  // (accessed with server.load/save) will be empty.
+  // When the agent starts it can check to see if this is empty and
+  // if so, send a message to the device.
+  device.send("location_request",{});
+  server.log("Initiated location information request");
+});
+
+main();

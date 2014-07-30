@@ -261,11 +261,11 @@ function magnetic_switch_activated() {
         imp.enableblinkup(true);
         
         // Old method
-        imp.sleep(30);
-        imp.enableblinkup(false);
+        // imp.sleep(30);
+        // imp.enableblinkup(false);
         
         // Method recommended by Hugo from Electric Imp
-        // imp.wakeup(30, function() { imp.enableblinkup(false); });
+        imp.wakeup(30, function() { imp.enableblinkup(false); });
     }
 }
 
@@ -317,7 +317,7 @@ function send_data(status) {
     if (status == SERVER_CONNECTED) {
         // ok: send data
         // server.log(imp.scanwifinetworks());
-        agent.send("data", { device = hardware.getimpeeid(), loc = imp.scanwifinetworks(), data = nv.data} ); // TODO: send error codes
+        agent.send("data", { device = hardware.getimpeeid(), data = nv.data} ); // TODO: send error codes
 
         local success = server.flush(TIMEOUT_SERVER_S);
         if (success) {
@@ -344,11 +344,29 @@ function send_data(status) {
     //});
 }
 
+// Callback for server status changes.
+function send_loc(status) {
+    server.log("Called send_loc function");
+    if (status == SERVER_CONNECTED) {
+        // ok: send data
+        // server.log(imp.scanwifinetworks());
+        agent.send("location", { device = hardware.getimpeeid(), loc = imp.scanwifinetworks()} );
+        local success = server.flush(TIMEOUT_SERVER_S);
+        if (success) {
+        } else {
+            server.log("Error: Server connected, but no location success.");
+        }
+    } else {
+        server.log("Error: Server is not connected. No location sent.");
+    }
+}
+
 function main() {
     // manual control of Wi-Fi state and other setup
     server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
     server.disconnect();
-    imp.setpowersave(true);
+    // Useless according to Hugo from Electric Imp
+    // imp.setpowersave(true);
     imp.enableblinkup(false);
     
     // create non-volatile storage if it doesn't exist
@@ -408,7 +426,8 @@ function main() {
         m = soil.voltage(),
         b = battery.voltage()
     });
-    
+
+    //Send sensor data
     if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
         if (server.isconnected()) {
             // already connected (first boot?). send data.
@@ -423,6 +442,18 @@ function main() {
             power.enter_deep_sleep_running(); // does not return
         });
     }
+    
 }
+
+agent.on("location_request", function() {
+  server.log("Agent requested location information.");
+  if (server.isconnected()) {
+    // already connected (first boot?). send data.
+    send_loc(SERVER_CONNECTED);
+  } else {
+    // connect first then send data.
+    server.connect(send_loc, TIMEOUT_SERVER_S);
+  }
+});
 
 main();
