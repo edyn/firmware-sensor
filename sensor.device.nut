@@ -18,7 +18,8 @@
 ////////////////////////////////////////////////////////////
 
 const INTERVAL_SENSOR_SAMPLE_S = 60; // sample sensors this often
-const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
+// const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
+const INTERVAL_SLEEP_MAX_S = 86400; // keep the maximum sleep at a day during development
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 const POLL_ITERATION_MAX = 100; // maximum number of iterations for sensor polling loop
 const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
@@ -84,23 +85,27 @@ class soil {
 // Power management
 class power {
     function enter_deep_sleep_running() {
-        server.disconnect();
         //Old version before Electric Imp's sleeping fix
         //imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
         //Implementing Electric Imp's sleeping fix
-        imp.onidle(function() {
-          imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
+        imp.wakeup(1,function() {
+            imp.onidle(function() {
+                server.disconnect();
+                imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
+            });
         });
     }
     
     function enter_deep_sleep_storage() {
         nv.running_state = false;
-        server.disconnect();
         //Old version before Electric Imp's sleeping fix
         //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
         //Implementing Electric Imp's sleeping fix
-        imp.onidle(function() {
-          imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
+        imp.wakeup(1,function() {
+            imp.onidle(function() {
+                server.disconnect();
+                imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
+            });
         });
     }
 }
@@ -252,7 +257,7 @@ function magnetic_switch_activated() {
         led.blink(1.0, 3);
         
         // deep sleep (storage state)
-        power.enter_deep_sleep_storage(); // does not return
+        power.enter_deep_sleep_storage();
     } else {
         // Flash blue led for 0.1s 10 times
         led.blink(0.1, 10);
@@ -293,7 +298,7 @@ function is_server_refresh_needed(data_last_sent, data_current) {
     else if (data_current.b >= 3.5) return false;             // battery critical
     else {
         // emergency shutoff workaround to prevent the Imp 'red light bricked' state
-        power.enter_deep_sleep_storage(); // does not return
+        power.enter_deep_sleep_storage();
     }
 
     // send updates more often when data has changed frequently and battery life is good
@@ -338,26 +343,19 @@ function send_data(status) {
     }
     
     // Sleep until next sensor sampling
-    // removed the onidle call as this has trouble running with bad wifi connection data
-    //imp.onidle(function () {
-        power.enter_deep_sleep_running(); // does not return
-    //});
+    power.enter_deep_sleep_running();
 }
 
 // Callback for server status changes.
-function send_loc(status) {
+function send_loc() {
     server.log("Called send_loc function");
-    if (status == SERVER_CONNECTED) {
-        // ok: send data
-        // server.log(imp.scanwifinetworks());
-        agent.send("location", { device = hardware.getimpeeid(), loc = imp.scanwifinetworks()} );
-        local success = server.flush(TIMEOUT_SERVER_S);
-        if (success) {
-        } else {
-            server.log("Error: Server connected, but no location success.");
-        }
+    // ok: send data
+    // server.log(imp.scanwifinetworks());
+    agent.send("location", { device = hardware.getimpeeid(), loc = imp.scanwifinetworks()} );
+    local success = server.flush(TIMEOUT_SERVER_S);
+    if (success) {
     } else {
-        server.log("Error: Server is not connected. No location sent.");
+    server.log("Error: Server connected, but no location success.");
     }
 }
 
@@ -385,7 +383,7 @@ function main() {
 
     // user did not wake the device and not running, go back to sleep
     if (magnetic_wakeup.read() == 0 && nv.running_state == false) {
-        power.enter_deep_sleep_storage(); // does not return
+        power.enter_deep_sleep_storage();
     }
     
     // user activated wake: blinkup if soil probe not shorted, otherwise sleep
@@ -438,22 +436,14 @@ function main() {
         }
     } else {
         // not time to send. sleep until next sensor sampling.
-        imp.onidle(function () {
-            power.enter_deep_sleep_running(); // does not return
-        });
+        power.enter_deep_sleep_running();
     }
     
 }
 
-agent.on("location_request", function() {
+agent.on("location_request", function(data) {
   server.log("Agent requested location information.");
-  if (server.isconnected()) {
-    // already connected (first boot?). send data.
-    send_loc(SERVER_CONNECTED);
-  } else {
-    // connect first then send data.
-    server.connect(send_loc, TIMEOUT_SERVER_S);
-  }
+  send_loc();
 });
 
 main();
