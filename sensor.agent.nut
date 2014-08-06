@@ -16,7 +16,8 @@ function send_data_json(data) {
         // TODO: retry?
         // server.log("error sending message: " + res.body);
         server.log("status code: " + res.statuscode);
-        server.log("error sending message: " + res.body.slice(0,40));
+        // server.log("error sending message: " + res.body.slice(0,40));
+        server.log("Error sending message to database.");
     }
 }
 
@@ -104,9 +105,7 @@ device.onconnect(function() {
   // If no preferences have been saved, settings will be empty
   if (settings.len() != 0) {
     // Settings table is NOT empty so set the locPrefs to the loaded table
-    server.log("We already know the lat and lng for this device");
-    server.log(settings.lat);
-    server.log(settings.lng);
+    server.log("We already know the lat and lng for this device: lat,lng = " + settings.lat + "," + settings.lng);
   } else {
     // Settings table IS empty so figure out the locPrefs and save as a table
     device.send("location_request", {test = "t"});

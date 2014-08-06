@@ -24,6 +24,23 @@ const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 const POLL_ITERATION_MAX = 100; // maximum number of iterations for sensor polling loop
 const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
 
+// offline logging
+offline <- [];
+const TZ_OFFSET = -25200; // 7 hours for PDT
+function log(s) {
+    local now = time() + TZ_OFFSET;
+    s = format("%02d:%02d:%02d - %s",date(now).hour, date(now).min, date(now).sec, s);
+    if (server.isconnected()) {
+        foreach(a in offline) server.log(a);
+        offline.clear();
+        server.log("ONLINE: "+s);
+    } else {
+        offline.append("OFFLINE: "+s);
+    }
+}
+
+log("Device booted.");
+
 // Blue LED, active low
 class led {
     static pin = hardware.pinD;
@@ -84,27 +101,33 @@ class soil {
 
 // Power management
 class power {
-    function enter_deep_sleep_running() {
+    function enter_deep_sleep_running(reason) {
         //Old version before Electric Imp's sleeping fix
         //imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
         //Implementing Electric Imp's sleeping fix
+        log("Deep sleep (running) call because: "+reason);
         imp.wakeup(1,function() {
             imp.onidle(function() {
-                server.disconnect();
-                imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
+                log("Starting deep sleep (running).");
+                // server.disconnect();
+                // imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
+                server.sleepfor(INTERVAL_SENSOR_SAMPLE_S);
             });
         });
     }
     
-    function enter_deep_sleep_storage() {
+    function enter_deep_sleep_storage(reason) {
         nv.running_state = false;
         //Old version before Electric Imp's sleeping fix
         //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
         //Implementing Electric Imp's sleeping fix
+        log("Deep sleep (storage) call because: "+reason)
         imp.wakeup(1,function() {
             imp.onidle(function() {
-                server.disconnect();
-                imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
+                log("Starting deep sleep (running).");
+                // server.disconnect();
+                // imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
+                server.sleepfor(INTERVAL_SLEEP_MAX_S);
             });
         });
     }
@@ -257,7 +280,7 @@ function magnetic_switch_activated() {
         led.blink(1.0, 3);
         
         // deep sleep (storage state)
-        power.enter_deep_sleep_storage();
+        power.enter_deep_sleep_storage("magnetic switch activated");
     } else {
         // Flash blue led for 0.1s 10 times
         led.blink(0.1, 10);
@@ -298,7 +321,7 @@ function is_server_refresh_needed(data_last_sent, data_current) {
     else if (data_current.b >= 3.5) return false;             // battery critical
     else {
         // emergency shutoff workaround to prevent the Imp 'red light bricked' state
-        power.enter_deep_sleep_storage();
+        power.enter_deep_sleep_storage("emergency battery levels");
     }
 
     // send updates more often when data has changed frequently and battery life is good
@@ -323,7 +346,7 @@ function send_data(status) {
         // ok: send data
         // server.log(imp.scanwifinetworks());
         agent.send("data", { device = hardware.getimpeeid(), data = nv.data} ); // TODO: send error codes
-
+        log("connected 266");
         local success = server.flush(TIMEOUT_SERVER_S);
         if (success) {
             // update last sent data (even on failure, so the next send attempt is not immediate)
@@ -334,36 +357,44 @@ function send_data(status) {
         } else {
             // error: blink led
             led.blink(0.1,5);
-            server.log("Error: Server connected, but no success.");
+            log("Error: Server connected, but no success.");
         }
     } else {
         // error: blink led
         led.blink(0.3,3);
-        server.log("Error: Server is not connected.");
+        log("Error: Server is not connected.");
     }
     
     // Sleep until next sensor sampling
-    power.enter_deep_sleep_running();
+    power.enter_deep_sleep_running("Sleep until next sensor sampling");
 }
 
 // Callback for server status changes.
 function send_loc() {
-    server.log("Called send_loc function");
+    log("Called send_loc function");
     // ok: send data
     // server.log(imp.scanwifinetworks());
     agent.send("location", { device = hardware.getimpeeid(), loc = imp.scanwifinetworks()} );
     local success = server.flush(TIMEOUT_SERVER_S);
     if (success) {
     } else {
-    server.log("Error: Server connected, but no location success.");
+    log("Error: Server connected, but no location success.");
     }
 }
 
 function main() {
-    server.log("Device firmware version: " + imp.getsoftwareversion());
+    log("Device firmware version: " + imp.getsoftwareversion());
     // manual control of Wi-Fi state and other setup
     server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
     server.disconnect();
+    // Removing this since, according to Hugo:
+    // When you wake from an imp.deepsleep or server.sleep,
+    // wifi is not up - there's no need to immediately disconnect.
+    // You'd have to either explicitly connect (if you are using
+    // RETURN_ON_ERROR) or perform an operation which requires
+    // network (if you're using SUSPEND_ON_ERROR).
+    // server.disconnect();
+    
     // Useless according to Hugo from Electric Imp
     // imp.setpowersave(true);
     imp.enableblinkup(false);
@@ -384,7 +415,7 @@ function main() {
 
     // user did not wake the device and not running, go back to sleep
     if (magnetic_wakeup.read() == 0 && nv.running_state == false) {
-        power.enter_deep_sleep_storage();
+        power.enter_deep_sleep_storage("User didn't wake");
     }
     
     // user activated wake: blinkup if soil probe not shorted, otherwise sleep
@@ -437,13 +468,13 @@ function main() {
         }
     } else {
         // not time to send. sleep until next sensor sampling.
-        power.enter_deep_sleep_running();
+        power.enter_deep_sleep_running("Not time yet");
     }
     
 }
 
 agent.on("location_request", function(data) {
-  server.log("Agent requested location information.");
+  log("Agent requested location information.");
   send_loc();
 });
 
