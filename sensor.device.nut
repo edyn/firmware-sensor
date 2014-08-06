@@ -285,9 +285,9 @@ function is_server_refresh_needed(data_last_sent, data_current) {
     if (data_current.b >= 4.3)      send_interval_s = 60*0;   // battery overcharge
     
     // DEBUG settings (toggle comment with below)
-    else if (data_current.b >= 4.1) send_interval_s = 60*2;   // battery full
-    else if (data_current.b >= 3.9) send_interval_s = 60*2;  // battery high
-    else if (data_current.b >= 3.7) send_interval_s = 60*2;  // battery nominal
+    else if (data_current.b >= 4.1) send_interval_s = 60*5;   // battery full
+    else if (data_current.b >= 3.9) send_interval_s = 60*5;  // battery high
+    else if (data_current.b >= 3.7) send_interval_s = 60*5;  // battery nominal
     
     // Production settings (toggle comment with above)
     // else if (data_current.b >= 4.1) send_interval_s = 60*5;   // battery full
@@ -360,6 +360,7 @@ function send_loc() {
 }
 
 function main() {
+    server.log("Device firmware version: " + imp.getsoftwareversion());
     // manual control of Wi-Fi state and other setup
     server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
     server.disconnect();
