@@ -18,10 +18,30 @@
 ////////////////////////////////////////////////////////////
 
 const INTERVAL_SENSOR_SAMPLE_S = 60; // sample sensors this often
-const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
+// const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
+const INTERVAL_SLEEP_MAX_S = 86400; // keep the maximum sleep at a day during development
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 const POLL_ITERATION_MAX = 100; // maximum number of iterations for sensor polling loop
 const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
+
+// offline logging
+offline <- [];
+const TZ_OFFSET = -25200; // 7 hours for PDT
+function log(s) {
+    local now = time() + TZ_OFFSET;
+    s = format("%02d:%02d:%02d - %s",date(now).hour, date(now).min, date(now).sec, s);
+    if (server.isconnected()) {
+        foreach(a in offline) server.log(a);
+        offline.clear();
+        server.log("ONLINE: "+s);
+    } else {
+        offline.append("OFFLINE: "+s);
+    }
+}
+
+log("Device booted - code version 1.0.");
+log("Device's unique id: " + hardware.getdeviceid());
+log("Mac address is: " + imp.getmacaddress());
 
 // Blue LED, active low
 class led {
@@ -83,24 +103,36 @@ class soil {
 
 // Power management
 class power {
-    function enter_deep_sleep_running() {
-        server.disconnect();
+    function enter_deep_sleep_running(reason) {
         //Old version before Electric Imp's sleeping fix
         //imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
         //Implementing Electric Imp's sleeping fix
-        imp.onidle(function() {
-          imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
+        log("Deep sleep (running) call because: "+reason);
+        imp.wakeup(1,function() {
+            imp.onidle(function() {
+                log("Starting deep sleep (running).");
+                log("Note that subsequent 'sensing' wakes won't log here.");
+                log("The next wake to log will be the 'data transmission' wake.");
+                // server.disconnect();
+                // imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
+                server.sleepfor(INTERVAL_SENSOR_SAMPLE_S);
+            });
         });
     }
     
-    function enter_deep_sleep_storage() {
+    function enter_deep_sleep_storage(reason) {
         nv.running_state = false;
-        server.disconnect();
         //Old version before Electric Imp's sleeping fix
         //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
         //Implementing Electric Imp's sleeping fix
-        imp.onidle(function() {
-          imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
+        log("Deep sleep (storage) call because: "+reason)
+        imp.wakeup(1,function() {
+            imp.onidle(function() {
+                log("Starting deep sleep (running).");
+                // server.disconnect();
+                // imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
+                server.sleepfor(INTERVAL_SLEEP_MAX_S);
+            });
         });
     }
 }
@@ -252,7 +284,7 @@ function magnetic_switch_activated() {
         led.blink(1.0, 3);
         
         // deep sleep (storage state)
-        power.enter_deep_sleep_storage(); // does not return
+        power.enter_deep_sleep_storage("magnetic switch activated");
     } else {
         // Flash blue led for 0.1s 10 times
         led.blink(0.1, 10);
@@ -261,11 +293,11 @@ function magnetic_switch_activated() {
         imp.enableblinkup(true);
         
         // Old method
-        imp.sleep(30);
-        imp.enableblinkup(false);
+        // imp.sleep(30);
+        // imp.enableblinkup(false);
         
         // Method recommended by Hugo from Electric Imp
-        // imp.wakeup(30, function() { imp.enableblinkup(false); });
+        imp.wakeup(30, function() { imp.enableblinkup(false); });
     }
 }
 
@@ -280,9 +312,9 @@ function is_server_refresh_needed(data_last_sent, data_current) {
     if (data_current.b >= 4.3)      send_interval_s = 60*0;   // battery overcharge
     
     // DEBUG settings (toggle comment with below)
-    else if (data_current.b >= 4.1) send_interval_s = 60*2;   // battery full
-    else if (data_current.b >= 3.9) send_interval_s = 60*2;  // battery high
-    else if (data_current.b >= 3.7) send_interval_s = 60*2;  // battery nominal
+    else if (data_current.b >= 4.1) send_interval_s = 60*3;   // battery full
+    else if (data_current.b >= 3.9) send_interval_s = 60*3;  // battery high
+    else if (data_current.b >= 3.7) send_interval_s = 60*3;  // battery nominal
     
     // Production settings (toggle comment with above)
     // else if (data_current.b >= 4.1) send_interval_s = 60*5;   // battery full
@@ -293,7 +325,7 @@ function is_server_refresh_needed(data_last_sent, data_current) {
     else if (data_current.b >= 3.5) return false;             // battery critical
     else {
         // emergency shutoff workaround to prevent the Imp 'red light bricked' state
-        power.enter_deep_sleep_storage(); // does not return
+        power.enter_deep_sleep_storage("emergency battery levels");
     }
 
     // send updates more often when data has changed frequently and battery life is good
@@ -302,8 +334,11 @@ function is_server_refresh_needed(data_last_sent, data_current) {
           || math.fabs(data_last_sent.h - data_current.h) > 5.0
           || math.fabs(data_last_sent.l - data_current.l) > 50.0
           || math.fabs(data_last_sent.m - data_current.m) > 0.2
-          || math.fabs(data_last_sent.b - data_current.b) > 0.2))
+          || math.fabs(data_last_sent.b - data_current.b) > 0.2)) {
+        log("Data is changing quickly, so send updates more often.");
         send_interval_s /= 4;
+        if (send_interval_s < 60) send_interval_s = 60;
+    }
 
     // send data to the server if (current time - last send time) > send_interval_s
     return ((data_current.ts - data_last_sent.ts) > send_interval_s);
@@ -317,8 +352,8 @@ function send_data(status) {
     if (status == SERVER_CONNECTED) {
         // ok: send data
         // server.log(imp.scanwifinetworks());
-        agent.send("data", { device = hardware.getimpeeid(), loc = imp.scanwifinetworks(), data = nv.data} ); // TODO: send error codes
-
+        log("Connected to server.");
+        agent.send("data", { device = hardware.getimpeeid(), data = nv.data} ); // TODO: send error codes
         local success = server.flush(TIMEOUT_SERVER_S);
         if (success) {
             // update last sent data (even on failure, so the next send attempt is not immediate)
@@ -329,26 +364,46 @@ function send_data(status) {
         } else {
             // error: blink led
             led.blink(0.1,5);
-            server.log("Error: Server connected, but no success.");
+            log("Error: Server connected, but no success.");
         }
     } else {
         // error: blink led
         led.blink(0.3,3);
-        server.log("Error: Server is not connected.");
+        log("Error: Server is not connected.");
     }
     
     // Sleep until next sensor sampling
-    // removed the onidle call as this has trouble running with bad wifi connection data
-    //imp.onidle(function () {
-        power.enter_deep_sleep_running(); // does not return
-    //});
+    power.enter_deep_sleep_running("Finished sending JSON data.");
+}
+
+// Callback for server status changes.
+function send_loc() {
+    log("Called send_loc function");
+    // ok: send data
+    // server.log(imp.scanwifinetworks());
+    agent.send("location", { device = hardware.getimpeeid(), loc = imp.scanwifinetworks()} );
+    local success = server.flush(TIMEOUT_SERVER_S);
+    if (success) {
+    } else {
+    log("Error: Server connected, but no location success.");
+    }
 }
 
 function main() {
+    log("Device firmware version: " + imp.getsoftwareversion());
     // manual control of Wi-Fi state and other setup
     server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
+    // I could remove this, since, according to Hugo:
+    // When you wake from an imp.deepsleep or server.sleep,
+    // wifi is not up - there's no need to immediately disconnect.
+    // You'd have to either explicitly connect (if you are using
+    // RETURN_ON_ERROR) or perform an operation which requires
+    // network (if you're using SUSPEND_ON_ERROR).
+    // server.disconnect();
     server.disconnect();
-    imp.setpowersave(true);
+    
+    // Useless according to Hugo from Electric Imp
+    // imp.setpowersave(true);
     imp.enableblinkup(false);
     
     // create non-volatile storage if it doesn't exist
@@ -367,7 +422,7 @@ function main() {
 
     // user did not wake the device and not running, go back to sleep
     if (magnetic_wakeup.read() == 0 && nv.running_state == false) {
-        power.enter_deep_sleep_storage(); // does not return
+        power.enter_deep_sleep_storage("User didn't wake");
     }
     
     // user activated wake: blinkup if soil probe not shorted, otherwise sleep
@@ -408,21 +463,29 @@ function main() {
         m = soil.voltage(),
         b = battery.voltage()
     });
-    
+
+    //Send sensor data
     if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
         if (server.isconnected()) {
+            log("Server refresh needed and server connected");
             // already connected (first boot?). send data.
             send_data(SERVER_CONNECTED);
         } else {
+            log("Server refresh needed but need to connect first");
             // connect first then send data.
             server.connect(send_data, TIMEOUT_SERVER_S);
         }
     } else {
         // not time to send. sleep until next sensor sampling.
-        imp.onidle(function () {
-            power.enter_deep_sleep_running(); // does not return
-        });
+        log("Not time to send");
+        power.enter_deep_sleep_running("Not time yet");
     }
+    
 }
+
+agent.on("location_request", function(data) {
+  log("Agent requested location information.");
+  send_loc();
+});
 
 main();
