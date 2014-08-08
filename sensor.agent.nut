@@ -8,8 +8,9 @@
 // Send data to Edyn server
 function send_data_json(data) {
     // local soil_url = "https://edyn.com/api/v1/readings?" + "impee_id=" + data.device;
-    // local soil_url = "http://edynbackendpythonstag.elasticbeanstalk.com/api/readings/?" + "impee_id=" + data.device;
-    local soil_url = "http://edynbackendpythondev.elasticbeanstalk.com/api/readings/";
+    local soil_url = "http://edynbackendpythonstag.elasticbeanstalk.com/api/readings/";
+    // local soil_url = "http://edynbackendpythondev.elasticbeanstalk.com/api/readings/";
+    // local soil_url = "http://Soil-IQ-stag-zhipffkaue.elasticbeanstalk.com/api/readings/";
     local req = http.post(soil_url, {"Content-Type":"application/json", "User-Agent":"Imp"}, http.jsonencode(data));
     local res = req.sendsync();
     if (res.statuscode != 200) {
@@ -18,6 +19,8 @@ function send_data_json(data) {
         server.log("status code: " + res.statuscode);
         // server.log("error sending message: " + res.body.slice(0,40));
         server.log("Error sending message to database.");
+    } else {
+      server.log("Data sent successfully to database.");
     }
 }
 
@@ -42,6 +45,7 @@ device.on("data", function(data) {
         dataToSend.lng <- -122.03476;
     }
     
+    // Hacks
     foreach (point in dataToSend.data) {
         point.sd <- [1];
     }

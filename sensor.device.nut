@@ -39,7 +39,9 @@ function log(s) {
     }
 }
 
-log("Device booted.");
+log("Device booted - code version 1.0.");
+log("Device's unique id: " + hardware.getdeviceid());
+log("Mac address is: " + imp.getmacaddress());
 
 // Blue LED, active low
 class led {
@@ -109,6 +111,8 @@ class power {
         imp.wakeup(1,function() {
             imp.onidle(function() {
                 log("Starting deep sleep (running).");
+                log("Note that subsequent 'sensing' wakes won't log here.");
+                log("The next wake to log will be the 'data transmission' wake.");
                 // server.disconnect();
                 // imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
                 server.sleepfor(INTERVAL_SENSOR_SAMPLE_S);
@@ -308,9 +312,9 @@ function is_server_refresh_needed(data_last_sent, data_current) {
     if (data_current.b >= 4.3)      send_interval_s = 60*0;   // battery overcharge
     
     // DEBUG settings (toggle comment with below)
-    else if (data_current.b >= 4.1) send_interval_s = 60*5;   // battery full
-    else if (data_current.b >= 3.9) send_interval_s = 60*5;  // battery high
-    else if (data_current.b >= 3.7) send_interval_s = 60*5;  // battery nominal
+    else if (data_current.b >= 4.1) send_interval_s = 60*3;   // battery full
+    else if (data_current.b >= 3.9) send_interval_s = 60*3;  // battery high
+    else if (data_current.b >= 3.7) send_interval_s = 60*3;  // battery nominal
     
     // Production settings (toggle comment with above)
     // else if (data_current.b >= 4.1) send_interval_s = 60*5;   // battery full
@@ -330,8 +334,11 @@ function is_server_refresh_needed(data_last_sent, data_current) {
           || math.fabs(data_last_sent.h - data_current.h) > 5.0
           || math.fabs(data_last_sent.l - data_current.l) > 50.0
           || math.fabs(data_last_sent.m - data_current.m) > 0.2
-          || math.fabs(data_last_sent.b - data_current.b) > 0.2))
+          || math.fabs(data_last_sent.b - data_current.b) > 0.2)) {
+        log("Data is changing quickly, so send updates more often.");
         send_interval_s /= 4;
+        if (send_interval_s < 60) send_interval_s = 60;
+    }
 
     // send data to the server if (current time - last send time) > send_interval_s
     return ((data_current.ts - data_last_sent.ts) > send_interval_s);
@@ -345,8 +352,8 @@ function send_data(status) {
     if (status == SERVER_CONNECTED) {
         // ok: send data
         // server.log(imp.scanwifinetworks());
+        log("Connected to server.");
         agent.send("data", { device = hardware.getimpeeid(), data = nv.data} ); // TODO: send error codes
-        log("connected 266");
         local success = server.flush(TIMEOUT_SERVER_S);
         if (success) {
             // update last sent data (even on failure, so the next send attempt is not immediate)
@@ -366,7 +373,7 @@ function send_data(status) {
     }
     
     // Sleep until next sensor sampling
-    power.enter_deep_sleep_running("Sleep until next sensor sampling");
+    power.enter_deep_sleep_running("Finished sending JSON data.");
 }
 
 // Callback for server status changes.
@@ -386,14 +393,14 @@ function main() {
     log("Device firmware version: " + imp.getsoftwareversion());
     // manual control of Wi-Fi state and other setup
     server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
-    server.disconnect();
-    // Removing this since, according to Hugo:
+    // I could remove this, since, according to Hugo:
     // When you wake from an imp.deepsleep or server.sleep,
     // wifi is not up - there's no need to immediately disconnect.
     // You'd have to either explicitly connect (if you are using
     // RETURN_ON_ERROR) or perform an operation which requires
     // network (if you're using SUSPEND_ON_ERROR).
     // server.disconnect();
+    server.disconnect();
     
     // Useless according to Hugo from Electric Imp
     // imp.setpowersave(true);
@@ -460,14 +467,17 @@ function main() {
     //Send sensor data
     if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
         if (server.isconnected()) {
+            log("Server refresh needed and server connected");
             // already connected (first boot?). send data.
             send_data(SERVER_CONNECTED);
         } else {
+            log("Server refresh needed but need to connect first");
             // connect first then send data.
             server.connect(send_data, TIMEOUT_SERVER_S);
         }
     } else {
         // not time to send. sleep until next sensor sampling.
+        log("Not time to send");
         power.enter_deep_sleep_running("Not time yet");
     }
     
