@@ -161,7 +161,6 @@ function main() {
     
     // we have entered the running state
     nv.running_state = true;
-    led.blink(0.001);
 
     // nv space is limited to 4kB and will not notify of failure
     // discard every other entry if over MAX entries
