@@ -159,8 +159,6 @@ function main() {
         nv <- { data = [], data_sent = null, running_state = true };
     }
     
-    battery.configure();
-        
     // we have entered the running state
     nv.running_state = true;
     led.blink(0.001);
