@@ -46,19 +46,6 @@ log("Device's unique id: " + hardware.getdeviceid());
 // NEED TO MODIFY THIS
 // Battery voltage sensor
 ////////////////////////
-class battery {
-    static pin = hardware.pinB;
-
-    function configure() {
-        pin.configure(ANALOG_IN);
-    }
-    
-    function voltage() {
-        // measures one half voltage divider, multiply by 2 to get the actual
-        return 2.0 * (pin.read()/65536.0) * hardware.voltage();
-    }
-}
-
 
 // Power management
 class power {
@@ -103,33 +90,7 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 
     local send_interval_s = 0;
 
-    // send updates more often when the battery is full
-    if (data_current.b >= 4.3)      send_interval_s = 60*0;   // battery overcharge
-    
-    // DEBUG settings (toggle comment with below)
-    else if (data_current.b >= 4.1) send_interval_s = 60*3;   // battery full
-    else if (data_current.b >= 3.9) send_interval_s = 60*3;  // battery high
-    else if (data_current.b >= 3.7) send_interval_s = 60*3;  // battery nominal
-    
-    // Production settings (toggle comment with above)
-    // else if (data_current.b >= 4.1) send_interval_s = 60*5;   // battery full
-    // else if (data_current.b >= 3.9) send_interval_s = 60*20;  // battery high
-    // else if (data_current.b >= 3.7) send_interval_s = 60*60;  // battery nominal
-    
-    else if (data_current.b >= 3.6) send_interval_s = 60*120; // battery low
-    else if (data_current.b >= 3.5) return false;             // battery critical
-    else {
-        // emergency shutoff workaround to prevent the Imp 'red light bricked' state
-        power.enter_deep_sleep_storage("emergency battery levels");
-    }
-
-    // send updates more often when data has changed frequently and battery life is good
-    if (data_current.b >= 3.7
-        && math.fabs(data_last_sent.b - data_current.b) > 0.2)) {
-        log("Data is changing quickly, so send updates more often.");
-        send_interval_s /= 4;
-        if (send_interval_s < 60) send_interval_s = 60;
-    }
+    send_interval_s = 60*1;
 
     // send data to the server if (current time - last send time) > send_interval_s
     return ((data_current.ts - data_last_sent.ts) > send_interval_s);
@@ -217,8 +178,7 @@ function main() {
 
     // store sensor data in non-volatile storage
     nv.data.push({
-        ts = time(),
-        b = battery.voltage()
+        ts = time()
     });
 
     //Send sensor data
