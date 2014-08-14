@@ -43,13 +43,69 @@ log("Device booted - code version 1.0.");
 log("Device's unique id: " + hardware.getdeviceid());
 
 ////////////////////////
-// Power controller
+// Power manager
 ////////////////////////
-class powerController {
-	// Pin 9 is SDA
-	// Pin 8 is SCL
+class PowerManager {
+// The i2c object has the following member methods:
 
+// i2c.configure(const) – configures the I²C clock speed, and enables the port
+// i2c.disable() – disables the I²C bus
+// i2c.read(integer, string, integer) – initiates an I²C read of N bytes from the specified base and sub-address
+// i2c.readerror() – returns error code from last I²C read
+// i2c.write(integer, string) – initiates an I²C write to the specified address
+	
+	_i2c  = null;
+	_addr = null;
+	_addr = null;
+
+	// Note: Imp I2C command values are strings with 
+	// the \x escape character to indicate a hex value
+	static SA_CHARGER_STATUS = "\x03";
+	
+	constructor(i2c) {
+		_i2c  = i2c;
+		
+		// Squirrel automatically sets bit zero to the correct I²C-defined value
+		// Please note that many vendors’ device datasheets specify a
+		// 7-bit base I²C address. In this case, you will need to
+		// bit-shift the address left by 1 (ie. multiply it by 2): 
+		// static WRITE_ADDR = "\x09"; // LTC4156 write address as a 7-bit word
+		// static WRITE_ADDR = 0x09 << 1; // LTC4156 write address converted to an 8-bit word
+		// static WRITE_ADDR = 0x12; // LTC4156 write address converted to an 8-bit word
+		// static READ_ADDR = 0x13;
+		// Note: Imp I2C address values are integers
+		_addr = 0x12;
+	}
+
+	// EVT wifi sensor can measure Solar panel voltage (PIN7)
+	// and output voltage (PINB)
+	// Once PIN7>PINB voltage & charging is enabled electricimp
+	// needn’t be sleeping and control charging
+	function sample() {
+		// The transaction is initiated by the bus master with a START condition
+		// The SMBus command code corresponds to teh sub address pointer value
+		// and will be written to the sub address pointer register in the LTC4156
+		_i2c.write(_addr, SA_CHARGER_STATUS);
+		local word = _i2c.read(_addr, SA_CHARGER_STATUS, 1);
+		server.log(word);
+		// _i2c.readerror();
+		// Wait for the sensor to finish the reading
+		// ERROR: the index '0' does not exist
+		// while ((_i2c.read(_addr, SA_CHARGER_STATUS + "", 1)[0] & 0x80) == 0x80) {
+		// 	log(_i2c.read(_addr, SA_CHARGER_STATUS + "", 1));
+		// }
+	}
 }
+
+// Configure i2c bus
+// This method configures the I²C clock speed and enables the port.
+hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+
+server.log(hardware.i2c89.write(0x12, ""));
+
+// Create PowerManager object
+powerManager <- PowerManager(hardware.i2c89);
+powerManager.sample();
 
 // Power management
 class power {
