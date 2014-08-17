@@ -56,11 +56,8 @@ class PowerManager {
 	
 	_i2c  = null;
 	_addr = null;
-	_addr = null;
-
-	// Note: Imp I2C command values are strings with 
-	// the \x escape character to indicate a hex value
 	static SA_CHARGER_STATUS = "\x03";
+  // static SA_CHARGER_STATUS = impified_i2c_address.toString();
 	
 	constructor(i2c) {
 		_i2c  = i2c;
@@ -73,6 +70,7 @@ class PowerManager {
 		// static WRITE_ADDR = 0x09 << 1; // LTC4156 write address converted to an 8-bit word
 		// static WRITE_ADDR = 0x12; // LTC4156 write address converted to an 8-bit word
 		// static READ_ADDR = 0x13;
+		// Imp I2C API automatically changes the write/read bit
 		// Note: Imp I2C address values are integers
 		_addr = 0x12;
 	}
@@ -83,10 +81,30 @@ class PowerManager {
 	// needn’t be sleeping and control charging
 	function sample() {
 		// The transaction is initiated by the bus master with a START condition
-		// The SMBus command code corresponds to teh sub address pointer value
+		// The SMBus command code corresponds to the sub address pointer value
 		// and will be written to the sub address pointer register in the LTC4156
+		// Note: Imp I2C command values are strings with 
+    // the \x escape character to indicate a hex value
+    // local reg3 = 0x03;
+    // server.log(reg3);
+    // local impified_i2c_address = reg3 << 1;
+    // server.log(impified_i2c_address);
+	
+	 // server.log(SA_CHARGER_STATUS);
+		local iteration = 0;
+		local word = 0x0;
 		_i2c.write(_addr, SA_CHARGER_STATUS);
-		local word = _i2c.read(_addr, SA_CHARGER_STATUS, 1);
+		do {
+		  // imp.sleep(0.1);
+		  // imp.wakeup(0.05)
+		  word = _i2c.read(_addr, SA_CHARGER_STATUS, 1);
+		  // server.log(word);
+		  iteration += 1;
+		  if (iteration > POLL_ITERATION_MAX) {
+		    server.log("Polled 100 times and gave up.");
+		    break;
+		  }
+		} while (word == null);
 		server.log(word);
 		// _i2c.readerror();
 		// Wait for the sensor to finish the reading
@@ -94,6 +112,7 @@ class PowerManager {
 		// while ((_i2c.read(_addr, SA_CHARGER_STATUS + "", 1)[0] & 0x80) == 0x80) {
 		// 	log(_i2c.read(_addr, SA_CHARGER_STATUS + "", 1));
 		// }
+		// timeout
 	}
 }
 
@@ -101,11 +120,26 @@ class PowerManager {
 // This method configures the I²C clock speed and enables the port.
 hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
 
-server.log(hardware.i2c89.write(0x12, ""));
+// LTC4156 battery charger 0x12 
+server.log(hardware.i2c89.write(0x12, "\x03"));
+server.log(hardware.i2c89.read(0x12, "\x03", 1)[0]);
+server.log(hardware.i2c89.write(0x12, "\x02"));
+server.log(hardware.i2c89.read(0x12, "\x02", 1)[0]);
+
+// HTU21D ambient humidity sensor 0x80
+// server.log(hardware.i2c89.write(0x80, ""));
+
+// VREF is VSYS – voltage=2.8V 
+// PIN 7 – ADC_AUX – measurement solar cell voltage (divided by/3, limited to zener 
+// voltage 6V) 
+// PIN A- ADC_S – soil moisture sensor (up to Vsys) 
+// PIN B – ADC_B - LTC4156 system voltage (divided by/2, charger voltage or battery 
+// voltage) 
+
 
 // Create PowerManager object
 powerManager <- PowerManager(hardware.i2c89);
-powerManager.sample();
+// powerManager.sample();
 
 // Power management
 class power {
