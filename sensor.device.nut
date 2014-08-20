@@ -23,6 +23,7 @@ const INTERVAL_SLEEP_MAX_S = 86400; // keep the maximum sleep at a day during de
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 const POLL_ITERATION_MAX = 100; // maximum number of iterations for sensor polling loop
 const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
+DEBUG <- true; // How much logging do we want?
 
 // offline logging
 offline <- [];
@@ -56,8 +57,9 @@ class PowerManager {
 	
 	_i2c  = null;
 	_addr = null;
+	static SA_CHARGE_CURRENT = "\x02";
 	static SA_CHARGER_STATUS = "\x03";
-  // static SA_CHARGER_STATUS = impified_i2c_address.toString();
+	// static SA_CHARGER_STATUS = impified_i2c_address.toString();
 	
 	constructor(i2c) {
 		_i2c  = i2c;
@@ -84,35 +86,109 @@ class PowerManager {
 		// The SMBus command code corresponds to the sub address pointer value
 		// and will be written to the sub address pointer register in the LTC4156
 		// Note: Imp I2C command values are strings with 
-    // the \x escape character to indicate a hex value
-    // local reg3 = 0x03;
-    // server.log(reg3);
-    // local impified_i2c_address = reg3 << 1;
-    // server.log(impified_i2c_address);
-	
+		// the \x escape character to indicate a hex value
+		
 	 // server.log(SA_CHARGER_STATUS);
+		local iteration = 0;
+		local word = 0x0;
+		_i2c.write(_addr, SA_CHARGE_CURRENT);
+		do {
+			// imp.sleep(0.1);
+			word = _i2c.read(_addr, SA_CHARGE_CURRENT, 1);
+			// server.log(word);
+			iteration += 1;
+			if (iteration > POLL_ITERATION_MAX) {
+				server.log("Polled 100 times and gave up.");
+				break;
+			}
+		} while (word == null);
+		server.log("Charge current, float voltage, c/x detection:");
+		server.log(word[0]);
+		
 		local iteration = 0;
 		local word = 0x0;
 		_i2c.write(_addr, SA_CHARGER_STATUS);
 		do {
-		  // imp.sleep(0.1);
-		  // imp.wakeup(0.05)
-		  word = _i2c.read(_addr, SA_CHARGER_STATUS, 1);
-		  // server.log(word);
-		  iteration += 1;
-		  if (iteration > POLL_ITERATION_MAX) {
-		    server.log("Polled 100 times and gave up.");
-		    break;
-		  }
+			// imp.sleep(0.1);
+			word = _i2c.read(_addr, SA_CHARGER_STATUS, 1);
+			// server.log(word);
+			iteration += 1;
+			if (iteration > POLL_ITERATION_MAX) {
+				server.log("Polled 100 times and gave up.");
+				break;
+			}
 		} while (word == null);
-		server.log(word);
+		server.log("Charger status, etc.:");
+		server.log(word[0]);
 		// _i2c.readerror();
 		// Wait for the sensor to finish the reading
-		// ERROR: the index '0' does not exist
 		// while ((_i2c.read(_addr, SA_CHARGER_STATUS + "", 1)[0] & 0x80) == 0x80) {
 		// 	log(_i2c.read(_addr, SA_CHARGER_STATUS + "", 1));
 		// }
 		// timeout
+	}
+}
+
+////////////////////////////////////////////////////////////
+// HTU21D ambient humidity sensor
+////////////////////////////////////////////////////////////
+class HumidityTemperatureSensor {
+	static ADDRESS = 0x80; // = 0x28 << 1
+	static COMMAND_MODE_BIT = 0x80;
+	static STATUS_STALE_BIT = 0x40;
+	static SUB_ADDR_TEMP = "\xE3";
+	static SUB_ADDR_HUMID = "\xE5";
+	
+	static i2c = hardware.i2c89;
+	humidity = 0.0;
+	temperature = 0.0;
+
+	constructor() {
+		i2c.configure(CLOCK_SPEED_400_KHZ);
+	}
+	
+	function sample() {
+		local humidity_raw, temperature_raw, iteration = 0;
+		local data = [0x0, 0x0];
+		
+		// Measurement Request - wakes the sensor and initiates a measurement
+		server.log("Sampling temperature");
+		server.log(i2c.write(ADDRESS, SUB_ADDR_TEMP));
+		// if (i2c.write(ADDRESS, SUB_ADDR_TEMP) == null)
+		// 	return -1;
+
+		// Data Fetch - poll until the 'stale data' status bit is 0
+		do {
+			imp.sleep(0.1);
+			data = i2c.read(ADDRESS, SUB_ADDR_TEMP, 2);
+			server.log("Read attempt");
+			
+			// timeout
+			iteration += 1;
+			if (iteration > POLL_ITERATION_MAX)
+				break;
+		} while (data == null);
+		
+		// THE TWO STATUS BITS, THE LAST BITS OF THE LEAST SIGNIFICANT BYTE,
+		// MUST BE SET TO '0' BEFORE CALCULATING PHYSICAL VALUES
+		// is_data_stale = data[0] & STATUS_STALE_BIT;
+		// humidity_raw = 0x3FFF & ((data[0] << 8) | data[1]);
+		// Mask for setting two least significant bits of least significant byte to zero
+		// 0b11111100 = 0xfc
+		//server.log(data[0]);
+		//server.log(data[0] << 8);
+		//server.log(data[1]);
+		//server.log(data[1] & 0xfc);
+		temperature_raw = (data[0] << 8) + (data[1] & 0xfc);
+
+		// Convert from raw data to Percent Relative Humidity and Degrees Celsius
+		//local humidity = 100.0 / pow(2,14) * humidity_raw;
+		//local temperature = 165.0 / pow(2,14) * temperature_raw - 40;
+		// humidity = humidity_raw / 163.83;
+		//server.log(temperature_raw);
+		temperature = temperature_raw * 175.72 / 65536 - 46.85;
+		if (DEBUG == true)
+		  server.log("Temperature is " + temperature);
 	}
 }
 
@@ -121,10 +197,10 @@ class PowerManager {
 hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
 
 // LTC4156 battery charger 0x12 
-server.log(hardware.i2c89.write(0x12, "\x03"));
-server.log(hardware.i2c89.read(0x12, "\x03", 1)[0]);
-server.log(hardware.i2c89.write(0x12, "\x02"));
-server.log(hardware.i2c89.read(0x12, "\x02", 1)[0]);
+// server.log(hardware.i2c89.write(0x12, "\x03"));
+// server.log(hardware.i2c89.read(0x12, "\x03", 1)[0]);
+// server.log(hardware.i2c89.write(0x12, "\x02"));
+// server.log(hardware.i2c89.read(0x12, "\x02", 1)[0]);
 
 // HTU21D ambient humidity sensor 0x80
 // server.log(hardware.i2c89.write(0x80, ""));
@@ -136,10 +212,6 @@ server.log(hardware.i2c89.read(0x12, "\x02", 1)[0]);
 // PIN B – ADC_B - LTC4156 system voltage (divided by/2, charger voltage or battery 
 // voltage) 
 
-
-// Create PowerManager object
-powerManager <- PowerManager(hardware.i2c89);
-// powerManager.sample();
 
 // Power management
 class power {
@@ -255,6 +327,14 @@ function main() {
 	
 	// we have entered the running state
 	nv.running_state = true;
+	
+	// Create PowerManager object
+  powerManager <- PowerManager(hardware.i2c89);
+  powerManager.sample();
+
+  // Create HumidityTemperatureSensor object
+  humidityTemperatureSensor <- HumidityTemperatureSensor();
+  humidityTemperatureSensor.sample();
 
 	// nv space is limited to 4kB and will not notify of failure
 	// discard every other entry if over MAX entries
@@ -269,7 +349,12 @@ function main() {
 
 	// store sensor data in non-volatile storage
 	nv.data.push({
-		ts = time()
+		ts = time(),
+		t = humidityTemperatureSensor.temperature
+		// h = temperature_humidity.humidity,
+		//l = ambient_light.lux,
+		//m = soil.voltage(),
+		//b = battery.voltage()
 	});
 
 	//Send sensor data
