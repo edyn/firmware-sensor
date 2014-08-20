@@ -15,6 +15,7 @@
 // - merge similar consecutive data points
 // - return error data (i2c sensor error, etc) to host
 // - interleave sensor sampling to reduce awake time
+// - give up when the device doesn't see wifi
 ////////////////////////////////////////////////////////////
 
 const INTERVAL_SENSOR_SAMPLE_S = 60; // sample sensors this often
@@ -41,7 +42,7 @@ function log(s) {
 
 log("Device booted - code version 1.0.");
 log("Device's unique id: " + hardware.getdeviceid());
-log("Mac address is: " + imp.getmacaddress());
+// log("Mac address is: " + imp.getmacaddress());
 
 // Blue LED, active low
 class led {
@@ -107,10 +108,10 @@ class power {
 		//Old version before Electric Imp's sleeping fix
 		//imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
 		//Implementing Electric Imp's sleeping fix
-		log("Deep sleep (running) call because: "+reason);
-		imp.wakeup(1,function() {
+		log("Device " + reason + ", do a running deep sleep.");
+		imp.wakeup(3,function() {
 			imp.onidle(function() {
-				log("Starting deep sleep (running).");
+				log("Starting a running deep sleep.");
 				log("Note that subsequent 'sensing' wakes won't log here.");
 				log("The next wake to log will be the 'data transmission' wake.");
 				// server.disconnect();
@@ -126,7 +127,7 @@ class power {
 		//imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
 		//Implementing Electric Imp's sleeping fix
 		log("Deep sleep (storage) call because: "+reason)
-		imp.wakeup(1,function() {
+		imp.wakeup(3,function() {
 			imp.onidle(function() {
 				log("Starting deep sleep (running).");
 				// server.disconnect();
@@ -189,7 +190,9 @@ class sensor_tsl2560 {
 	function sample() {
 		local data_ch0 = 0, data_ch1 = 0, iteration = 0;
 
-		if (i2c.write(ADDRESS, CMD_TIMING_GAIN_LO_INT_402) == null)
+    local firstResult = i2c.write(ADDRESS, CMD_TIMING_GAIN_LO_INT_402);
+    server.log(firstResult);
+		if (firstResult == null)
 			return -1;
 		
 		if (i2c.write(ADDRESS, CMD_PWR_ON) == null)
@@ -293,11 +296,11 @@ function magnetic_switch_activated() {
 		imp.enableblinkup(true);
 		
 		// Old method
-		// imp.sleep(30);
-		// imp.enableblinkup(false);
+		imp.sleep(30);
+		imp.enableblinkup(false);
 		
 		// Method recommended by Hugo from Electric Imp
-		imp.wakeup(30, function() { imp.enableblinkup(false); });
+		// imp.wakeup(30, function() { imp.enableblinkup(false); });
 	}
 }
 
@@ -312,14 +315,14 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 	if (data_current.b >= 4.3)      send_interval_s = 60*0;   // battery overcharge
 	
 	// DEBUG settings (toggle comment with below)
-	else if (data_current.b >= 4.1) send_interval_s = 60*3;   // battery full
-	else if (data_current.b >= 3.9) send_interval_s = 60*3;  // battery high
-	else if (data_current.b >= 3.7) send_interval_s = 60*3;  // battery nominal
+  else if (data_current.b >= 4.1) send_interval_s = 60*2;   // battery full
+  else if (data_current.b >= 3.9) send_interval_s = 60*2;  // battery high
+  else if (data_current.b >= 3.7) send_interval_s = 60*2;  // battery nominal
 	
 	// Production settings (toggle comment with above)
-	// else if (data_current.b >= 4.1) send_interval_s = 60*5;   // battery full
-	// else if (data_current.b >= 3.9) send_interval_s = 60*20;  // battery high
-	// else if (data_current.b >= 3.7) send_interval_s = 60*60;  // battery nominal
+// 	else if (data_current.b >= 4.1) send_interval_s = 60*5;   // battery full
+// 	else if (data_current.b >= 3.9) send_interval_s = 60*20;  // battery high
+// 	else if (data_current.b >= 3.7) send_interval_s = 60*60;  // battery nominal
 	
 	else if (data_current.b >= 3.6) send_interval_s = 60*120; // battery low
 	else if (data_current.b >= 3.5) return false;             // battery critical
@@ -373,7 +376,7 @@ function send_data(status) {
 	}
 	
 	// Sleep until next sensor sampling
-	power.enter_deep_sleep_running("Finished sending JSON data.");
+	power.enter_deep_sleep_running("finished sending or trying to send JSON data");
 }
 
 // Callback for server status changes.
@@ -381,7 +384,7 @@ function send_loc() {
 	log("Called send_loc function");
 	// ok: send data
 	// server.log(imp.scanwifinetworks());
-	agent.send("location", { device = hardware.getimpeeid(), loc = imp.scanwifinetworks()} );
+	agent.send("location", { device = hardware.getimpeeid(), loc = imp.scanwifinetworks(), ssid = imp.getssid() } );
 	local success = server.flush(TIMEOUT_SERVER_S);
 	if (success) {
 	} else {
@@ -470,6 +473,8 @@ function main() {
 			log("Server refresh needed and server connected");
 			// already connected (first boot?). send data.
 			send_data(SERVER_CONNECTED);
+			log("Sending location information without prompting.");
+	    send_loc();
 		} else {
 			log("Server refresh needed but need to connect first");
 			// connect first then send data.
