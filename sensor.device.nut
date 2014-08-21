@@ -256,7 +256,7 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 
 	local send_interval_s = 0;
 
-	send_interval_s = 60*1;
+	send_interval_s = 60*10;
 
 	// send data to the server if (current time - last send time) > send_interval_s
 	return ((data_current.ts - data_last_sent.ts) > send_interval_s);
@@ -350,11 +350,11 @@ function main() {
 	// store sensor data in non-volatile storage
 	nv.data.push({
 		ts = time(),
-		t = humidityTemperatureSensor.temperature
-		// h = temperature_humidity.humidity,
-		//l = ambient_light.lux,
-		//m = soil.voltage(),
-		//b = battery.voltage()
+		t = humidityTemperatureSensor.temperature,
+		h = 0.0,
+		l = 0.0,
+		m = 0.0,
+		b = 0.0
 	});
 
 	//Send sensor data
