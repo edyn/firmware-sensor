@@ -24,7 +24,7 @@ const INTERVAL_SLEEP_SHIP_STORE_S = 2419198;
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 const POLL_ITERATION_MAX = 100; // maximum number of iterations for sensor polling loop
 const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
-debug <- false; // How much logging do we want?
+debug <- true; // How much logging do we want?
 demo <- false; // Should we send data really fast?
 ship_and_store <- false; // Directly go to ship and store?
 
@@ -498,7 +498,7 @@ function send_data(status) {
 	// Sleep until next sensor sampling
   // power.enter_deep_sleep_running("Finished sending JSON data.");
 	if (ship_and_store == true) {
-    power.enter_deep_sleep_ship_store("Ship and store");
+    power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
   }
 	else {
 		power.enter_deep_sleep_running("Finished sending JSON data.");
@@ -591,7 +591,7 @@ function main() {
 		// not time to send. sleep until next sensor sampling.
 		log("Not time to send");
 		if (ship_and_store == true) {
-      power.enter_deep_sleep_ship_store("Ship and store");
+      power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
     }
 		else {
 		  power.enter_deep_sleep_running("Not time yet");
@@ -607,7 +607,21 @@ agent.on("location_request", function(data) {
 
 local attemptNumber = 0;
 if (ship_and_store == true) {
-  power.enter_deep_sleep_ship_store("Ship and store");
+  power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
 }
+
+// Define a function to handle disconnections
+ 
+function disconnectHandler(reason)
+{
+    if (reason != SERVER_CONNECTED)
+    {
+        power.enter_deep_sleep_ship_store("Lost wifi connection.");
+    }
+}
+ 
+// Register the disconnection handler
+ 
+server.onunexpecteddisconnect(disconnectHandler);
 
 main();
