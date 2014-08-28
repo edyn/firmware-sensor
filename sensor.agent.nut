@@ -8,8 +8,8 @@
 // Send data to Edyn server
 function send_data_json(data) {
 	// local soil_url = "https://edyn.com/api/v1/readings?" + "impee_id=" + data.device;
-	local soil_url = "http://edynbackendpythonstag.elasticbeanstalk.com/api/readings/";
-// 	local soil_url = "http://edynbackendpythondev.elasticbeanstalk.com/api/readings/";
+// 	local soil_url = "http://edynbackendpythonstag.elasticbeanstalk.com/api/readings/";
+	local soil_url = "http://edynbackendpythondev.elasticbeanstalk.com/api/readings/";
 	// local soil_url = "http://Soil-IQ-stag-zhipffkaue.elasticbeanstalk.com/api/readings/";
 	local req = http.post(soil_url, {"Content-Type":"application/json", "User-Agent":"Imp"}, http.jsonencode(data));
 	local res = req.sendsync();

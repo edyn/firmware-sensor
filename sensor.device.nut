@@ -20,10 +20,13 @@
 const INTERVAL_SENSOR_SAMPLE_S = 60; // sample sensors this often
 // const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
 const INTERVAL_SLEEP_MAX_S = 86400; // keep the maximum sleep at a day during development
+const INTERVAL_SLEEP_SHIP_STORE_S = 2419198;
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 const POLL_ITERATION_MAX = 100; // maximum number of iterations for sensor polling loop
 const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
-DEBUG <- true; // How much logging do we want?
+debug <- false; // How much logging do we want?
+demo <- false; // Should we send data really fast?
+ship_and_store <- false; // Directly go to ship and store?
 
 // offline logging
 offline <- [];
@@ -42,6 +45,37 @@ function log(s) {
 
 log("Device booted - code version 1.0.");
 log("Device's unique id: " + hardware.getdeviceid());
+
+// Blue LED, active low
+class led {
+	static pin = hardware.pinD;
+
+	function configure() {
+		pin.configure(DIGITAL_OUT);
+		pin.write(1);
+	}
+	
+	function on() {
+		pin.write(0);
+	}
+	
+	function off() {
+		pin.write(1);
+	}
+	
+	function blink(duration, count = 1) {
+		while (count > 0) {
+			count -= 1;
+			led.on();
+			imp.sleep(duration);
+			led.off();
+			if (count > 0) {
+				// do not sleep on the last blink
+				imp.sleep(duration);
+			}
+		}
+	}
+}
 
 ////////////////////////
 // Power manager
@@ -187,8 +221,8 @@ class HumidityTemperatureSensor {
 		// humidity = humidity_raw / 163.83;
 		//server.log(temperature_raw);
 		temperature = temperature_raw * 175.72 / 65536 - 46.85;
-		if (DEBUG == true)
-		  server.log("Temperature is " + temperature);
+		if (debug == true)
+		  log("Temperature is " + temperature);
 	}
 }
 
@@ -206,11 +240,101 @@ hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
 // server.log(hardware.i2c89.write(0x80, ""));
 
 // VREF is VSYS – voltage=2.8V 
+
+// PIN A- ADC_S – soil moisture sensor (up to Vsys) 
+// Soil probe voltage sensor
+class soil {
+	pin = hardware.pinA;
+
+	function configure() {
+		pin.configure(ANALOG_IN);
+	}
+	
+	function voltage() {
+		return (pin.read()/65536.0) * hardware.voltage();
+	}
+}
+
+// LTC4156 system voltage (divided by/2, charger voltage or battery voltage)
+class source {
+  pin = hardware.pinB;
+  
+	function configure() {
+		pin.configure(ANALOG_IN);
+	}
+	
+	function voltage() {
+		return 2.0 * (pin.read()/65536.0) * hardware.voltage();
+	}  
+}
+
+function onConnectedTimeout(state) 
+{
+	//If we're connected...
+	if (state == SERVER_CONNECTED) 
+	{
+		// ...do something
+		log("After allowing a chance to blinkup, succesfully connected to server.");
+		main();
+	} 
+	else 
+	{
+		// Otherwise, do something else
+		log("Gave a chance to blink up, then tried to connect to server but failed.");
+		power.enter_deep_sleep_ship_store("Ship and store");
+	}
+}
+ 
+function connect(callback, timeout) 
+{
+	// Check if we're connected before calling server.connect()
+	// to avoid race condition
+	
+	if (server.isconnected()) 
+	{
+		// We're already connected, so execute the callback
+		callback(SERVER_CONNECTED);
+	} 
+	else 
+	{
+		// Otherwise, proceed as normal
+		server.connect(callback, timeout);
+	}
+}
+
+alreadyPressed <- false;
+// hardware.pin1.configure("DIGITAL_IN_WAKEUP", function(){server.log("imp woken") });
+hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){
+  alreadyPressed <- true;
+  log("Button pressed");
+  led.blink(0.1, 10);
+  // Enable blinkup for 30s
+	imp.enableblinkup(true);
+	imp.sleep(20);
+	imp.enableblinkup(false);
+	led.blink(0.1, 10);
+	imp.setwificonfiguration("Edyn Front", "lalala");
+	connect(onConnectedTimeout, 20);
+	imp.sleep(21);
+	alreadyPressed <- false;
+  // server.connect(send_data, TIMEOUT_SERVER_S);
+});
+
 // PIN 7 – ADC_AUX – measurement solar cell voltage (divided by/3, limited to zener 
 // voltage 6V) 
-// PIN A- ADC_S – soil moisture sensor (up to Vsys) 
-// PIN B – ADC_B - LTC4156 system voltage (divided by/2, charger voltage or battery 
-// voltage) 
+// Solar voltage sensor
+class solar {
+	static pin = hardware.pin7;
+
+	function configure() {
+		pin.configure(ANALOG_IN);
+	}
+	
+	function voltage() {
+		// measures one half voltage divider, multiply by 2 to get the actual
+		return 3.0 * (pin.read()/65536.0) * hardware.voltage();
+	}
+}
 
 
 // Power management
@@ -240,14 +364,32 @@ class power {
 		log("Deep sleep (storage) call because: "+reason)
 		imp.wakeup(1,function() {
 			imp.onidle(function() {
-				log("Starting deep sleep (running).");
+				log("Starting deep sleep (storage).");
 				// server.disconnect();
 				// imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
 				server.sleepfor(INTERVAL_SLEEP_MAX_S);
 			});
 		});
 	}
+	
+	function enter_deep_sleep_ship_store(reason) {
+		// nv.running_state = false;
+		//Old version before Electric Imp's sleeping fix
+		//imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
+		//Implementing Electric Imp's sleeping fix
+		log("Deep sleep (storage) call because: "+reason)
+		led.blink(1.0, 3);
+		imp.wakeup(1,function() {
+			imp.onidle(function() {
+				log("Starting deep sleep (ship and store).");
+				// server.disconnect();
+				// imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
+				server.sleepfor(INTERVAL_SLEEP_SHIP_STORE_S);
+			});
+		});
+	}
 }
+
 
 // return true iff the collected data should be sent to the server
 function is_server_refresh_needed(data_last_sent, data_current) {
@@ -256,7 +398,74 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 
 	local send_interval_s = 0;
 
-	send_interval_s = 60*10;
+	// send updates more often when the battery is full
+	if (data_current.b >= 4.3)      send_interval_s = 60*0;   // battery overcharge
+	
+	// DEMO settings
+	if (demo == true) {
+	  log("Demo mode.");
+    // send updates more often when the battery is full
+	  if (data_current.b >= 3.3)      send_interval_s = 60*0;   // battery overcharge
+    else if (data_current.b >= 3.2) send_interval_s = 60*1;   // battery full
+    else if (data_current.b >= 3.1) send_interval_s = 60*2;  // battery high
+    else if (data_current.b >= 3.0) send_interval_s = 60*5;  // battery medium
+    else if (data_current.b >= 2.9) {
+      send_interval_s = 60*10; // battery low
+      log("Low battery.");
+    }
+	  else if (data_current.b >= 2.85) return false;             // battery critical
+	  else {
+		  // emergency shutoff workaround to prevent the Imp 'red light bricked' state
+		  power.enter_deep_sleep_ship_store("Emergency battery levels.");
+	  }
+	}
+	
+	// DEBUG settings
+	if (demo == false && debug == true) {
+    log("Debug mode.");
+    // send updates more often when the battery is full
+	  if (data_current.b >= 3.3)      send_interval_s = 60*5;   // battery overcharge
+    else if (data_current.b >= 3.2) send_interval_s = 60*5;   // battery full
+    else if (data_current.b >= 3.1) send_interval_s = 60*5;  // battery high
+    else if (data_current.b >= 3.0) send_interval_s = 60*5;  // battery medium
+    else if (data_current.b >= 2.9) {
+      send_interval_s = 60*10; // battery low
+      log("Low battery.");
+    }
+	  else if (data_current.b >= 2.85) return false;             // battery critical
+	  else {
+		  // emergency shutoff workaround to prevent the Imp 'red light bricked' state
+		  power.enter_deep_sleep_ship_store("Emergency battery levels.");
+	  }
+	}
+	
+	// Production settings
+	if (demo == false && debug == false) {
+    // send updates more often when the battery is full
+	  if (data_current.b >= 3.3)      send_interval_s = 60*1;   // battery overcharge
+    else if (data_current.b >= 3.2) send_interval_s = 60*60;   // battery full
+	  else if (data_current.b >= 3.1) send_interval_s = 60*60;  // battery high
+	  else if (data_current.b >= 3.0) send_interval_s = 60*120;  // battery medium
+	  else if (data_current.b >= 2.9) {
+      send_interval_s = 60*120; // battery low
+      log("Low battery");
+    }else if (data_current.b >= 2.85) return false;             // battery critical
+	  else {
+		  // emergency shutoff workaround to prevent the Imp 'red light bricked' state
+		  power.enter_deep_sleep_ship_store("Emergency battery levels.");
+	  }
+	}
+
+	// send updates more often when data has changed frequently and battery life is good
+	if (data_current.b >= 3.1
+		&& (math.fabs(data_last_sent.t - data_current.t) > 5.0
+			|| math.fabs(data_last_sent.h - data_current.h) > 5.0
+			|| math.fabs(data_last_sent.l - data_current.l) > 50.0
+			|| math.fabs(data_last_sent.m - data_current.m) > 0.2
+			|| math.fabs(data_last_sent.b - data_current.b) > 0.2)) {
+		log("Data is changing quickly, so send updates more often.");
+		send_interval_s /= 4;
+	}
 
 	// send data to the server if (current time - last send time) > send_interval_s
 	return ((data_current.ts - data_last_sent.ts) > send_interval_s);
@@ -287,7 +496,13 @@ function send_data(status) {
 	}
 	
 	// Sleep until next sensor sampling
-	power.enter_deep_sleep_running("Finished sending JSON data.");
+  // power.enter_deep_sleep_running("Finished sending JSON data.");
+	if (ship_and_store == true) {
+    power.enter_deep_sleep_ship_store("Ship and store");
+  }
+	else {
+		power.enter_deep_sleep_running("Finished sending JSON data.");
+	}
 }
 
 // Callback for server status changes.
@@ -315,6 +530,10 @@ function main() {
 	// network (if you're using SUSPEND_ON_ERROR).
 	// server.disconnect();
 	server.disconnect();
+	led.configure();
+	soil.configure();
+	solar.configure();
+	source.configure();
 	
 	// Useless according to Hugo from Electric Imp
 	// imp.setpowersave(true);
@@ -352,9 +571,9 @@ function main() {
 		ts = time(),
 		t = humidityTemperatureSensor.temperature,
 		h = 0.0,
-		l = 0.0,
-		m = 0.0,
-		b = 0.0
+		l = solar.voltage(),
+		m = soil.voltage(),
+		b = source.voltage()
 	});
 
 	//Send sensor data
@@ -371,7 +590,12 @@ function main() {
 	} else {
 		// not time to send. sleep until next sensor sampling.
 		log("Not time to send");
-		power.enter_deep_sleep_running("Not time yet");
+		if (ship_and_store == true) {
+      power.enter_deep_sleep_ship_store("Ship and store");
+    }
+		else {
+		  power.enter_deep_sleep_running("Not time yet");
+		}
 	}
 	
 }
@@ -380,5 +604,10 @@ agent.on("location_request", function(data) {
 	log("Agent requested location information.");
 	send_loc();
 });
+
+local attemptNumber = 0;
+if (ship_and_store == true) {
+  power.enter_deep_sleep_ship_store("Ship and store");
+}
 
 main();
