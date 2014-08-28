@@ -492,7 +492,8 @@ function send_data(status) {
 			log("Error: Server connected, but no success.");
 		}
 	} else {
-		log("Error: Server is not connected.");
+		log("Error: Server connection failed.");
+		power.enter_deep_sleep_ship_store("Conservatively going into ship and store mode after data send failure.");
 	}
 	
 	// Sleep until next sensor sampling
