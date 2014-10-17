@@ -91,7 +91,13 @@ class blueLed {
 
   local ledState = 0.0;
   local ledChange = 0.05;
-
+  function on() {
+    pin.write(0.0);
+  }
+  
+  function off() {
+    pin.write(1.0);
+  }
   function blink(duration, count = 1) {
     while (count > 0) {
       count -= 1;
