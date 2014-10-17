@@ -501,73 +501,64 @@ function is_server_refresh_needed(data_last_sent, data_current) {
   if (data_last_sent == null)     return true;
 
   local send_interval_s = 0;
-
-  // send updates more often when the battery is full
-  if (data_current.b >= 3.5)      send_interval_s = 60*0;   // battery overcharge
   
-  // DEMO settings
+  local higher_frequency = 0;
+  local high_frequency = 0;
+  local medium_frequency = 0;
+  local low_frequency = 0;
+  local lower_frequency = 0;
+
+  if (debug == true) log("Debug mode.");
+
   if (demo == true) {
     log("Demo mode.");
-    // send updates more often when the battery is full
-    if (data_current.b >= 3.4)      send_interval_s = 60*0;   // battery overcharge
-    else if (data_current.b >= 3.35) send_interval_s = 60*1;   // battery full
-    else if (data_current.b >= 3.3) send_interval_s = 60*2;  // battery high
-    else if (data_current.b >= 3.25) send_interval_s = 60*5;  // battery medium
-    else if (data_current.b >= 3.2) {
-      send_interval_s = 60*10; // battery low
-      log("Low battery.");
-    }
-    else if (data_current.b >= 3.1) return false;             // battery critical
-    else {
-      // emergency shutoff workaround to prevent the Imp 'red light bricked' state
-      power.enter_deep_sleep_ship_store("Emergency battery levels.");
-    }
+    higher_frequency = 60*0;
+    high_frequency = 60*1;
+    medium_frequency = 60*2;
+    low_frequency = 60*5;
+    lower_frequency = 60*10;
+    lowest_frequency = 60*30;
   }
-  
+
   // Live coding settings
-  if (demo == false && coding == true) {
-    log("Coding mode.");
-    log("Debug mode.");
-    // send updates more often when the battery is full
-    if (data_current.b >= 3.4)      send_interval_s = 60*5;   // battery overcharge
-    else if (data_current.b >= 3.35) send_interval_s = 60*5;   // battery full
-    else if (data_current.b >= 3.3) send_interval_s = 60*5;  // battery high
-    else if (data_current.b >= 3.25) send_interval_s = 60*5;  // battery medium
-    else if (data_current.b >= 3.2) {
-      send_interval_s = 60*5; // battery low
-      log("Low battery.");
-    }
-    else if (data_current.b >= 3.1) {
-      send_interval_s = 60*5; // battery critical
-      log("Critical battery.");
-    }
-    else if (data_current.b >= 3.0) return false;             // battery critical
-    else {
-      // emergency shutoff workaround to prevent the Imp 'red light bricked' state
-      power.enter_deep_sleep_ship_store("Emergency battery levels.");
-    }
+  else if (demo == false && coding == true) {
+    log("Coding mode");
+    higher_frequency = 60*5;
+    high_frequency = 60*5;
+    medium_frequency = 60*5;
+    low_frequency = 60*5;
+    lower_frequency = 60*5;
+    lowest_frequency = 60*60;
   }
+
   
   // Production settings
-  if (demo == false && coding == false) {
-    // send updates more often when the battery is full
-    if (data_current.b >= 3.4)      send_interval_s = 60*5;   // battery overcharge
-    else if (data_current.b >= 3.35) send_interval_s = 60*20;   // battery full
-    else if (data_current.b >= 3.3) send_interval_s = 60*45;  // battery high
-    else if (data_current.b >= 3.25) send_interval_s = 60*60;  // battery medium
-    else if (data_current.b >= 3.2) {
-      send_interval_s = 60*120; // battery low
-      log("Low battery");
-    }
-    else if (data_current.b >= 3.12) {
-      send_interval_s = 60*720;
-      log("Near-critical battery");
-    }
-    else if (data_current.b >= 3.0) return false;             // battery critical
-    else {
-      // emergency shutoff workaround to prevent the Imp 'red light bricked' state
-      power.enter_deep_sleep_ship_store("Emergency battery levels.");
-    }
+  else if (demo == false && coding == false) {
+    higher_frequency = 60*5;
+    high_frequency = 60*20;
+    medium_frequency = 60*45;
+    low_frequency = 60*60;
+    lower_frequency = 60*120;
+    lowest_frequency = 60*720;
+  }
+
+  // send updates more often when the battery is full
+  if (data_current.b >= 3.4)      send_interval_s = higher_frequency;   // battery overcharge
+  else if (data_current.b >= 3.35) send_interval_s = high_frequency;   // battery full
+  else if (data_current.b >= 3.3) send_interval_s = medium_frequency;  // battery high
+  else if (data_current.b >= 3.25) send_interval_s = low_frequency;  // battery medium
+  else if (data_current.b >= 3.2) {
+    send_interval_s = lower_frequency; // battery low
+    log("Low battery");
+  }
+  else if (data_current.b >= 3.12) {
+    send_interval_s = lowest_frequency;
+    log("Near-critical battery");
+  }
+  else if (data_current.b >= 3.0) return false;             // battery critical
+  else {
+    // emergency shutoff workaround to prevent the Imp 'red light bricked' state
+    power.enter_deep_sleep_ship_store("Emergency battery levels.");
   }
 
   // send updates more often when data has changed frequently and battery life is good
