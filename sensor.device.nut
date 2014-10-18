@@ -110,7 +110,7 @@ class blueLed {
       }
     }
   }
-  function pulse(count = 1) {
+  function pulse(duration, count = 1) {
       // write value to pin
     pin.write(ledState);
     
@@ -127,7 +127,7 @@ class blueLed {
       
       if (count > 0) {
         // schedule the loop to run again:
-        imp.wakeup(0.05, pulse);
+        imp.wakeup(duration, pulse);
       }
     }
   }
@@ -465,13 +465,13 @@ alreadyPressed <- false;
 hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){
   alreadyPressed <- true;
   if (debug == true) log("Button pressed");
-  led.blink(0.1, 10);
+  blueLed.pulse(0.05,30);
 
   // Enable blinkup for 30s
   imp.enableblinkup(true);
   imp.sleep(30);
   imp.enableblinkup(false);
-  led.blink(0.1, 10);
+  blueLed.pulse(0.05,30);
   imp.setwificonfiguration("doesntexist", "lalala");
   connect(onConnectedTimeout, 20);
   imp.sleep(21);
@@ -536,7 +536,7 @@ class power {
     //Old version before Electric Imp's sleeping fix
     //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
     //Implementing Electric Imp's sleeping fix
-    led.blink(1.0, 2);
+    blueLed.pulse(0.02, 60);
     if (debug == true) log("Deep sleep (storage) call because: "+reason)
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
