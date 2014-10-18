@@ -20,7 +20,6 @@
 
 const INTERVAL_SENSOR_SAMPLE_S = 60; // sample sensors this often
 // const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
-const INTERVAL_SLEEP_MAX_S = 86400; // keep the maximum sleep at a day during development
 const INTERVAL_SLEEP_SHIP_STORE_S = 2419198;
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 const POLL_ITERATION_MAX = 100; // maximum number of iterations for sensor polling loop
@@ -511,22 +510,6 @@ class power {
         // server.disconnect();
         // imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
         server.sleepfor(INTERVAL_SENSOR_SAMPLE_S);
-      });
-    });
-  }
-    
-  function enter_deep_sleep_storage(reason) {
-    nv.running_state = false;
-    //Old version before Electric Imp's sleeping fix
-    //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
-    //Implementing Electric Imp's sleeping fix
-    if (debug == true) log("Deep sleep (storage) call because: "+reason)
-    imp.wakeup(1.5,function() {
-      imp.onidle(function() {
-        if (debug == true) log("Starting deep sleep (storage).");
-        // server.disconnect();
-        // imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
-        server.sleepfor(INTERVAL_SLEEP_MAX_S);
       });
     });
   }
