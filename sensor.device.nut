@@ -51,7 +51,7 @@ if (debug == true) log("Device's unique id: " + hardware.getdeviceid());
 class led {
   // Constructor function 
   constructor(constructorParameterOne) {
-    if (constructorParameterOne == 'pinD' {
+    if (constructorParameterOne == 'pinD') {
       static pin = hardware.pinD; //green
     }
     else if (constructorParameterOne == 'pin2') {
