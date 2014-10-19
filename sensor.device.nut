@@ -50,12 +50,12 @@ if (debug == true) log("Device's unique id: " + hardware.getdeviceid());
 // Digital LED, active low
 class led {
   // Constructor function 
-  constructor(constructorParameterOne) {
-    if (constructorParameterOne == 'pinD') {
-      static pin = hardware.pinD; //green
+  constructor(paramOne) {
+    if (paramOne == 0) {
+      pin = hardware.pinD; //green
     }
-    else if (constructorParameterOne == 'pin2') {
-      static pin = hardware.pin2; //red
+    else if (paramOne == 1) {
+      pin = hardware.pin2; //red
     }
   }
 
@@ -688,8 +688,8 @@ function main() {
   //  server.disconnect();
   // });
   server.disconnect();
-  greenLed <- led('pinD');
-  redLed <- led('pin2');
+  greenLed <- led(0);
+  redLed <- led(1);
   greenLed.configure();
   redLed.configure();
   blueLed.configure();
