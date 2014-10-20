@@ -24,6 +24,7 @@ const INTERVAL_SLEEP_SHIP_STORE_S = 2419198;
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 const POLL_ITERATION_MAX = 100; // maximum number of iterations for sensor polling loop
 const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
+const TZ_OFFSET = -25200; // 7 hours for PDT
 debug <- true; // How much logging do we want?
 coding <- true; // Do you need live data right now?
 demo <- false; // Should we send data really fast?
@@ -31,21 +32,13 @@ ship_and_store <- false; // Directly go to ship and store?
 
 // offline logging
 offline <- [];
-const TZ_OFFSET = -25200; // 7 hours for PDT
-function log(s) {
-  local now = time() + TZ_OFFSET;
-  s = format("%02d:%02d:%02d - %s",date(now).hour, date(now).min, date(now).sec, s);
-  if (server.isconnected()) {
-    foreach(a in offline) server.log(a);
-    offline.clear();
-    server.log("ONLINE: "+s);
-  } else {
-    offline.append("OFFLINE: "+s);
-  }
-}
+alreadyPressed <- false;
+attemptNumber <- 0;
 
-if (debug == true) log("Device booted - code version 1.0.");
-if (debug == true) log("Device's unique id: " + hardware.getdeviceid());
+
+///
+// Classes
+///
 
 // Digital LED, active low
 class led {
@@ -141,14 +134,6 @@ class blueLed {
 // Power manager
 ////////////////////////
 class PowerManager {
-// The i2c object has the following member methods:
-
-// i2c.configure(const) – configures the I²C clock speed, and enables the port
-// i2c.disable() – disables the I²C bus
-// i2c.read(integer, string, integer) – initiates an I²C read of N bytes from the specified base and sub-address
-// i2c.readerror() – returns error code from last I²C read
-// i2c.write(integer, string) – initiates an I²C write to the specified address
-  
   _i2c  = null;
   _addr = null;
   static SA_REG_2 = "\x02";
@@ -213,8 +198,8 @@ class PowerManager {
     if (debug == true) server.log(word[0]);
     
     
-    local iteration = 0;
-    local word = 0x0;
+    iteration = 0;
+    word = 0x0;
     // _i2c.write(_addr, SA_REG_2 + "\xFC");
     _i2c.write(_addr, SA_REG_2 + "\xF0");
     do {
@@ -232,8 +217,8 @@ class PowerManager {
     // charge_current = (word[0] & 0xf0) >> 4;
     reg_2 = (word[0] & 0xff);
     
-    local iteration = 0;
-    local word = 0x0;
+    iteration = 0;
+    word = 0x0;
     _i2c.write(_addr, SA_REG_0);
     do {
       // imp.sleep(0.1);
@@ -250,8 +235,8 @@ class PowerManager {
     // charge_current = (word[0] & 0xf0) >> 4;
     reg_0 = (word[0] & 0xff);
     
-    local iteration = 0;
-    local word = 0x0;
+    iteration = 0;
+    word = 0x0;
     _i2c.write(_addr, SA_REG_1);
     do {
       // imp.sleep(0.1);
@@ -269,8 +254,8 @@ class PowerManager {
     reg_1 = (word[0] & 0xff);
 
     // external power
-    local iteration = 0;
-    local word = 0x0;
+    iteration = 0;
+    word = 0x0;
     _i2c.write(_addr, SA_EXTERNAL_POWER);
     do {
       // imp.sleep(0.1);
@@ -287,8 +272,8 @@ class PowerManager {
     external_power = (word[0] & 0xff);
     
     // ntc warning
-    local iteration = 0;
-    local word = 0x0;
+    iteration = 0;
+    word = 0x0;
     _i2c.write(_addr, SA_NTC_WARNING);
     do {
       // imp.sleep(0.1);
@@ -390,18 +375,6 @@ class HumidityTemperatureSensor {
   }
 }
 
-// Configure i2c bus
-// This method configures the I²C clock speed and enables the port.
-hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-
-// LTC4156 battery charger 0x12 
-// server.log(hardware.i2c89.write(0x12, "\x03"));
-// server.log(hardware.i2c89.read(0x12, "\x03", 1)[0]);
-// server.log(hardware.i2c89.write(0x12, "\x02"));
-// server.log(hardware.i2c89.read(0x12, "\x02", 1)[0]);
-
-// HTU21D ambient humidity sensor 0x80
-// server.log(hardware.i2c89.write(0x80, ""));
 
 // VREF is VSYS – voltage=2.8V 
 
@@ -432,56 +405,6 @@ class source {
   }  
 }
 
-function onConnectedTimeout(state) 
-{
-  //If we're connected...
-  if (state == SERVER_CONNECTED) 
-  {
-    // ...do something
-    if (debug == true) log("After allowing a chance to blinkup, succesfully connected to server.");
-    main();
-  } 
-  else 
-  {
-    // Otherwise, do something else
-    if (debug == true) log("Gave a chance to blink up, then tried to connect to server but failed.");
-    power.enter_deep_sleep_ship_store("Conservatively going into ship and store mode after failling to connect to server.");
-  }
-}
- 
-function connect(callback, timeout) 
-{
-  // Check if we're connected before calling server.connect()
-  // to avoid race condition
-  
-  if (server.isconnected()) {
-    // We're already connected, so execute the callback
-    callback(SERVER_CONNECTED);
-  } 
-  else {
-    // Otherwise, proceed as normal
-    server.connect(callback, timeout);
-  }
-}
-
-alreadyPressed <- false;
-// hardware.pin1.configure("DIGITAL_IN_WAKEUP", function(){server.log("imp woken") });
-hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){
-  alreadyPressed <- true;
-  if (debug == true) log("Button pressed");
-  blueLed.pulse(0.05,30);
-
-  // Enable blinkup for 30s
-  imp.enableblinkup(true);
-  imp.sleep(30);
-  imp.enableblinkup(false);
-  blueLed.pulse(0.05,30);
-  imp.setwificonfiguration("doesntexist", "lalala");
-  connect(onConnectedTimeout, 20);
-  imp.sleep(21);
-  alreadyPressed <- false;
-  // server.connect(send_data, TIMEOUT_SERVER_S);
-});
 
 // PIN 7 – ADC_AUX – measurement solar cell voltage (divided by/3, limited to zener 
 // voltage 6V) 
@@ -512,8 +435,6 @@ class power {
         if (debug == true) log("Starting deep sleep (running).");
         if (debug == true) log("Note that subsequent 'sensing' wakes won't log here.");
         if (debug == true) log("The next wake to log will be the 'data transmission' wake.");
-        // server.disconnect();
-        // imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
         server.sleepfor(INTERVAL_SENSOR_SAMPLE_S);
       });
     });
@@ -529,14 +450,79 @@ class power {
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) log("Starting deep sleep (ship and store).");
-        // server.disconnect();
-        // imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
         server.sleepfor(INTERVAL_SLEEP_SHIP_STORE_S);
       });
     });
   }
 }
 
+///
+// End of classes
+///
+
+///
+// Functions
+///
+function log(s) {
+  local now = time() + TZ_OFFSET;
+  s = format("%02d:%02d:%02d - %s",date(now).hour, date(now).min, date(now).sec, s);
+  if (server.isconnected()) {
+    foreach(a in offline) server.log(a);
+    offline.clear();
+    server.log("ONLINE: "+s);
+  } else {
+    offline.append("OFFLINE: "+s);
+  }
+}
+
+function onConnectedTimeout(state) {
+  //If we're connected...
+  if (state == SERVER_CONNECTED) 
+  {
+    // ...do something
+    if (debug == true) log("After allowing a chance to blinkup, succesfully connected to server.");
+    main();
+  } 
+  else 
+  {
+    // Otherwise, do something else
+    if (debug == true) log("Gave a chance to blink up, then tried to connect to server but failed.");
+    power.enter_deep_sleep_ship_store("Conservatively going into ship and store mode after failing to connect to server.");
+  }
+}
+
+function connect(callback, timeout) {
+  // Check if we're connected before calling server.connect()
+  // to avoid race condition
+  
+  if (server.isconnected()) {
+    // We're already connected, so execute the callback
+    callback(SERVER_CONNECTED);
+  } 
+  else {
+    // Otherwise, proceed as normal
+    server.connect(callback, timeout);
+  }
+}
+
+
+function interruptPin() {
+  alreadyPressed = true;
+  if (debug == true) log("Button pressed");
+  // led.blink(0.1, 10);
+  blueLed.pulse(0.05,30);
+  // Enable blinkup for 30s
+  imp.enableblinkup(true);
+  imp.sleep(30);
+  imp.enableblinkup(false);
+  // led.blink(0.1, 10);
+  blueLed.pulse(0.05,30);
+  // imp.setwificonfiguration("doesntexist", "lalala");
+  connect(onConnectedTimeout, TIMEOUT_SERVER_S);
+  imp.sleep(21);
+  alreadyPressed = false;
+  // server.connect(send_data, TIMEOUT_SERVER_S);
+}
 
 // return true iff the collected data should be sent to the server
 function is_server_refresh_needed(data_last_sent, data_current) {
@@ -628,7 +614,10 @@ function send_data(status) {
     // ok: send data
     // server.log(imp.scanwifinetworks());
     if (debug == true) log("Connected to server.");
-    agent.send("data", { device = hardware.getdeviceid(), data = nv.data} ); // TODO: send error codes
+    agent.send("data", {
+      device = hardware.getdeviceid(),
+      data = nv.data
+    }); // TODO: send error codes
     local success = server.flush(TIMEOUT_SERVER_S);
     if (success) {
       // update last sent data (even on failure, so the next send attempt is not immediate)
@@ -662,7 +651,11 @@ function send_loc(state) {
   if (debug == true) log("Called send_loc function");
   // ok: send data
   // server.log(imp.scanwifinetworks());
-  agent.send("location", { device = hardware.getimpeeid(), loc = imp.scanwifinetworks(), ssid = imp.getssid() } );
+  agent.send("location", {
+    device = hardware.getdeviceid(),
+    loc = imp.scanwifinetworks(),
+    ssid = imp.getssid()
+  });
   local success = server.flush(TIMEOUT_SERVER_S);
   if (success) {
   }
@@ -673,6 +666,7 @@ function send_loc(state) {
 }
 
 function main() {
+  if (debug == true) log("Device's unique id: " + hardware.getdeviceid());
   log("Device firmware version: " + imp.getsoftwareversion());
   // manual control of Wi-Fi state and other setup
   server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
@@ -774,28 +768,45 @@ function main() {
   
 }
 
-agent.on("location_request", function(data) {
-  if (debug == true) log("Agent requested location information.");
-  connect(send_loc, TIMEOUT_SERVER_S);
-});
-
-local attemptNumber = 0;
-if (ship_and_store == true) {
-  power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-}
-
 // Define a function to handle disconnections
  
-function disconnectHandler(reason)
-{
+function disconnectHandler(reason) {
   if (reason != SERVER_CONNECTED)
   {
     power.enter_deep_sleep_ship_store("Lost wifi connection.");
   }
 }
- 
+
+///
+// End of functions
+///
+
+///
+// Event handlers
+///
+agent.on("location_request", function(data) {
+  if (debug == true) log("Agent requested location information.");
+  connect(send_loc, TIMEOUT_SERVER_S);
+});
+
 // Register the disconnection handler
- 
 server.onunexpecteddisconnect(disconnectHandler);
 
+// hardware.pin1.configure("DIGITAL_IN_WAKEUP", function(){server.log("imp woken") });
+hardware.pin1.configure(DIGITAL_IN_WAKEUP, interruptPin);
+
+///
+// End of event handlers
+///
+
+
+if (debug == true) log("Device booted.");
+// Configure i2c bus
+// This method configures the I²C clock speed and enables the port.
+hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+
+if (ship_and_store == true) {
+  power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
+}
+ 
 main();
