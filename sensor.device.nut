@@ -452,25 +452,7 @@ class power {
         if (debug == true) log("Starting deep sleep (running).");
         if (debug == true) log("Note that subsequent 'sensing' wakes won't log here.");
         if (debug == true) log("The next wake to log will be the 'data transmission' wake.");
-        // server.disconnect();
-        // imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
         server.sleepfor(INTERVAL_SENSOR_SAMPLE_S);
-      });
-    });
-  }
-    
-  function enter_deep_sleep_storage(reason) {
-    nv.running_state = false;
-    //Old version before Electric Imp's sleeping fix
-    //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
-    //Implementing Electric Imp's sleeping fix
-    if (debug == true) log("Deep sleep (storage) call because: "+reason)
-    imp.wakeup(1.5,function() {
-      imp.onidle(function() {
-        if (debug == true) log("Starting deep sleep (storage).");
-        // server.disconnect();
-        // imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
-        server.sleepfor(INTERVAL_SLEEP_MAX_S);
       });
     });
   }
@@ -485,8 +467,6 @@ class power {
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) log("Starting deep sleep (ship and store).");
-        // server.disconnect();
-        // imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
         server.sleepfor(INTERVAL_SLEEP_SHIP_STORE_S);
       });
     });
@@ -618,7 +598,7 @@ function send_loc(state) {
   if (debug == true) log("Called send_loc function");
   // ok: send data
   // server.log(imp.scanwifinetworks());
-  agent.send("location", { device = hardware.getimpeeid(), loc = imp.scanwifinetworks(), ssid = imp.getssid() } );
+  agent.send("location", { device = hardware.getdeviceid(), loc = imp.scanwifinetworks(), ssid = imp.getssid() } );
   local success = server.flush(TIMEOUT_SERVER_S);
   if (success) {
   }
