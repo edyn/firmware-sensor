@@ -89,13 +89,12 @@ class led {
 // Blue LED, active low
 class blueLed {
   static pin = hardware.pin5;
-
+  ledState = 0.0;
+  ledChange = 0.05;
   function configure() {
     pin.configure(PWM_OUT, 1.0/400.0, 0.0);
   }
 
-  local ledState = 0.0;
-  local ledChange = 0.05;
   function on() {
     pin.write(0.0);
   }
