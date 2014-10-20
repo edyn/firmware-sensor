@@ -42,6 +42,8 @@ attemptNumber <- 0;
 
 // Digital LED, active low
 class led {
+  //  [Device]  ERROR: the index 'pin' does not exist:  at constructor
+  pin = hardware.pinD;
   // Constructor function 
   constructor(paramOne) {
     if (paramOne == 0) {
@@ -531,11 +533,12 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 
   local send_interval_s = 0;
   
-  local higher_frequency = 0;
-  local high_frequency = 0;
-  local medium_frequency = 0;
-  local low_frequency = 0;
-  local lower_frequency = 0;
+  local higher_frequency = 60*5;
+  local high_frequency = 60*20;
+  local medium_frequency = 60*45;
+  local low_frequency = 60*60;
+  local lower_frequency = 60*120;
+  local lowest_frequency = 60*720;
 
   if (debug == true) log("Debug mode.");
 
