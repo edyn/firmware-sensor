@@ -337,15 +337,6 @@ class HumidityTemperatureSensor {
 // This method configures the I²C clock speed and enables the port.
 hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
 
-// LTC4156 battery charger 0x12 
-// server.log(hardware.i2c89.write(0x12, "\x03"));
-// server.log(hardware.i2c89.read(0x12, "\x03", 1)[0]);
-// server.log(hardware.i2c89.write(0x12, "\x02"));
-// server.log(hardware.i2c89.read(0x12, "\x02", 1)[0]);
-
-// HTU21D ambient humidity sensor 0x80
-// server.log(hardware.i2c89.write(0x80, ""));
-
 // VREF is VSYS – voltage=2.8V 
 
 // PIN A- ADC_S – soil moisture sensor (up to Vsys) 
@@ -564,7 +555,10 @@ function send_data(status) {
     // ok: send data
     // server.log(imp.scanwifinetworks());
     if (debug == true) log("Connected to server.");
-    agent.send("data", { device = hardware.getdeviceid(), data = nv.data} ); // TODO: send error codes
+    agent.send("data", {
+      device = hardware.getdeviceid(),
+      data = nv.data
+    }); // TODO: send error codes
     local success = server.flush(TIMEOUT_SERVER_S);
     if (success) {
       // update last sent data (even on failure, so the next send attempt is not immediate)
@@ -598,7 +592,11 @@ function send_loc(state) {
   if (debug == true) log("Called send_loc function");
   // ok: send data
   // server.log(imp.scanwifinetworks());
-  agent.send("location", { device = hardware.getdeviceid(), loc = imp.scanwifinetworks(), ssid = imp.getssid() } );
+  agent.send("location", {
+    device = hardware.getdeviceid(),
+    loc = imp.scanwifinetworks(),
+    ssid = imp.getssid()
+  });
   local success = server.flush(TIMEOUT_SERVER_S);
   if (success) {
   }
@@ -717,8 +715,7 @@ if (ship_and_store == true) {
 
 // Define a function to handle disconnections
  
-function disconnectHandler(reason)
-{
+function disconnectHandler(reason) {
   if (reason != SERVER_CONNECTED)
   {
     power.enter_deep_sleep_ship_store("Lost wifi connection.");
