@@ -82,6 +82,7 @@ class led {
 ////////////////////////
 // Power manager
 ////////////////////////
+
 class PowerManager {
 // The i2c object has the following member methods:
 
@@ -155,8 +156,8 @@ class PowerManager {
     if (debug == true) server.log(word[0]);
     
     
-    local iteration = 0;
-    local word = 0x0;
+    iteration = 0;
+    word = 0x0;
     // _i2c.write(_addr, SA_REG_2 + "\xFC");
     _i2c.write(_addr, SA_REG_2 + "\xF0");
     do {
@@ -174,8 +175,8 @@ class PowerManager {
     // charge_current = (word[0] & 0xf0) >> 4;
     reg_2 = (word[0] & 0xff);
     
-    local iteration = 0;
-    local word = 0x0;
+    iteration = 0;
+    word = 0x0;
     _i2c.write(_addr, SA_REG_0);
     do {
       // imp.sleep(0.1);
@@ -192,8 +193,8 @@ class PowerManager {
     // charge_current = (word[0] & 0xf0) >> 4;
     reg_0 = (word[0] & 0xff);
     
-    local iteration = 0;
-    local word = 0x0;
+    iteration = 0;
+    word = 0x0;
     _i2c.write(_addr, SA_REG_1);
     do {
       // imp.sleep(0.1);
@@ -211,8 +212,8 @@ class PowerManager {
     reg_1 = (word[0] & 0xff);
 
     // external power
-    local iteration = 0;
-    local word = 0x0;
+    iteration = 0;
+    word = 0x0;
     _i2c.write(_addr, SA_EXTERNAL_POWER);
     do {
       // imp.sleep(0.1);
@@ -229,8 +230,8 @@ class PowerManager {
     external_power = (word[0] & 0xff);
     
     // ntc warning
-    local iteration = 0;
-    local word = 0x0;
+    iteration = 0;
+    word = 0x0;
     _i2c.write(_addr, SA_NTC_WARNING);
     do {
       // imp.sleep(0.1);
@@ -374,8 +375,7 @@ class source {
   }  
 }
 
-function onConnectedTimeout(state) 
-{
+function onConnectedTimeout(state) {
   //If we're connected...
   if (state == SERVER_CONNECTED) 
   {
@@ -391,8 +391,7 @@ function onConnectedTimeout(state)
   }
 }
  
-function connect(callback, timeout) 
-{
+function connect(callback, timeout) {
   // Check if we're connected before calling server.connect()
   // to avoid race condition
   
@@ -409,7 +408,7 @@ function connect(callback, timeout)
 alreadyPressed <- false;
 // hardware.pin1.configure("DIGITAL_IN_WAKEUP", function(){server.log("imp woken") });
 hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){
-  alreadyPressed <- true;
+  alreadyPressed = true;
   if (debug == true) log("Button pressed");
   led.blink(0.1, 10);
   // Enable blinkup for 30s
@@ -420,7 +419,7 @@ hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){
   imp.setwificonfiguration("doesntexist", "lalala");
   connect(onConnectedTimeout, 20);
   imp.sleep(21);
-  alreadyPressed <- false;
+  alreadyPressed = false;
   // server.connect(send_data, TIMEOUT_SERVER_S);
 });
 
