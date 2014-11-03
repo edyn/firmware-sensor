@@ -26,7 +26,7 @@ const POLL_ITERATION_MAX = 100; // maximum number of iterations for sensor polli
 const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
 const TZ_OFFSET = -25200; // 7 hours for PDT
 debug <- true; // How much logging do we want?
-coding <- true; // Do you need live data right now?
+coding <- false; // Do you need live data right now?
 demo <- false; // Should we send data really fast?
 ship_and_store <- false; // Directly go to ship and store?
 
@@ -41,18 +41,9 @@ attemptNumber <- 0;
 ///
 
 // Digital LED, active low
-class led {
+class greenLed {
   //  [Device]  ERROR: the index 'pin' does not exist:  at constructor
-  pin = hardware.pinD;
-  // Constructor function 
-  constructor(paramOne) {
-    if (paramOne == 0) {
-      pin = hardware.pinD; //green
-    }
-    else if (paramOne == 1) {
-      pin = hardware.pin2; //red
-    }
-  }
+  static pin = hardware.pinD;
 
   function configure() {
     pin.configure(DIGITAL_OUT);
@@ -70,9 +61,9 @@ class led {
   function blink(duration, count = 1) {
     while (count > 0) {
       count -= 1;
-      led.on();
+      greenLed.on();
       imp.sleep(duration);
-      led.off();
+      greenLed.off();
       if (count > 0) {
         // do not sleep on the last blink
         imp.sleep(duration);
@@ -81,15 +72,47 @@ class led {
   }
 }
 
-// Blue LED, active low
-class blueLed {
-  static pin = hardware.pin5;
-  ledState = 0.0;
-  ledChange = 0.05;
+// Digital LED, active low
+class redLed {
+  //  [Device]  ERROR: the index 'pin' does not exist:  at constructor
+  static pin = hardware.pin2;
+
   function configure() {
     pin.configure(PWM_OUT, 1.0/400.0, 0.0);
+    pin.write(1.0);
   }
+  
+  function on() {
+    pin.write(0.5);
+  }
+  
+  function off() {
+    pin.write(1.0);
+  }
+  
+  function blink(duration, count = 1) {
+    while (count > 0) {
+      count -= 1;
+      redLed.on();
+      imp.sleep(duration);
+      redLed.off();
+      if (count > 0) {
+        // do not sleep on the last blink
+        imp.sleep(duration);
+      }
+    }
+  }
+}
 
+class blueLed {
+  //  [Device]  ERROR: the index 'pin' does not exist:  at constructor
+  static pin = hardware.pin5;
+
+  function configure() {
+    pin.configure(PWM_OUT, 1.0/400.0, 0.0);
+    pin.write(1.0);
+  }
+  
   function on() {
     pin.write(0.0);
   }
@@ -97,41 +120,38 @@ class blueLed {
   function off() {
     pin.write(1.0);
   }
+  function pulse() {
+    local blueLedState = 1.0;
+    local blueLedChange = 0.05;
+    local count = 80;
+    while (count >= 0) {
+      count -= 1;
+      // write value to pin
+      pin.write(blueLedState);
+  
+      // Check if we're out of bounds
+      if (blueLedState >= 1.0 || blueLedState <= 0.0) {
+        // flip ledChange if we are
+        blueLedChange *= -1.0;
+      }
+      // change the value
+      blueLedState += blueLedChange;
+      imp.sleep(0.05);
+    }
+  }
   function blink(duration, count = 1) {
     while (count > 0) {
       count -= 1;
-      led.on();
+      blueLed.on();
       imp.sleep(duration);
-      led.off();
+      blueLed.off();
       if (count > 0) {
         // do not sleep on the last blink
         imp.sleep(duration);
       }
     }
   }
-  function pulse(duration, count = 1) {
-      // write value to pin
-    pin.write(ledState);
-    
-    // change the value
-    ledState = ledState + ledChange;
-    
-    while (count > 0) {
-      count -= 1;
-      // Check if we're out of bounds
-      if (ledState > 0.99 || ledState < 0.01) {
-            // flip ledChange if we are
-        ledChange = ledChange * -1.0;
-      }
-      
-      if (count > 0) {
-        // schedule the loop to run again:
-        imp.wakeup(duration, pulse);
-      }
-    }
-  }
 }
-
 ////////////////////////
 // Power manager
 ////////////////////////
@@ -447,7 +467,7 @@ class power {
     //Old version before Electric Imp's sleeping fix
     //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
     //Implementing Electric Imp's sleeping fix
-    blueLed.pulse(0.02, 60);
+    blueLed.pulse();
     if (debug == true) log("Deep sleep (storage) call because: "+reason)
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
@@ -512,13 +532,19 @@ function interruptPin() {
   alreadyPressed = true;
   if (debug == true) log("Button pressed");
   // led.blink(0.1, 10);
-  blueLed.pulse(0.05,30);
-  // Enable blinkup for 30s
   imp.enableblinkup(true);
+  blueLed.pulse();
+  greenLed.blink(0.1,6);
+  redLed.blink(0.1,6);
+  blinkAll(0.1,6);
+  // Enable blinkup for 30s
   imp.sleep(30);
-  imp.enableblinkup(false);
   // led.blink(0.1, 10);
-  blueLed.pulse(0.05,30);
+  blueLed.pulse();
+  greenLed.blink(0.1,6);
+  redLed.blink(0.1,6);
+  blinkAll(0.1,6);
+  imp.enableblinkup(false);
   // imp.setwificonfiguration("doesntexist", "lalala");
   connect(onConnectedTimeout, TIMEOUT_SERVER_S);
   imp.sleep(21);
@@ -668,6 +694,23 @@ function send_loc(state) {
   }
 }
 
+function blinkAll(duration, count = 1) {
+  while (count > 0) {
+    count -= 1;
+    blueLed.on();
+    redLed.on();
+    greenLed.on();
+    imp.sleep(duration);
+    blueLed.off();
+    redLed.off();
+    greenLed.off();
+    if (count > 0) {
+      // do not sleep on the last blink
+      imp.sleep(duration);
+    }
+  }
+}
+
 function main() {
   if (debug == true) log("Device's unique id: " + hardware.getdeviceid());
   log("Device firmware version: " + imp.getsoftwareversion());
@@ -684,12 +727,10 @@ function main() {
   //  server.disconnect();
   // });
   server.disconnect();
-  greenLed <- led(0);
-  redLed <- led(1);
   greenLed.configure();
   redLed.configure();
   blueLed.configure();
-  led.configure();
+  // led.configure();
   soil.configure();
   solar.configure();
   source.configure();

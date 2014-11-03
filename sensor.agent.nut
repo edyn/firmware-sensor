@@ -22,20 +22,6 @@ function send_data_json(data) {
   } else {
     server.log("Data sent successfully to database.");
   }
-  
-  local sap_url = "https://techedbc2228f55.us1.hana.ondemand.com/teched/SaveReading.htm";
-  // local soil_url = "http://Soil-IQ-stag-zhipffkaue.elasticbeanstalk.com/api/readings/";
-  req = http.post(sap_url, {"Content-Type":"application/json", "User-Agent":"Edyn"}, http.jsonencode(data));
-  res = req.sendsync();
-  if (res.statuscode != 200) {
-    // TODO: retry?
-    // server.log("error sending message: " + res.body);
-    server.log("status code: " + res.statuscode);
-    // server.log("error sending message: " + res.body.slice(0,40));
-    server.log("Error sending message to SAP.");
-  } else {
-    server.log("Data sent successfully to SAP.");
-  }
 }
 
 // Invoked when the device calls agent.send("data", ...)
