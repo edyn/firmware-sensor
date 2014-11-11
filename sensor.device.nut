@@ -749,7 +749,11 @@ function main() {
   log("Device firmware version: " + imp.getsoftwareversion());
   // manual control of Wi-Fi state and other setup
   server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
+  
+  // Configure i2c bus
+  // This method configures the I²C clock speed and enables the port.
   hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+  
   // I could remove this, since, according to Hugo:
   // When you wake from an imp.deepsleep or server.sleep,
   // wifi is not up - there's no need to immediately disconnect.
@@ -824,7 +828,7 @@ function main() {
     if (debug == true) log("Server refresh needed");
     connect(send_data, TIMEOUT_SERVER_S);
     if (debug == true) log("Sending location information without prompting.");
-    connect(send_loc, TIMEOUT_SERVER_S);
+    // connect(send_loc, TIMEOUT_SERVER_S);
   }
   
   else {
@@ -854,6 +858,8 @@ function disconnectHandler(reason) {
 // End of functions
 ///
 
+if (debug == true) log("Device booted.");
+
 ///
 // Event handlers
 ///
@@ -872,9 +878,5 @@ hardware.pin1.configure(DIGITAL_IN_WAKEUP, interruptPin);
 // End of event handlers
 ///
 
-
-if (debug == true) log("Device booted.");
-// Configure i2c bus
-// This method configures the I²C clock speed and enables the port.
  
 main();

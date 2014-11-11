@@ -177,8 +177,8 @@ device.onconnect(function() {
   }
 });
 
-device.send("location_request", {test = "t"});
-server.log("Initiated location information request");
+// device.send("location_request", {test = "t"});
+// server.log("Initiated location information request");
 
 // // Debug code used to allow data monitoring via JSON API
 // data_buffer <- [];
@@ -192,7 +192,7 @@ server.log("Initiated location information request");
 //  }
 // });
 
-// Basic wrapper to create an execute an HTTP POST
+// Basic wrapper to create and execute an HTTP POST
 function httpPostWrapper (url, headers, string) {
   local request = http.post(url, headers, string);
   local response = request.sendsync();
