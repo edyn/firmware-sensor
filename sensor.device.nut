@@ -453,7 +453,7 @@ class power {
     //imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
     //Implementing Electric Imp's sleeping fix
     if (debug == true) log("Deep sleep (running) call because: "+reason);
-    imp.wakeup(1,function() {
+    imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) log("Starting deep sleep (running).");
         if (debug == true) log("Note that subsequent 'sensing' wakes won't log here.");
@@ -827,7 +827,7 @@ function main() {
   if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
     if (debug == true) log("Server refresh needed");
     connect(send_data, TIMEOUT_SERVER_S);
-    if (debug == true) log("Sending location information without prompting.");
+    // if (debug == true) log("Sending location information without prompting.");
     // connect(send_loc, TIMEOUT_SERVER_S);
   }
   
