@@ -26,7 +26,7 @@ const POLL_ITERATION_MAX = 100; // maximum number of iterations for sensor polli
 const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
 const TZ_OFFSET = -25200; // 7 hours for PDT
 debug <- true; // How much logging do we want?
-coding <- false; // Do you need live data right now?
+coding <- true; // Do you need live data right now?
 demo <- false; // Should we send data really fast?
 ship_and_store <- false; // Directly go to ship and store?
 
@@ -726,7 +726,7 @@ function main() {
   // imp.onidle(function() {
   //  server.disconnect();
   // });
-  server.disconnect();
+  // server.disconnect();
   greenLed.configure();
   redLed.configure();
   blueLed.configure();
