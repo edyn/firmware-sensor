@@ -19,8 +19,8 @@
 ////////////////////////////////////////////////////////////
 
 const INTERVAL_SENSOR_SAMPLE_S = 60; // sample sensors this often
+const INTERVAL_SLEEP_FAILED_S = 3600; // sample sensors this often
 // const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
-const INTERVAL_SLEEP_MAX_S = 86400; // keep the maximum sleep at a day during development
 const INTERVAL_SLEEP_SHIP_STORE_S = 2419198;
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 const POLL_ITERATION_MAX = 100; // maximum number of iterations for sensor polling loop
@@ -41,8 +41,9 @@ attemptNumber <- 0;
 // Classes
 ///
 
-// Blue LED, active low
-class led {
+// Digital LED, active low
+class greenLed {
+  //  [Device]  ERROR: the index 'pin' does not exist:  at constructor
   static pin = hardware.pinD;
 
   function configure() {
@@ -61,9 +62,9 @@ class led {
   function blink(duration, count = 1) {
     while (count > 0) {
       count -= 1;
-      led.on();
+      greenLed.on();
       imp.sleep(duration);
-      led.off();
+      greenLed.off();
       if (count > 0) {
         // do not sleep on the last blink
         imp.sleep(duration);
@@ -72,6 +73,86 @@ class led {
   }
 }
 
+// Digital LED, active low
+class redLed {
+  //  [Device]  ERROR: the index 'pin' does not exist:  at constructor
+  static pin = hardware.pin2;
+
+  function configure() {
+    pin.configure(PWM_OUT, 1.0/400.0, 0.0);
+    pin.write(1.0);
+  }
+  
+  function on() {
+    pin.write(0.5);
+  }
+  
+  function off() {
+    pin.write(1.0);
+  }
+  
+  function blink(duration, count = 1) {
+    while (count > 0) {
+      count -= 1;
+      redLed.on();
+      imp.sleep(duration);
+      redLed.off();
+      if (count > 0) {
+        // do not sleep on the last blink
+        imp.sleep(duration);
+      }
+    }
+  }
+}
+
+class blueLed {
+  //  [Device]  ERROR: the index 'pin' does not exist:  at constructor
+  static pin = hardware.pin5;
+
+  function configure() {
+    pin.configure(PWM_OUT, 1.0/400.0, 0.0);
+    pin.write(1.0);
+  }
+  
+  function on() {
+    pin.write(0.0);
+  }
+  
+  function off() {
+    pin.write(1.0);
+  }
+  function pulse() {
+    local blueLedState = 1.0;
+    local blueLedChange = 0.05;
+    local count = 80;
+    while (count >= 0) {
+      count -= 1;
+      // write value to pin
+      pin.write(blueLedState);
+  
+      // Check if we're out of bounds
+      if (blueLedState >= 1.0 || blueLedState <= 0.0) {
+        // flip ledChange if we are
+        blueLedChange *= -1.0;
+      }
+      // change the value
+      blueLedState += blueLedChange;
+      imp.sleep(0.05);
+    }
+  }
+  function blink(duration, count = 1) {
+    while (count > 0) {
+      count -= 1;
+      blueLed.on();
+      imp.sleep(duration);
+      blueLed.off();
+      if (count > 0) {
+        // do not sleep on the last blink
+        imp.sleep(duration);
+      }
+    }
+  }
+}
 ////////////////////////
 // Power manager
 ////////////////////////
@@ -372,7 +453,7 @@ class power {
     //imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
     //Implementing Electric Imp's sleeping fix
     if (debug == true) log("Deep sleep (running) call because: "+reason);
-    imp.wakeup(5,function() {
+    imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) log("Starting deep sleep (running).");
         if (debug == true) log("Note that subsequent 'sensing' wakes won't log here.");
@@ -387,12 +468,27 @@ class power {
     //Old version before Electric Imp's sleeping fix
     //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
     //Implementing Electric Imp's sleeping fix
-    led.blink(1.0, 2);
+    blueLed.pulse();
     if (debug == true) log("Deep sleep (storage) call because: "+reason)
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) log("Starting deep sleep (ship and store).");
         server.sleepfor(INTERVAL_SLEEP_SHIP_STORE_S);
+      });
+    });
+  }
+
+  function enter_deep_sleep_failed(reason) {
+    // nv.running_state = false;
+    //Old version before Electric Imp's sleeping fix
+    //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
+    //Implementing Electric Imp's sleeping fix
+    redLed.blink(0.1,6);
+    if (debug == true) log("Deep sleep (failed) call because: "+reason)
+    imp.wakeup(0.5,function() {
+      imp.onidle(function() {
+        if (debug == true) log("Starting deep sleep (failed).");
+        server.sleepfor(INTERVAL_SLEEP_FAILED_S);
       });
     });
   }
@@ -428,37 +524,49 @@ function onConnectedTimeout(state) {
   else 
   {
     // Otherwise, do something else
+    // power.enter_deep_sleep_ship_store("Conservatively going into ship and store mode after failing to connect to server.");
     if (debug == true) log("Gave a chance to blink up, then tried to connect to server but failed.");
-    power.enter_deep_sleep_ship_store("Conservatively going into ship and store mode after failling to connect to server.");
+    power.enter_deep_sleep_failed("Sleeping after failing to connect to server after a button press.");
   }
 }
- 
+
 function connect(callback, timeout) {
   // Check if we're connected before calling server.connect()
   // to avoid race condition
   
   if (server.isconnected()) {
+    if (debug == true) log("Server connected");
     // We're already connected, so execute the callback
     callback(SERVER_CONNECTED);
   } 
   else {
+    if (debug == true) log("Need to connect first");
     // Otherwise, proceed as normal
     server.connect(callback, timeout);
   }
 }
 
+
 function interruptPin() {
   alreadyPressed = true;
   if (debug == true) log("Button pressed");
-  led.blink(0.1, 10);
-  // Enable blinkup for 30s
+  // led.blink(0.1, 10);
   imp.enableblinkup(true);
+  // blueLed.pulse();
+  // greenLed.blink(0.1,6);
+  // redLed.blink(0.1,6);
+  blinkAll(0.1,6);
+  // Enable blinkup for 30s
   imp.sleep(30);
+  // led.blink(0.1, 10);
+  // blueLed.pulse();
+  // greenLed.blink(0.1,6);
+  // redLed.blink(0.1,6);
+  blinkAll(0.1,6);
   imp.enableblinkup(false);
-  led.blink(0.1, 10);
   // imp.setwificonfiguration("doesntexist", "lalala");
   connect(onConnectedTimeout, TIMEOUT_SERVER_S);
-  imp.sleep(21);
+  // imp.sleep(21);
   alreadyPressed = false;
   // server.connect(send_data, TIMEOUT_SERVER_S);
 }
@@ -470,11 +578,12 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 
   local send_interval_s = 0;
   
-  local higher_frequency = 0;
-  local high_frequency = 0;
-  local medium_frequency = 0;
-  local low_frequency = 0;
-  local lower_frequency = 0;
+  local higher_frequency = 60*5;
+  local high_frequency = 60*20;
+  local medium_frequency = 60*45;
+  local low_frequency = 60*60;
+  local lower_frequency = 60*120;
+  local lowest_frequency = 60*480;
 
   if (debug == true) log("Debug mode.");
 
@@ -572,8 +681,8 @@ function send_data(status) {
   }
   
   else {
-    if (debug == true) log("Error: Server connection failed.");
-    power.enter_deep_sleep_ship_store("Conservatively going into ship and store mode after data send failure.");
+    if (debug == true) log("Tried to connect to server to send data but failed.");
+    power.enter_deep_sleep_failed("Sleeping after failing to connect to server for sending data.");
   }
   
   if (ship_and_store == true) {
@@ -586,21 +695,52 @@ function send_data(status) {
 }
 
 // Callback for server status changes.
-function send_loc(state) {
-  if (debug == true) log("Called send_loc function");
-  // ok: send data
-  // server.log(imp.scanwifinetworks());
-  agent.send("location", {
-    device = hardware.getdeviceid(),
-    loc = imp.scanwifinetworks(),
-    ssid = imp.getssid()
-  });
-  local success = server.flush(TIMEOUT_SERVER_S);
-  if (success) {
+function send_loc(status) {
+  if (status == SERVER_CONNECTED) {
+    if (debug == true) log("Called send_loc function");
+    // ok: send data
+    // server.log(imp.scanwifinetworks());
+    agent.send("location", {
+      device = hardware.getdeviceid(),
+      loc = imp.scanwifinetworks(),
+      ssid = imp.getssid()
+    });
+    local success = server.flush(TIMEOUT_SERVER_S);
+    if (success) {
+    }
+    
+    else {
+      if (debug == true) log("Error: Server connected, but no location success.");
+    }
+  }
+  else {
+    if (debug == true) log("Tried to connect to server to send location but failed.");
+    power.enter_deep_sleep_failed("Sleeping after failing to connect to server for sending location.");
   }
   
+  if (ship_and_store == true) {
+    power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
+  }
   else {
-    if (debug == true) log("Error: Server connected, but no location success.");
+    // Sleep until next sensor sampling
+    power.enter_deep_sleep_running("Finished sending JSON data.");
+  }
+}
+
+function blinkAll(duration, count = 1) {
+  while (count > 0) {
+    count -= 1;
+    blueLed.on();
+    redLed.on();
+    greenLed.on();
+    imp.sleep(duration);
+    blueLed.off();
+    redLed.off();
+    greenLed.off();
+    if (count > 0) {
+      // do not sleep on the last blink
+      imp.sleep(duration);
+    }
   }
 }
 
@@ -609,6 +749,31 @@ function main() {
   log("Device firmware version: " + imp.getsoftwareversion());
   // manual control of Wi-Fi state and other setup
   server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
+  
+  // Configure i2c bus
+  // This method configures the I²C clock speed and enables the port.
+  hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+
+  if (debug == true) log("Device booted.");
+
+  ///
+  // Event handlers
+  ///
+  agent.on("location_request", function(data) {
+    if (debug == true) log("Agent requested location information.");
+    connect(send_loc, TIMEOUT_SERVER_S);
+  });
+
+  // Register the disconnection handler
+  server.onunexpecteddisconnect(disconnectHandler);
+
+  // hardware.pin1.configure("DIGITAL_IN_WAKEUP", function(){server.log("imp woken") });
+  hardware.pin1.configure(DIGITAL_IN_WAKEUP, interruptPin);
+
+  ///
+  // End of event handlers
+  ///
+  
   // I could remove this, since, according to Hugo:
   // When you wake from an imp.deepsleep or server.sleep,
   // wifi is not up - there's no need to immediately disconnect.
@@ -619,8 +784,14 @@ function main() {
   // imp.onidle(function() {
   //  server.disconnect();
   // });
-  server.disconnect();
-  led.configure();
+  // server.disconnect();
+  if (ship_and_store == true) {
+    power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
+  }
+  greenLed.configure();
+  redLed.configure();
+  blueLed.configure();
+  // led.configure();
   soil.configure();
   solar.configure();
   source.configure();
@@ -674,19 +845,10 @@ function main() {
 
   //Send sensor data
   if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
-    if (server.isconnected()) {
-      if (debug == true) log("Server refresh needed and server connected");
-      // already connected (first boot?). send data.
-      send_data(SERVER_CONNECTED);
-      if (debug == true) log("Sending location information without prompting.");
-      send_loc(SERVER_CONNECTED);
-    }
-    
-    else {
-      if (debug == true) log("Server refresh needed but need to connect first");
-      // connect first then send data.
-      server.connect(send_data, TIMEOUT_SERVER_S);
-    }
+    if (debug == true) log("Server refresh needed");
+    connect(send_data, TIMEOUT_SERVER_S);
+    // if (debug == true) log("Sending location information without prompting.");
+    // connect(send_loc, TIMEOUT_SERVER_S);
   }
   
   else {
@@ -707,7 +869,8 @@ function main() {
 function disconnectHandler(reason) {
   if (reason != SERVER_CONNECTED)
   {
-    power.enter_deep_sleep_ship_store("Lost wifi connection.");
+    if (debug == true) log("Unexpectedly lost wifi connection.");
+    power.enter_deep_sleep_failed("Unexpectedly lost wifi connection.");
   }
 }
 
@@ -715,32 +878,5 @@ function disconnectHandler(reason) {
 // End of functions
 ///
 
-///
-// Event handlers
-///
-agent.on("location_request", function(data) {
-  if (debug == true) log("Agent requested location information.");
-  connect(send_loc, TIMEOUT_SERVER_S);
-});
-
-// Register the disconnection handler
-server.onunexpecteddisconnect(disconnectHandler);
-
-// hardware.pin1.configure("DIGITAL_IN_WAKEUP", function(){server.log("imp woken") });
-hardware.pin1.configure(DIGITAL_IN_WAKEUP, interruptPin);
-
-///
-// End of event handlers
-///
-
-
-if (debug == true) log("Device booted.");
-// Configure i2c bus
-// This method configures the I²C clock speed and enables the port.
-hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-
-if (ship_and_store == true) {
-  power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-}
  
 main();
