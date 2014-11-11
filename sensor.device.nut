@@ -552,21 +552,21 @@ function interruptPin() {
   if (debug == true) log("Button pressed");
   // led.blink(0.1, 10);
   imp.enableblinkup(true);
-  blueLed.pulse();
-  greenLed.blink(0.1,6);
-  redLed.blink(0.1,6);
+  // blueLed.pulse();
+  // greenLed.blink(0.1,6);
+  // redLed.blink(0.1,6);
   blinkAll(0.1,6);
   // Enable blinkup for 30s
   imp.sleep(30);
   // led.blink(0.1, 10);
-  blueLed.pulse();
-  greenLed.blink(0.1,6);
-  redLed.blink(0.1,6);
+  // blueLed.pulse();
+  // greenLed.blink(0.1,6);
+  // redLed.blink(0.1,6);
   blinkAll(0.1,6);
   imp.enableblinkup(false);
   // imp.setwificonfiguration("doesntexist", "lalala");
   connect(onConnectedTimeout, TIMEOUT_SERVER_S);
-  imp.sleep(21);
+  // imp.sleep(21);
   alreadyPressed = false;
   // server.connect(send_data, TIMEOUT_SERVER_S);
 }
@@ -583,7 +583,7 @@ function is_server_refresh_needed(data_last_sent, data_current) {
   local medium_frequency = 60*45;
   local low_frequency = 60*60;
   local lower_frequency = 60*120;
-  local lowest_frequency = 60*720;
+  local lowest_frequency = 60*480;
 
   if (debug == true) log("Debug mode.");
 
@@ -753,6 +753,26 @@ function main() {
   // Configure i2c bus
   // This method configures the I²C clock speed and enables the port.
   hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+
+  if (debug == true) log("Device booted.");
+
+  ///
+  // Event handlers
+  ///
+  agent.on("location_request", function(data) {
+    if (debug == true) log("Agent requested location information.");
+    connect(send_loc, TIMEOUT_SERVER_S);
+  });
+
+  // Register the disconnection handler
+  server.onunexpecteddisconnect(disconnectHandler);
+
+  // hardware.pin1.configure("DIGITAL_IN_WAKEUP", function(){server.log("imp woken") });
+  hardware.pin1.configure(DIGITAL_IN_WAKEUP, interruptPin);
+
+  ///
+  // End of event handlers
+  ///
   
   // I could remove this, since, according to Hugo:
   // When you wake from an imp.deepsleep or server.sleep,
@@ -856,26 +876,6 @@ function disconnectHandler(reason) {
 
 ///
 // End of functions
-///
-
-if (debug == true) log("Device booted.");
-
-///
-// Event handlers
-///
-agent.on("location_request", function(data) {
-  if (debug == true) log("Agent requested location information.");
-  connect(send_loc, TIMEOUT_SERVER_S);
-});
-
-// Register the disconnection handler
-server.onunexpecteddisconnect(disconnectHandler);
-
-// hardware.pin1.configure("DIGITAL_IN_WAKEUP", function(){server.log("imp woken") });
-hardware.pin1.configure(DIGITAL_IN_WAKEUP, interruptPin);
-
-///
-// End of event handlers
 ///
 
  
