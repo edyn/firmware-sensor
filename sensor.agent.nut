@@ -24,10 +24,28 @@ function send_data_json(data) {
   }
 }
 
+// Send data to the readings API
+function send_data_json_node(data) {
+  local readings_url = "http://edynapireadings.elasticbeanstalk.com/readings/";
+  local req = http.post(soil_url, {"Content-Type":"application/json", "User-Agent":"Imp"}, http.jsonencode(data));
+  local res = req.sendsync();
+  if (res.statuscode != 200) {
+    // TODO: retry?
+    // server.log("error sending message: " + res.body);
+    server.log("status code: " + res.statuscode);
+    // server.log("error sending message: " + res.body.slice(0,40));
+    server.log("Error sending message to database.");
+  } else {
+    server.log("Data sent successfully to database.");
+  }
+}
+
 // Invoked when the device calls agent.send("data", ...)
 device.on("data", function(data) {
   // data[sd] <- [1, 2];
   local dataToSend = data;
+  local dataToSendNode <- {};
+  dataToSendNode.data <- [];
   // temp code to work with back end expectation of sd key
   // dataToSend.data[0].sd <- [];
   
@@ -45,16 +63,152 @@ device.on("data", function(data) {
     dataToSend.lng <- -122.03476;
   }
   
+  local newPoint <- {};
   // Hacks
   foreach (point in dataToSend.data) {
     point.sd <- [1];
   }
+  foreach (point in data.data) {
+    newPoint.uuid <- "30000c2a69000001";
+    newPoint.timestamp <- point.ts;
+    newPoint.battery <- point.b;
+    newPoint.humidity <- point.h;
+    newPoint.temperature <- point.t;
+    newPoint.electrical_conductivity <- point.m;
+    newPoint.light <- point.l;
+
+    // newPoint.disable_input_uvcl <- false;
+    newPoint.disable_input_uvcl <- (point.REG0 & 0x80) != 0x00;
+    
+    // newPoint.lockout_id_pin <- false;
+    newPoint.lockout_id_pin <- (point.REG0 & 0x20) != 0x00;
+
+    local convertCurrentLim = function(input) {
+      if (input == 0x00) return "100mA Max (USB Low Power)"
+      if (input == 0x01) return "500mA Max (USB High Power)"
+      if (input == 0x02) return "600mA Max"
+      if (input == 0x03) return "700mA Max"
+      if (input == 0x04) return "800mA Max"
+      if (input == 0x05) return "900mA Max (USB 3.0)"
+      if (input == 0x06) return "1000mA Typical"
+      if (input == 0x07) return "1250mA Typical"
+      if (input == 0x08) return "1500mA Typical"
+      if (input == 0x09) return "1750mA Typical"
+      if (input == 0x0A) return "2000mA Typical"
+      if (input == 0x0B) return "2250mA Typical"
+      if (input == 0x0C) return "2500mA Typical"
+      if (input == 0x0D) return "2750mA Typical"
+      if (input == 0x0E) return "3000mA Typical"
+      if (input == 0x0F) return "2.5mA Max (USB Suspend)"
+      if (input == 0x1F) return "SELECT CLPROG1"
+    }
+    
+    // NEED TO THINK ABOUT MORE
+    // newPoint.usb_i_lim <- 0;
+    local usb_i_lim <- (point.REG0 & 0x1f);
+    newPoint.usb_i_lim <- convertCurrentLim(usb_i_lim);
+
+    // NEED TO THINK ABOUT MORE
+    // newPoint.wall_i_lim <- 0;
+    local wall_i_lim <- (point.REG1 & 0x1f);
+    newPoint.wall_i_lim <- convertCurrentLim(wall_i_lim);
+    
+    // newPoint.priority <- false;
+    newPoint.priority <- (point.REG1 & 0x80) != 0x00;
+
+    // In minutes, different than data sheet
+    // newPoint.timer <- 60;
+    local timer <- (point.REG1 & 0x60) >> 5;
+    if (timer == 0x0) newPoint.timer <- 60;
+    if (timer == 0x1) newPoint.timer <- 240;
+    if (timer == 0x2) newPoint.timer <- 15;
+    if (timer == 0x3) newPoint.timer <- 30;
+    
+    // newPoint.i_charge <- 100.0;
+    local i_charge <- ((point.REG2 & 0xf0) >> 4).toFloat();
+    newPoint.i_charge <- ((i_charge-1)*6.25)+12.5
+    if (newPoint.i_charge < 12.49) newPoint.i_charge = 0.0;
+    
+    // newPoint.v_float <- 3.45;
+    local v_float <- (point.REG2 & 0xc) >> 2;
+    if (v_float == 0x0) newPoint.v_float <- 3.45;
+    if (v_float == 0x1) newPoint.v_float <- 3.55;
+    if (v_float == 0x2) newPoint.v_float <- 3.60;
+    if (v_float == 0x3) newPoint.v_float <- 3.80;
+    
+    // newPoint.c_x_set <- 10;
+    local c_x_set <- (point.REG2 & 0x3);
+    if (c_x_set == 0x0) newPoint.c_x_set <- 10;
+    if (c_x_set == 0x1) newPoint.c_x_set <- 20;
+    if (c_x_set == 0x2) newPoint.c_x_set <- 2;
+    if (c_x_set == 0x3) newPoint.c_x_set <- 5;
+    
+    // newPoint.charger_status <- "Charger Off";
+    local charger_status <- (point.REG3 & 0xe0) >> 5;
+    if (charger_status == 0x0) newPoint.charger_status <- "Charger Off";
+    if (charger_status == 0x1) newPoint.charger_status <- "Low Battery Voltage";
+    if (charger_status == 0x2) newPoint.charger_status <- "Constant Current";
+    if (charger_status == 0x3) newPoint.charger_status <- "Constant Voltage, VPROG>VC/X";
+    if (charger_status == 0x4) newPoint.charger_status <- "Constant Voltage, VPROG<VC/X";
+    if (charger_status == 0x6) newPoint.charger_status <- "NTC TOO COLD, Charging Paused";
+    if (charger_status == 0x7) newPoint.charger_status <- "NTC HOT FAULT, Charging Paused";
+    
+    // newPoint.id_pin_detect <- true;
+    newPoint.id_pin_detect <- (point.REG3 & 0x10) != 0x00;
+    
+    // newPoint.otg_enabled <- false;
+    newPoint.otg_enabled <- (point.REG3 & 0x8) != 0x00;
+    
+    // newPoint.ntc_stat <- "NTC Normal";
+    local ntc_stat <- (point.REG3 & 0x6) >> 1;
+    if (ntc_stat == 0x0) newPoint.ntc_stat <- "NTC Normal";
+    if (ntc_stat == 0x1) newPoint.ntc_stat <- "NTC_TOO_COLD";
+    if (ntc_stat == 0x3) newPoint.ntc_stat <- "NTC_HOT_FAULT";
+    
+    // newPoint.low_bat <- true;
+    newPoint.low_bat <- (point.REG3 & 0x1) != 0x00;
+    
+    // newPoint.ext_pwr_good <- true;
+    newPoint.ext_pwr_good <- (point.REG4 & 0x80) != 0x00;
+    
+    // newPoint.usb_sns_good <- true;
+    newPoint.usb_sns_good <- (point.REG4 & 0x40) != 0x00;
+    
+    // newPoint.wall_sns_good <- true;
+    newPoint.wall_sns_good <- (point.REG4 & 0x20) != 0x00;
+    
+    // newPoint.at_input_ilim <- false;
+    newPoint.at_input_ilim <- (point.REG4 & 0x10) != 0x00;
+    
+    // newPoint.input_uvcl_active <- false;
+    newPoint.input_uvcl_active <- (point.REG4 & 0x8) != 0x00;
+    
+    // newPoint.ovp_active <- false;
+    newPoint.ovp_active <- (point.REG4 & 0x4) != 0x00;
+    
+    // newPoint.otg_fault <- false;
+    newPoint.otg_fault <- (point.REG4 & 0x2) != 0x00;
+    
+    // newPoint.bad_cell <- false;
+    newPoint.bad_cell <- (point.REG4 & 0x1) != 0x00;
+    
+    // SWITCHED THIS TO INTEGER!
+    // newPoint.ntc_val <- 20.0;
+    newPoint.ntc_val <- ((point.REG5 & 0xfe) >> 1).toInteger();
+    
+    // newPoint.ntc_warning <- false;
+    newPoint.ntc_warning <- (point.REG5 & 0x1) != 0x00;
+
+    dataToSendNode.data.append(newPoint);
+  }
   
   //data_buffer.extend(data.data); // for debug
   server.log(http.jsonencode(dataToSend));
+  server.log(http.jsonencode(dataToSendNode));
   
   // Commented out while hacking on the new power controller
   send_data_json(dataToSend); // JSON API
+  send_data_json_node(dataToSendNode);
 });
 
 // Invoked when the device calls agent.send("location", ...)
