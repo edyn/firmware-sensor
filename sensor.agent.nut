@@ -81,6 +81,7 @@ device.on("data", function(data) {
     newPoint.disable_input_uvcl <- (point.REG0 & 0x80) != 0x00;
     
     // newPoint.lockout_id_pin <- false;
+    // ALWAYS DISABLED ACCORDING TO MILOS
     newPoint.lockout_id_pin <- (point.REG0 & 0x20) != 0x00;
 
     local convertCurrentLim = function(input) {
@@ -105,6 +106,7 @@ device.on("data", function(data) {
     
     // NEED TO THINK ABOUT MORE
     // newPoint.usb_i_lim <- 0;
+    // ALWAYS DISABLED ACCORDING TO MILOS
     local usb_i_lim <- (point.REG0 & 0x1f);
     newPoint.usb_i_lim <- convertCurrentLim(usb_i_lim);
 
@@ -154,9 +156,11 @@ device.on("data", function(data) {
     if (charger_status == 0x7) newPoint.charger_status <- "NTC HOT FAULT, Charging Paused";
     
     // newPoint.id_pin_detect <- true;
+    // ALWAYS DISABLED ACCORDING TO MILOS
     newPoint.id_pin_detect <- (point.REG3 & 0x10) != 0x00;
     
     // newPoint.otg_enabled <- false;
+    // ALWAYS DISABLED ACCORDING TO MILOS
     newPoint.otg_enabled <- (point.REG3 & 0x8) != 0x00;
     
     // newPoint.ntc_stat <- "NTC Normal";
@@ -172,6 +176,7 @@ device.on("data", function(data) {
     newPoint.ext_pwr_good <- (point.REG4 & 0x80) != 0x00;
     
     // newPoint.usb_sns_good <- true;
+    // ALWAYS DISABLED ACCORDING TO MILOS
     newPoint.usb_sns_good <- (point.REG4 & 0x40) != 0x00;
     
     // newPoint.wall_sns_good <- true;
@@ -187,6 +192,7 @@ device.on("data", function(data) {
     newPoint.ovp_active <- (point.REG4 & 0x4) != 0x00;
     
     // newPoint.otg_fault <- false;
+    // ALWAYS DISABLED ACCORDING TO MILOS
     newPoint.otg_fault <- (point.REG4 & 0x2) != 0x00;
     
     // newPoint.bad_cell <- false;
