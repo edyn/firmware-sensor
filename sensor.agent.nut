@@ -79,10 +79,6 @@ device.on("data", function(data) {
 
     // newPoint.disable_input_uvcl <- false;
     newPoint.disable_input_uvcl <- (point.REG0 & 0x80) != 0x00;
-    
-    // newPoint.lockout_id_pin <- false;
-    // ALWAYS DISABLED ACCORDING TO MILOS
-    newPoint.lockout_id_pin <- (point.REG0 & 0x20) != 0x00;
 
     local convertCurrentLim = function(input) {
       if (input == 0x00) return "100mA Max (USB Low Power)"
@@ -103,12 +99,6 @@ device.on("data", function(data) {
       if (input == 0x0F) return "2.5mA Max (USB Suspend)"
       if (input == 0x1F) return "SELECT CLPROG1"
     }
-    
-    // NEED TO THINK ABOUT MORE
-    // newPoint.usb_i_lim <- 0;
-    // ALWAYS DISABLED ACCORDING TO MILOS
-    local usb_i_lim <- (point.REG0 & 0x1f);
-    newPoint.usb_i_lim <- convertCurrentLim(usb_i_lim);
 
     // NEED TO THINK ABOUT MORE
     // newPoint.wall_i_lim <- 0;
@@ -154,15 +144,7 @@ device.on("data", function(data) {
     if (charger_status == 0x4) newPoint.charger_status <- "Constant Voltage, VPROG<VC/X";
     if (charger_status == 0x6) newPoint.charger_status <- "NTC TOO COLD, Charging Paused";
     if (charger_status == 0x7) newPoint.charger_status <- "NTC HOT FAULT, Charging Paused";
-    
-    // newPoint.id_pin_detect <- true;
-    // ALWAYS DISABLED ACCORDING TO MILOS
-    newPoint.id_pin_detect <- (point.REG3 & 0x10) != 0x00;
-    
-    // newPoint.otg_enabled <- false;
-    // ALWAYS DISABLED ACCORDING TO MILOS
-    newPoint.otg_enabled <- (point.REG3 & 0x8) != 0x00;
-    
+
     // newPoint.ntc_stat <- "NTC Normal";
     local ntc_stat <- (point.REG3 & 0x6) >> 1;
     if (ntc_stat == 0x0) newPoint.ntc_stat <- "NTC Normal";
@@ -175,10 +157,6 @@ device.on("data", function(data) {
     // newPoint.ext_pwr_good <- true;
     newPoint.ext_pwr_good <- (point.REG4 & 0x80) != 0x00;
     
-    // newPoint.usb_sns_good <- true;
-    // ALWAYS DISABLED ACCORDING TO MILOS
-    newPoint.usb_sns_good <- (point.REG4 & 0x40) != 0x00;
-    
     // newPoint.wall_sns_good <- true;
     newPoint.wall_sns_good <- (point.REG4 & 0x20) != 0x00;
     
@@ -190,10 +168,6 @@ device.on("data", function(data) {
     
     // newPoint.ovp_active <- false;
     newPoint.ovp_active <- (point.REG4 & 0x4) != 0x00;
-    
-    // newPoint.otg_fault <- false;
-    // ALWAYS DISABLED ACCORDING TO MILOS
-    newPoint.otg_fault <- (point.REG4 & 0x2) != 0x00;
     
     // newPoint.bad_cell <- false;
     newPoint.bad_cell <- (point.REG4 & 0x1) != 0x00;
