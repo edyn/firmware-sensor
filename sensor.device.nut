@@ -160,9 +160,9 @@ class PowerManager {
   _i2c  = null;
   _addr = null;
   static SA_REG_2 = "\x02";
-  static SA_CHARGER_STATUS = "\x03";
-  static SA_EXTERNAL_POWER = "\x04";
-  static SA_NTC_WARNING = "\x05";
+  static SA_REG_3 = "\x03";
+  static SA_REG_4 = "\x04";
+  static SA_REG_5 = "\x05";
   static SA_REG_0 = "\x00";
   static SA_REG_1 = "\x01";
   
@@ -172,7 +172,7 @@ class PowerManager {
   reg_1 = 0;
   external_power = 0;
   ntc_warning = 0;
-  // static SA_CHARGER_STATUS = impified_i2c_address.toString();
+  // static SA_REG_3 = impified_i2c_address.toString();
   
   constructor(i2c) {
     _i2c  = i2c;
@@ -190,6 +190,17 @@ class PowerManager {
     _addr = 0x12;
   }
 
+  function changeBatteryMax() {
+    // REG 2 has the V float setting
+    // write 1111 (battery charger current at 100% full-scale DEFAULT) + 
+    // 11 (vfloat of 3.8V) +
+    // 00 (full capacity charge indication threshold of 10% full-scale current DEFAULT) = 
+    // 11111100
+
+    local result = _i2c.write(_addr, SA_REG_2 + "\xfc");
+    if (debug == true) server.log(result);
+  }
+
   // EVT wifi sensor can measure Solar panel voltage (PIN7)
   // and output voltage (PINB)
   // Once PIN7>PINB voltage & charging is enabled electricimp
@@ -203,10 +214,10 @@ class PowerManager {
     
     local iteration = 0;
     local word = 0x0;
-    _i2c.write(_addr, SA_CHARGER_STATUS);
+    _i2c.write(_addr, SA_REG_3);
     do {
       // imp.sleep(0.1);
-      word = _i2c.read(_addr, SA_CHARGER_STATUS, 1);
+      word = _i2c.read(_addr, SA_REG_3, 1);
       // server.log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
@@ -279,10 +290,10 @@ class PowerManager {
     // external power
     iteration = 0;
     word = 0x0;
-    _i2c.write(_addr, SA_EXTERNAL_POWER);
+    _i2c.write(_addr, SA_REG_4);
     do {
       // imp.sleep(0.1);
-      word = _i2c.read(_addr, SA_EXTERNAL_POWER, 1);
+      word = _i2c.read(_addr, SA_REG_4, 1);
       // server.log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
@@ -297,10 +308,10 @@ class PowerManager {
     // ntc warning
     iteration = 0;
     word = 0x0;
-    _i2c.write(_addr, SA_NTC_WARNING);
+    _i2c.write(_addr, SA_REG_5);
     do {
       // imp.sleep(0.1);
-      word = _i2c.read(_addr, SA_NTC_WARNING, 1);
+      word = _i2c.read(_addr, SA_REG_5, 1);
       // server.log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
@@ -315,8 +326,8 @@ class PowerManager {
     // server.log(output);
     // _i2c.readerror();
     // Wait for the sensor to finish the reading
-    // while ((_i2c.read(_addr, SA_CHARGER_STATUS + "", 1)[0] & 0x80) == 0x80) {
-    //  log(_i2c.read(_addr, SA_CHARGER_STATUS + "", 1));
+    // while ((_i2c.read(_addr, SA_REG_3 + "", 1)[0] & 0x80) == 0x80) {
+    //  log(_i2c.read(_addr, SA_REG_3 + "", 1));
     // }
     // timeout
   }
@@ -810,6 +821,7 @@ function main() {
   
   // Create PowerManager object
   powerManager <- PowerManager(hardware.i2c89);
+  powerManager.changeBatteryMax();
   powerManager.sample();
 
   // Create HumidityTemperatureSensor object
