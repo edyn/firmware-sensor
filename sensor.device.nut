@@ -768,6 +768,7 @@ function blinkAll(duration, count = 1) {
 function main() {
   if (debug == true) log("Device's unique id: " + hardware.getdeviceid());
   log("Device firmware version: " + imp.getsoftwareversion());
+  log("Memory free: " + imp.getmemoryfree());
   // manual control of Wi-Fi state and other setup
   server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
   
