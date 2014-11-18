@@ -166,12 +166,12 @@ class PowerManager {
   static SA_REG_0 = "\x00";
   static SA_REG_1 = "\x01";
   
-  charger_status = 0;
+  reg_3 = 0;
   reg_2 = 0;
   reg_0 = 0;
   reg_1 = 0;
-  external_power = 0;
-  ntc_warning = 0;
+  reg_4 = 0;
+  reg_5 = 0;
   // static SA_REG_3 = impified_i2c_address.toString();
   
   constructor(i2c) {
@@ -198,7 +198,7 @@ class PowerManager {
     // 11111100
 
     local result = _i2c.write(_addr, SA_REG_2 + "\xfc");
-    if (debug == true) server.log(result);
+    if (debug == true) log(result);
   }
 
   // EVT wifi sensor can measure Solar panel voltage (PIN7)
@@ -218,7 +218,7 @@ class PowerManager {
     do {
       // imp.sleep(0.1);
       word = _i2c.read(_addr, SA_REG_3, 1);
-      // server.log(word);
+      // log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
         if (debug == true) log("Polled 100 times and gave up.");
@@ -226,20 +226,20 @@ class PowerManager {
       }
     } while (word == null);
     // log("Charger status, etc.:");
-    // charger_status = (word[0] & 0xe0) >> 5;
-    charger_status = (word[0] & 0xff);
-    // charger_status = word[0];
-    if (debug == true) server.log(word[0]);
+    // reg_3 = (word[0] & 0xe0) >> 5;
+    reg_3 = (word[0] & 0xff);
+    // reg_3 = word[0];
+    if (debug == true) log("REG 3" + word[0]);
     
     
     iteration = 0;
     word = 0x0;
-    // _i2c.write(_addr, SA_REG_2 + "\xFC");
-    _i2c.write(_addr, SA_REG_2 + "\xF0");
+    _i2c.write(_addr, SA_REG_2 + "\xFC");
+    // _i2c.write(_addr, SA_REG_2 + "\xF0");
     do {
       // imp.sleep(0.1);
       word = _i2c.read(_addr, SA_REG_2, 1);
-      // server.log(word);
+      // log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
         if (debug == true) log("Polled 100 times and gave up.");
@@ -247,7 +247,7 @@ class PowerManager {
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
-    if (debug == true) server.log(word[0]);
+    if (debug == true) log("REG 2" + word[0]);
     // charge_current = (word[0] & 0xf0) >> 4;
     reg_2 = (word[0] & 0xff);
     
@@ -257,7 +257,7 @@ class PowerManager {
     do {
       // imp.sleep(0.1);
       word = _i2c.read(_addr, SA_REG_0, 1);
-      // server.log(word);
+      // log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
         if (debug == true) log("Polled 100 times and gave up.");
@@ -265,17 +265,22 @@ class PowerManager {
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
-    if (debug == true) server.log(word[0]);
+    if (debug == true) log("REG 0" + word[0]);
     // charge_current = (word[0] & 0xf0) >> 4;
     reg_0 = (word[0] & 0xff);
     
     iteration = 0;
     word = 0x0;
-    _i2c.write(_addr, SA_REG_1);
+    // _i2c.write(_addr, SA_REG_1);
+    // 0 Wall Input Prioritized +
+    // 00 Battery Charger Safety Timer +
+    // 00001 500 mA Max WALLILIM =
+    // 00000001
+    _i2c.write(_addr, SA_REG_1 + "\x01");
     do {
       // imp.sleep(0.1);
       word = _i2c.read(_addr, SA_REG_1, 1);
-      // server.log(word);
+      // log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
         if (debug == true) log("Polled 100 times and gave up.");
@@ -283,7 +288,7 @@ class PowerManager {
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
-    if (debug == true) server.log(word[0]);
+    if (debug == true) log("REG 1" + word[0]);
     // charge_current = (word[0] & 0xf0) >> 4;
     reg_1 = (word[0] & 0xff);
 
@@ -294,7 +299,7 @@ class PowerManager {
     do {
       // imp.sleep(0.1);
       word = _i2c.read(_addr, SA_REG_4, 1);
-      // server.log(word);
+      // log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
         if (debug == true) log("Polled 100 times and gave up.");
@@ -302,8 +307,8 @@ class PowerManager {
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
-    if (debug == true) server.log(word[0]);
-    external_power = (word[0] & 0xff);
+    if (debug == true) log("REG 4" + word[0]);
+    reg_4 = (word[0] & 0xff);
     
     // ntc warning
     iteration = 0;
@@ -312,7 +317,7 @@ class PowerManager {
     do {
       // imp.sleep(0.1);
       word = _i2c.read(_addr, SA_REG_5, 1);
-      // server.log(word);
+      // log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
         if (debug == true) log("Polled 100 times and gave up.");
@@ -320,10 +325,10 @@ class PowerManager {
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
-    if (debug == true) server.log(word[0]);
-    ntc_warning = (word[0] & 0xff);
+    if (debug == true) log("REG 5" + word[0]);
+    reg_5 = (word[0] & 0xff);
 
-    // server.log(output);
+    // log(output);
     // _i2c.readerror();
     // Wait for the sensor to finish the reading
     // while ((_i2c.read(_addr, SA_REG_3 + "", 1)[0] & 0x80) == 0x80) {
@@ -356,8 +361,8 @@ class HumidityTemperatureSensor {
     local data = [0x0, 0x0];
     
     // Measurement Request - wakes the sensor and initiates a measurement
-    if (debug == true) server.log("Sampling temperature");
-    if (debug == true) server.log(i2c.write(ADDRESS, SUB_ADDR_TEMP));
+    if (debug == true) log("Sampling temperature");
+    if (debug == true) log(i2c.write(ADDRESS, SUB_ADDR_TEMP));
     // if (i2c.write(ADDRESS, SUB_ADDR_TEMP) == null)
     //  return -1;
 
@@ -365,7 +370,7 @@ class HumidityTemperatureSensor {
     do {
       imp.sleep(0.1);
       data = i2c.read(ADDRESS, SUB_ADDR_TEMP, 2);
-      if (debug == true) server.log("Read attempt");
+      if (debug == true) log("Read attempt");
       
       // timeout
       iteration += 1;
@@ -379,10 +384,10 @@ class HumidityTemperatureSensor {
     // is_data_stale = data[0] & STATUS_STALE_BIT;
     // Mask for setting two least significant bits of least significant byte to zero
     // 0b11111100 = 0xfc
-    //server.log(data[0]);
-    //server.log(data[0] << 8);
-    //server.log(data[1]);
-    //server.log(data[1] & 0xfc);
+    //log(data[0]);
+    //log(data[0] << 8);
+    //log(data[1]);
+    //log(data[1] & 0xfc);
     temperature_raw = (data[0] << 8) + (data[1] & 0xfc);
     temperature = temperature_raw * 175.72 / 65536.0 - 46.85;
     
@@ -390,13 +395,13 @@ class HumidityTemperatureSensor {
     iteration = 0;
     data = [0x0, 0x0];
     // Measurement Request - wakes the sensor and initiates a measurement
-    if (debug == true) server.log("Sampling humidity");
-    if (debug == true) server.log(i2c.write(ADDRESS, SUB_ADDR_HUMID));
+    if (debug == true) log("Sampling humidity");
+    if (debug == true) log(i2c.write(ADDRESS, SUB_ADDR_HUMID));
     // Data Fetch - poll until the 'stale data' status bit is 0
     do {
       imp.sleep(0.1);
       data = i2c.read(ADDRESS, SUB_ADDR_HUMID, 2);
-      if (debug == true) server.log("Read attempt");
+      if (debug == true) log("Read attempt");
       
       // timeout
       iteration += 1;
@@ -516,7 +521,7 @@ function log(s) {
   local now = time() + TZ_OFFSET;
   s = format("%02d:%02d:%02d - %s",date(now).hour, date(now).min, date(now).sec, s);
   if (server.isconnected()) {
-    foreach(a in offline) server.log(a);
+    foreach(a in offline) log(a);
     offline.clear();
     server.log("ONLINE: "+s);
   } else {
@@ -671,7 +676,7 @@ function send_data(status) {
   
   if (status == SERVER_CONNECTED) {
     // ok: send data
-    // server.log(imp.scanwifinetworks());
+    // log(imp.scanwifinetworks());
     if (debug == true) log("Connected to server.");
     agent.send("data", {
       device = hardware.getdeviceid(),
@@ -710,7 +715,7 @@ function send_loc(status) {
   if (status == SERVER_CONNECTED) {
     if (debug == true) log("Called send_loc function");
     // ok: send data
-    // server.log(imp.scanwifinetworks());
+    // log(imp.scanwifinetworks());
     agent.send("location", {
       device = hardware.getdeviceid(),
       loc = imp.scanwifinetworks(),
@@ -778,7 +783,7 @@ function main() {
   // Register the disconnection handler
   server.onunexpecteddisconnect(disconnectHandler);
 
-  // hardware.pin1.configure("DIGITAL_IN_WAKEUP", function(){server.log("imp woken") });
+  // hardware.pin1.configure("DIGITAL_IN_WAKEUP", function(){log("imp woken") });
   hardware.pin1.configure(DIGITAL_IN_WAKEUP, interruptPin);
 
   ///
@@ -847,12 +852,12 @@ function main() {
     l = solar.voltage(),
     m = soil.voltage(),
     b = source.voltage(),
-    REG3 = powerManager.charger_status,
+    REG3 = powerManager.reg_3,
     REG2 = powerManager.reg_2,
     REG0 = powerManager.reg_0,
     REG1 = powerManager.reg_1,
-    REG5 = powerManager.ntc_warning,
-    REG4 = powerManager.external_power
+    REG5 = powerManager.reg_5,
+    REG4 = powerManager.reg_4
   });
 
   //Send sensor data
