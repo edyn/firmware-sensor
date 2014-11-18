@@ -197,8 +197,8 @@ class PowerManager {
     // 00 (full capacity charge indication threshold of 10% full-scale current DEFAULT) = 
     // 11111100
 
-    local result = _i2c.write(_addr, SA_REG_2 + "\xfc");
-    if (debug == true) log(result);
+    local result = _i2c.write(_addr, SA_REG_2 + "\xFC");
+    if (debug == true) log(result.tostring());
   }
 
   // EVT wifi sensor can measure Solar panel voltage (PIN7)
@@ -229,11 +229,16 @@ class PowerManager {
     // reg_3 = (word[0] & 0xe0) >> 5;
     reg_3 = (word[0] & 0xff);
     // reg_3 = word[0];
-    if (debug == true) log("REG 3" + word[0]);
+    if (debug == true) log("REG 3 = " + reg_3);
     
     
     iteration = 0;
     word = 0x0;
+    // REG 2 has the V float setting
+    // write 1111 (battery charger current at 100% full-scale DEFAULT) + 
+    // 11 (vfloat of 3.8V) +
+    // 00 (full capacity charge indication threshold of 10% full-scale current DEFAULT) = 
+    // 11111100
     _i2c.write(_addr, SA_REG_2 + "\xFC");
     // _i2c.write(_addr, SA_REG_2 + "\xF0");
     do {
@@ -247,9 +252,9 @@ class PowerManager {
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
-    if (debug == true) log("REG 2" + word[0]);
     // charge_current = (word[0] & 0xf0) >> 4;
     reg_2 = (word[0] & 0xff);
+    if (debug == true) log("REG 2 = " + reg_2);
     
     iteration = 0;
     word = 0x0;
@@ -265,9 +270,9 @@ class PowerManager {
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
-    if (debug == true) log("REG 0" + word[0]);
     // charge_current = (word[0] & 0xf0) >> 4;
     reg_0 = (word[0] & 0xff);
+    if (debug == true) log("REG 0 = " + reg_0);
     
     iteration = 0;
     word = 0x0;
@@ -288,9 +293,9 @@ class PowerManager {
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
-    if (debug == true) log("REG 1" + word[0]);
     // charge_current = (word[0] & 0xf0) >> 4;
     reg_1 = (word[0] & 0xff);
+    if (debug == true) log("REG 1 = " + reg_1);
 
     // external power
     iteration = 0;
@@ -307,8 +312,8 @@ class PowerManager {
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
-    if (debug == true) log("REG 4" + word[0]);
     reg_4 = (word[0] & 0xff);
+    if (debug == true) log("REG 4 = " + reg_4);
     
     // ntc warning
     iteration = 0;
@@ -325,8 +330,8 @@ class PowerManager {
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
-    if (debug == true) log("REG 5" + word[0]);
     reg_5 = (word[0] & 0xff);
+    if (debug == true) log("REG 5 = " + reg_5);
 
     // log(output);
     // _i2c.readerror();
@@ -362,7 +367,7 @@ class HumidityTemperatureSensor {
     
     // Measurement Request - wakes the sensor and initiates a measurement
     if (debug == true) log("Sampling temperature");
-    if (debug == true) log(i2c.write(ADDRESS, SUB_ADDR_TEMP));
+    if (debug == true) log(i2c.write(ADDRESS, SUB_ADDR_TEMP).tostring());
     // if (i2c.write(ADDRESS, SUB_ADDR_TEMP) == null)
     //  return -1;
 
@@ -396,7 +401,7 @@ class HumidityTemperatureSensor {
     data = [0x0, 0x0];
     // Measurement Request - wakes the sensor and initiates a measurement
     if (debug == true) log("Sampling humidity");
-    if (debug == true) log(i2c.write(ADDRESS, SUB_ADDR_HUMID));
+    if (debug == true) log(i2c.write(ADDRESS, SUB_ADDR_HUMID).tostring());
     // Data Fetch - poll until the 'stale data' status bit is 0
     do {
       imp.sleep(0.1);
