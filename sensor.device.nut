@@ -27,6 +27,7 @@ const POLL_ITERATION_MAX = 100; // maximum number of iterations for sensor polli
 const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
 const TZ_OFFSET = -25200; // 7 hours for PDT
 debug <- true; // How much logging do we want?
+trace <- false; // How much logging do we want?
 coding <- true; // Do you need live data right now?
 demo <- false; // Should we send data really fast?
 ship_and_store <- false; // Directly go to ship and store?
@@ -198,7 +199,7 @@ class PowerManager {
     // 11111100
 
     local result = _i2c.write(_addr, SA_REG_2 + "\xFC");
-    if (debug == true) log(result.tostring());
+    if (trace == true) log(result.tostring());
   }
 
   // EVT wifi sensor can measure Solar panel voltage (PIN7)
@@ -221,7 +222,7 @@ class PowerManager {
       // log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
-        if (debug == true) log("Polled 100 times and gave up.");
+        if (trace == true) log("Polled 100 times and gave up.");
         break;
       }
     } while (word == null);
@@ -229,7 +230,7 @@ class PowerManager {
     // reg_3 = (word[0] & 0xe0) >> 5;
     reg_3 = (word[0] & 0xff);
     // reg_3 = word[0];
-    if (debug == true) log("REG 3 = " + reg_3);
+    if (trace == true) log("REG 3 = " + reg_3);
     
     
     iteration = 0;
@@ -247,14 +248,14 @@ class PowerManager {
       // log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
-        if (debug == true) log("Polled 100 times and gave up.");
+        if (trace == true) log("Polled 100 times and gave up.");
         break;
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
     // charge_current = (word[0] & 0xf0) >> 4;
     reg_2 = (word[0] & 0xff);
-    if (debug == true) log("REG 2 = " + reg_2);
+    if (trace == true) log("REG 2 = " + reg_2);
     
     iteration = 0;
     word = 0x0;
@@ -265,14 +266,14 @@ class PowerManager {
       // log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
-        if (debug == true) log("Polled 100 times and gave up.");
+        if (trace == true) log("Polled 100 times and gave up.");
         break;
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
     // charge_current = (word[0] & 0xf0) >> 4;
     reg_0 = (word[0] & 0xff);
-    if (debug == true) log("REG 0 = " + reg_0);
+    if (trace == true) log("REG 0 = " + reg_0);
     
     iteration = 0;
     word = 0x0;
@@ -288,14 +289,14 @@ class PowerManager {
       // log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
-        if (debug == true) log("Polled 100 times and gave up.");
+        if (trace == true) log("Polled 100 times and gave up.");
         break;
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
     // charge_current = (word[0] & 0xf0) >> 4;
     reg_1 = (word[0] & 0xff);
-    if (debug == true) log("REG 1 = " + reg_1);
+    if (trace == true) log("REG 1 = " + reg_1);
 
     // external power
     iteration = 0;
@@ -307,13 +308,13 @@ class PowerManager {
       // log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
-        if (debug == true) log("Polled 100 times and gave up.");
+        if (trace == true) log("Polled 100 times and gave up.");
         break;
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
     reg_4 = (word[0] & 0xff);
-    if (debug == true) log("REG 4 = " + reg_4);
+    if (trace == true) log("REG 4 = " + reg_4);
     
     // ntc warning
     iteration = 0;
@@ -325,13 +326,13 @@ class PowerManager {
       // log(word);
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX) {
-        if (debug == true) log("Polled 100 times and gave up.");
+        if (trace == true) log("Polled 100 times and gave up.");
         break;
       }
     } while (word == null);
     // log("Charge current, float voltage, c/x detection:");
     reg_5 = (word[0] & 0xff);
-    if (debug == true) log("REG 5 = " + reg_5);
+    if (trace == true) log("REG 5 = " + reg_5);
 
     // log(output);
     // _i2c.readerror();
@@ -366,8 +367,8 @@ class HumidityTemperatureSensor {
     local data = [0x0, 0x0];
     
     // Measurement Request - wakes the sensor and initiates a measurement
-    if (debug == true) log("Sampling temperature");
-    if (debug == true) log(i2c.write(ADDRESS, SUB_ADDR_TEMP).tostring());
+    if (trace == true) log("Sampling temperature");
+    if (trace == true) log(i2c.write(ADDRESS, SUB_ADDR_TEMP).tostring());
     // if (i2c.write(ADDRESS, SUB_ADDR_TEMP) == null)
     //  return -1;
 
@@ -375,7 +376,7 @@ class HumidityTemperatureSensor {
     do {
       imp.sleep(0.1);
       data = i2c.read(ADDRESS, SUB_ADDR_TEMP, 2);
-      if (debug == true) log("Read attempt");
+      if (trace == true) log("Read attempt");
       
       // timeout
       iteration += 1;
@@ -400,13 +401,13 @@ class HumidityTemperatureSensor {
     iteration = 0;
     data = [0x0, 0x0];
     // Measurement Request - wakes the sensor and initiates a measurement
-    if (debug == true) log("Sampling humidity");
-    if (debug == true) log(i2c.write(ADDRESS, SUB_ADDR_HUMID).tostring());
+    if (trace == true) log("Sampling humidity");
+    if (trace == true) log(i2c.write(ADDRESS, SUB_ADDR_HUMID).tostring());
     // Data Fetch - poll until the 'stale data' status bit is 0
     do {
       imp.sleep(0.1);
       data = i2c.read(ADDRESS, SUB_ADDR_HUMID, 2);
-      if (debug == true) log("Read attempt");
+      if (trace == true) log("Read attempt");
       
       // timeout
       iteration += 1;
@@ -477,8 +478,8 @@ class power {
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) log("Starting deep sleep (running).");
-        if (debug == true) log("Note that subsequent 'sensing' wakes won't log here.");
-        if (debug == true) log("The next wake to log will be the 'data transmission' wake.");
+        if (trace == true) log("Note that subsequent 'sensing' wakes won't log here.");
+        if (trace == true) log("The next wake to log will be the 'data transmission' wake.");
         server.sleepfor(INTERVAL_SENSOR_SAMPLE_S);
       });
     });
