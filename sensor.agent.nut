@@ -44,7 +44,7 @@ function send_data_json_node(data) {
 device.on("data", function(data) {
   // data[sd] <- [1, 2];
   local dataToSend = data;
-  local dataToSendNode <- {};
+  local dataToSendNode = {};
   dataToSendNode.data <- [];
   // temp code to work with back end expectation of sd key
   // dataToSend.data[0].sd <- [];
@@ -63,7 +63,7 @@ device.on("data", function(data) {
     dataToSend.lng <- -122.03476;
   }
   
-  local newPoint <- {};
+  local newPoint = {};
   // Hacks
   foreach (point in dataToSend.data) {
     point.sd <- [1];
@@ -102,41 +102,38 @@ device.on("data", function(data) {
 
     // NEED TO THINK ABOUT MORE
     // newPoint.wall_i_lim <- 0;
-    local wall_i_lim <- (point.REG1 & 0x1f);
+    local wall_i_lim = (point.REG1 & 0x1f);
     newPoint.wall_i_lim <- convertCurrentLim(wall_i_lim);
-    
-    // newPoint.priority <- false;
-    newPoint.priority <- (point.REG1 & 0x80) != 0x00;
 
     // In minutes, different than data sheet
     // newPoint.timer <- 60;
-    local timer <- (point.REG1 & 0x60) >> 5;
+    local timer = (point.REG1 & 0x60) >> 5;
     if (timer == 0x0) newPoint.timer <- 60;
     if (timer == 0x1) newPoint.timer <- 240;
     if (timer == 0x2) newPoint.timer <- 15;
     if (timer == 0x3) newPoint.timer <- 30;
     
     // newPoint.i_charge <- 100.0;
-    local i_charge <- ((point.REG2 & 0xf0) >> 4).toFloat();
+    local i_charge = ((point.REG2 & 0xf0) >> 4).tofloat();
     newPoint.i_charge <- ((i_charge-1)*6.25)+12.5
     if (newPoint.i_charge < 12.49) newPoint.i_charge = 0.0;
     
     // newPoint.v_float <- 3.45;
-    local v_float <- (point.REG2 & 0xc) >> 2;
+    local v_float = (point.REG2 & 0xc) >> 2;
     if (v_float == 0x0) newPoint.v_float <- 3.45;
     if (v_float == 0x1) newPoint.v_float <- 3.55;
     if (v_float == 0x2) newPoint.v_float <- 3.60;
     if (v_float == 0x3) newPoint.v_float <- 3.80;
     
     // newPoint.c_x_set <- 10;
-    local c_x_set <- (point.REG2 & 0x3);
+    local c_x_set = (point.REG2 & 0x3);
     if (c_x_set == 0x0) newPoint.c_x_set <- 10;
     if (c_x_set == 0x1) newPoint.c_x_set <- 20;
     if (c_x_set == 0x2) newPoint.c_x_set <- 2;
     if (c_x_set == 0x3) newPoint.c_x_set <- 5;
     
     // newPoint.charger_status <- "Charger Off";
-    local charger_status <- (point.REG3 & 0xe0) >> 5;
+    local charger_status = (point.REG3 & 0xe0) >> 5;
     if (charger_status == 0x0) newPoint.charger_status <- "Charger Off";
     if (charger_status == 0x1) newPoint.charger_status <- "Low Battery Voltage";
     if (charger_status == 0x2) newPoint.charger_status <- "Constant Current";
@@ -146,7 +143,7 @@ device.on("data", function(data) {
     if (charger_status == 0x7) newPoint.charger_status <- "NTC HOT FAULT, Charging Paused";
 
     // newPoint.ntc_stat <- "NTC Normal";
-    local ntc_stat <- (point.REG3 & 0x6) >> 1;
+    local ntc_stat = (point.REG3 & 0x6) >> 1;
     if (ntc_stat == 0x0) newPoint.ntc_stat <- "NTC Normal";
     if (ntc_stat == 0x1) newPoint.ntc_stat <- "NTC_TOO_COLD";
     if (ntc_stat == 0x3) newPoint.ntc_stat <- "NTC_HOT_FAULT";
@@ -174,7 +171,7 @@ device.on("data", function(data) {
     
     // SWITCHED THIS TO INTEGER!
     // newPoint.ntc_val <- 20.0;
-    newPoint.ntc_val <- ((point.REG5 & 0xfe) >> 1).toInteger();
+    newPoint.ntc_val <- ((point.REG5 & 0xfe) >> 1).tointeger();
     
     // newPoint.ntc_warning <- false;
     newPoint.ntc_warning <- (point.REG5 & 0x1) != 0x00;
@@ -184,11 +181,36 @@ device.on("data", function(data) {
   
   //data_buffer.extend(data.data); // for debug
   server.log(http.jsonencode(dataToSend));
-  server.log(http.jsonencode(dataToSendNode));
+  server.log("Number of sensor measurements and power manager statuses is " + dataToSendNode.data[0].len());
+  
+  // Core
+  server.log("timestamp " + dataToSendNode.data[0].timestamp + ", battery " + dataToSendNode.data[0].battery);
+  server.log("temperature " + dataToSendNode.data[0].temperature + ", humidity " + dataToSendNode.data[0].humidity);
+  server.log("light " + dataToSendNode.data[0].light + ", electrical_conductivity " + dataToSendNode.data[0].electrical_conductivity);
+  
+  // Text
+  server.log("charger_status " + dataToSendNode.data[0].charger_status);
+  server.log("ntc_stat " + dataToSendNode.data[0].ntc_stat);
+  server.log("wall_i_lim " + dataToSendNode.data[0].wall_i_lim);
+  
+  // Numbers
+  server.log("i_charge " + dataToSendNode.data[0].i_charge);
+  server.log("ntc_val " + dataToSendNode.data[0].ntc_val + ", timer " + dataToSendNode.data[0].timer);
+  server.log("v_float " + dataToSendNode.data[0].v_float + ", c_x_set " + dataToSendNode.data[0].c_x_set);
+  
+  // Booleans
+  server.log("ext_pwr_good " + dataToSendNode.data[0].ext_pwr_good + ", wall_sns_good " + dataToSendNode.data[0].wall_sns_good);
+  // Low cell voltage is only meaningful when input (WALL or USB) power is available
+  // and the battery charger is enabled,
+  // or when automatic or manual enable of the step-up regulator has been requested.
+  server.log("low_bat (with caveats) " + dataToSendNode.data[0].low_bat + ", bad_cell " + dataToSendNode.data[0].bad_cell);
+  server.log("at_input_ilim " + dataToSendNode.data[0].at_input_ilim + ", ovp_active " + dataToSendNode.data[0].ovp_active);
+  server.log("input_uvcl_active " + dataToSendNode.data[0].input_uvcl_active + ", disable_input_uvcl " + dataToSendNode.data[0].disable_input_uvcl);
+  server.log("ntc_warning " + dataToSendNode.data[0].ntc_warning);
   
   // Commented out while hacking on the new power controller
   send_data_json(dataToSend); // JSON API
-  send_data_json_node(dataToSendNode);
+  // send_data_json_node(dataToSendNode);
 });
 
 // Invoked when the device calls agent.send("location", ...)
