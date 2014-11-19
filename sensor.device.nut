@@ -680,11 +680,11 @@ function is_server_refresh_needed(data_last_sent, data_current) {
   // Production settings
   else if (demo == false && coding == false) {
     higher_frequency = 60*5;
-    high_frequency = 60*20;
-    medium_frequency = 60*45;
+    high_frequency = 60*10;
+    medium_frequency = 60*30;
     low_frequency = 60*60;
     lower_frequency = 60*120;
-    lowest_frequency = 60*720;
+    lowest_frequency = 60*240;
   }
 
   // send updates more often when the battery is full
@@ -813,6 +813,9 @@ function blinkAll(duration, count = 1) {
 }
 
 function main() {
+  // manual control of Wi-Fi state and other setup
+  server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
+
   // I could remove this, since, according to Hugo:
   // When you wake from an imp.deepsleep or server.sleep,
   // wifi is not up - there's no need to immediately disconnect.
@@ -820,12 +823,9 @@ function main() {
   // RETURN_ON_ERROR) or perform an operation which requires
   // network (if you're using SUSPEND_ON_ERROR).
   // server.disconnect();
-  imp.onidle(function() {
-    server.disconnect();
-  });
-  
-  // manual control of Wi-Fi state and other setup
-  server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
+  // imp.onidle(function() {
+  //   server.disconnect();
+  // });
   
   if (debug == true) server.log("Device's unique id: " + hardware.getdeviceid());
   server.log("Device firmware version: " + imp.getsoftwareversion());
