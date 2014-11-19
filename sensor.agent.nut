@@ -78,7 +78,7 @@ device.on("data", function(data) {
     newPoint.light <- point.l;
 
     // newPoint.disable_input_uvcl <- false;
-    newPoint.disable_input_uvcl <- (point.REG0 & 0x80) != 0x00;
+    newPoint.disable_input_uvcl <- (point.r0 & 0x80) != 0x00;
 
     local convertCurrentLim = function(input) {
       if (input == 0x00) return "100mA Max (USB Low Power)"
@@ -102,38 +102,38 @@ device.on("data", function(data) {
 
     // NEED TO THINK ABOUT MORE
     // newPoint.wall_i_lim <- 0;
-    local wall_i_lim = (point.REG1 & 0x1f);
+    local wall_i_lim = (point.r1 & 0x1f);
     newPoint.wall_i_lim <- convertCurrentLim(wall_i_lim);
 
     // In minutes, different than data sheet
     // newPoint.timer <- 60;
-    local timer = (point.REG1 & 0x60) >> 5;
+    local timer = (point.r1 & 0x60) >> 5;
     if (timer == 0x0) newPoint.timer <- 60;
     if (timer == 0x1) newPoint.timer <- 240;
     if (timer == 0x2) newPoint.timer <- 15;
     if (timer == 0x3) newPoint.timer <- 30;
     
     // newPoint.i_charge <- 100.0;
-    local i_charge = ((point.REG2 & 0xf0) >> 4).tofloat();
+    local i_charge = ((point.r2 & 0xf0) >> 4).tofloat();
     newPoint.i_charge <- ((i_charge-1)*6.25)+12.5
     if (newPoint.i_charge < 12.49) newPoint.i_charge = 0.0;
     
     // newPoint.v_float <- 3.45;
-    local v_float = (point.REG2 & 0xc) >> 2;
+    local v_float = (point.r2 & 0xc) >> 2;
     if (v_float == 0x0) newPoint.v_float <- 3.45;
     if (v_float == 0x1) newPoint.v_float <- 3.55;
     if (v_float == 0x2) newPoint.v_float <- 3.60;
     if (v_float == 0x3) newPoint.v_float <- 3.80;
     
     // newPoint.c_x_set <- 10;
-    local c_x_set = (point.REG2 & 0x3);
+    local c_x_set = (point.r2 & 0x3);
     if (c_x_set == 0x0) newPoint.c_x_set <- 10;
     if (c_x_set == 0x1) newPoint.c_x_set <- 20;
     if (c_x_set == 0x2) newPoint.c_x_set <- 2;
     if (c_x_set == 0x3) newPoint.c_x_set <- 5;
     
     // newPoint.charger_status <- "Charger Off";
-    local charger_status = (point.REG3 & 0xe0) >> 5;
+    local charger_status = (point.r3 & 0xe0) >> 5;
     if (charger_status == 0x0) newPoint.charger_status <- "Charger Off";
     if (charger_status == 0x1) newPoint.charger_status <- "Low Battery Voltage";
     if (charger_status == 0x2) newPoint.charger_status <- "Constant Current";
@@ -143,38 +143,38 @@ device.on("data", function(data) {
     if (charger_status == 0x7) newPoint.charger_status <- "NTC HOT FAULT, Charging Paused";
 
     // newPoint.ntc_stat <- "NTC Normal";
-    local ntc_stat = (point.REG3 & 0x6) >> 1;
+    local ntc_stat = (point.r3 & 0x6) >> 1;
     if (ntc_stat == 0x0) newPoint.ntc_stat <- "NTC Normal";
     if (ntc_stat == 0x1) newPoint.ntc_stat <- "NTC_TOO_COLD";
     if (ntc_stat == 0x3) newPoint.ntc_stat <- "NTC_HOT_FAULT";
     
     // newPoint.low_bat <- true;
-    newPoint.low_bat <- (point.REG3 & 0x1) != 0x00;
+    newPoint.low_bat <- (point.r3 & 0x1) != 0x00;
     
     // newPoint.ext_pwr_good <- true;
-    newPoint.ext_pwr_good <- (point.REG4 & 0x80) != 0x00;
+    newPoint.ext_pwr_good <- (point.r4 & 0x80) != 0x00;
     
     // newPoint.wall_sns_good <- true;
-    newPoint.wall_sns_good <- (point.REG4 & 0x20) != 0x00;
+    newPoint.wall_sns_good <- (point.r4 & 0x20) != 0x00;
     
     // newPoint.at_input_ilim <- false;
-    newPoint.at_input_ilim <- (point.REG4 & 0x10) != 0x00;
+    newPoint.at_input_ilim <- (point.r4 & 0x10) != 0x00;
     
     // newPoint.input_uvcl_active <- false;
-    newPoint.input_uvcl_active <- (point.REG4 & 0x8) != 0x00;
+    newPoint.input_uvcl_active <- (point.r4 & 0x8) != 0x00;
     
     // newPoint.ovp_active <- false;
-    newPoint.ovp_active <- (point.REG4 & 0x4) != 0x00;
+    newPoint.ovp_active <- (point.r4 & 0x4) != 0x00;
     
     // newPoint.bad_cell <- false;
-    newPoint.bad_cell <- (point.REG4 & 0x1) != 0x00;
+    newPoint.bad_cell <- (point.r4 & 0x1) != 0x00;
     
     // SWITCHED THIS TO INTEGER!
     // newPoint.ntc_val <- 20.0;
-    newPoint.ntc_val <- ((point.REG5 & 0xfe) >> 1).tointeger();
+    newPoint.ntc_val <- ((point.r5 & 0xfe) >> 1).tointeger();
     
     // newPoint.ntc_warning <- false;
-    newPoint.ntc_warning <- (point.REG5 & 0x1) != 0x00;
+    newPoint.ntc_warning <- (point.r5 & 0x1) != 0x00;
 
     dataToSendNode.data.append(newPoint);
   }

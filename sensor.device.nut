@@ -24,7 +24,9 @@ const INTERVAL_SLEEP_FAILED_S = 3600; // sample sensors this often
 const INTERVAL_SLEEP_SHIP_STORE_S = 2419198;
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 const POLL_ITERATION_MAX = 100; // maximum number of iterations for sensor polling loop
-const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
+// const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
+// New setting now that we're recording register values
+const NV_ENTRIES_MAX = 19; // maximum NV entry space is about 55, based on testing
 const TZ_OFFSET = -25200; // 7 hours for PDT
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
@@ -893,7 +895,7 @@ function main() {
   humidityTemperatureSensor.sample();
 
   // nv space is limited to 4kB and will not notify of failure
-  // discard every third entry if over MAX entries
+  // discard every second entry if over MAX entries
   // TODO: combine similar data points instead of discarding them
   if (nv.data.len() > NV_ENTRIES_MAX) {
     local i = 1;
@@ -911,12 +913,12 @@ function main() {
     l = solar.voltage(),
     m = soil.voltage(),
     b = source.voltage(),
-    REG3 = powerManager.reg_3,
-    REG2 = powerManager.reg_2,
-    REG0 = powerManager.reg_0,
-    REG1 = powerManager.reg_1,
-    REG5 = powerManager.reg_5,
-    REG4 = powerManager.reg_4
+    r3 = powerManager.reg_3,
+    r2 = powerManager.reg_2,
+    r0 = powerManager.reg_0,
+    r1 = powerManager.reg_1,
+    r5 = powerManager.reg_5,
+    r4 = powerManager.reg_4
   });
 
   //Send sensor data
