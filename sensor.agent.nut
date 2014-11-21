@@ -27,7 +27,7 @@ function send_data_json(data) {
 // Send data to the readings API
 function send_data_json_node(data) {
   local readings_url = "http://edynapireadings.elasticbeanstalk.com/readings/";
-  local req = http.post(soil_url, {"Content-Type":"application/json", "User-Agent":"Imp"}, http.jsonencode(data));
+  local req = http.post(soil_url, {"Content-Type":"application/json", "User-Agent":"Imp", "X-Api-Key": "FEIMfjweiovm90283y3#*U)#@URvm"}, http.jsonencode(data));
   local res = req.sendsync();
   if (res.statuscode != 200) {
     // TODO: retry?
@@ -68,6 +68,9 @@ device.on("data", function(data) {
   foreach (point in dataToSend.data) {
     point.sd <- [1];
   }
+  
+  send_data_json(dataToSend); // JSON API
+  
   foreach (point in data.data) {
     newPoint.uuid <- "30000c2a69000001";
     newPoint.timestamp <- point.ts;
@@ -209,8 +212,7 @@ device.on("data", function(data) {
   server.log("ntc_warning " + dataToSendNode.data[0].ntc_warning);
   
   // Commented out while hacking on the new power controller
-  send_data_json(dataToSend); // JSON API
-  // send_data_json_node(dataToSendNode);
+  send_data_json_node(dataToSendNode);
 });
 
 // Invoked when the device calls agent.send("location", ...)
