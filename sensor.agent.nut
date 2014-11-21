@@ -16,27 +16,29 @@ function send_data_json(data) {
   if (res.statuscode != 200) {
     // TODO: retry?
     // server.log("error sending message: " + res.body);
-    server.log("status code: " + res.statuscode);
+    server.log("MySQL API status code: " + res.statuscode);
     // server.log("error sending message: " + res.body.slice(0,40));
-    server.log("Error sending message to database.");
+    server.log("Error sending message to MySQL database.");
   } else {
-    server.log("Data sent successfully to database.");
+    server.log("Data sent successfully to MySQL database.");
   }
 }
 
 // Send data to the readings API
 function send_data_json_node(data) {
+  server.log(http.jsonencode(data));
   local readings_url = "http://edynapireadings.elasticbeanstalk.com/readings/";
-  local req = http.post(soil_url, {"Content-Type":"application/json", "User-Agent":"Imp", "X-Api-Key": "FEIMfjweiovm90283y3#*U)#@URvm"}, http.jsonencode(data));
+  local req = http.post(readings_url, {"Content-Type":"application/json", "User-Agent":"Imp", "X-Api-Key":"FEIMfjweiovm90283y3#*U)#@URvm"}, http.jsonencode(data));
   local res = req.sendsync();
   if (res.statuscode != 200) {
     // TODO: retry?
     // server.log("error sending message: " + res.body);
-    server.log("status code: " + res.statuscode);
+    server.log("Postgres API status code: " + res.statuscode);
+    server.log(res.body);
     // server.log("error sending message: " + res.body.slice(0,40));
-    server.log("Error sending message to database.");
+    server.log("Error sending message to Postgres database.");
   } else {
-    server.log("Data sent successfully to database.");
+    server.log("Data sent successfully to Postgres database.");
   }
 }
 
@@ -45,6 +47,7 @@ device.on("data", function(data) {
   // data[sd] <- [1, 2];
   local dataToSend = data;
   local dataToSendNode = {};
+  dataToSendNode.uuid <- data.device;
   dataToSendNode.data <- [];
   // temp code to work with back end expectation of sd key
   // dataToSend.data[0].sd <- [];
@@ -72,7 +75,6 @@ device.on("data", function(data) {
   send_data_json(dataToSend); // JSON API
   
   foreach (point in data.data) {
-    newPoint.uuid <- "30000c2a69000001";
     newPoint.timestamp <- point.ts;
     newPoint.battery <- point.b;
     newPoint.humidity <- point.h;
