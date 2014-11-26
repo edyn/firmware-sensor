@@ -690,34 +690,32 @@ function is_server_refresh_needed(data_last_sent, data_current) {
   }
 
   // send updates more often when the battery is full
-  if (data_current.b > 3.4)      send_interval_s = higher_frequency;   // battery overcharge
-  else if (data_current.b > 3.35) send_interval_s = high_frequency;   // battery full
-  else if (data_current.b > 3.3) send_interval_s = medium_frequency;  // battery high
-  else if (data_current.b > 3.25) send_interval_s = low_frequency;  // battery medium
-  else if (data_current.b > 3.2) {
+  if (data_current.b > 3.4) {
+    send_interval_s = high_frequency; // battery very high
+  }
+  else if (data_current.b > 3.35) send_interval_s = high_frequency;   // battery high
+  else if (data_current.b > 3.3) send_interval_s = high_frequency;  // battery medium
+  else if (data_current.b > 3.21) send_interval_s = high_frequency;  // battery getting low
+  else if (data_current.b > 3.18) {
     send_interval_s = lower_frequency; // battery low
-    server.log("Low battery");
+    server.log("Low Vout from LTC4156.");
   }
-  else if (data_current.b > 3.12) {
-    send_interval_s = lowest_frequency;
-    server.log("Near-critical battery");
-  }
-  else if (data_current.b > 3.0) return false;             // battery critical
-  else {
-    // emergency shutoff workaround to prevent the Imp 'red light bricked' state
-    power.enter_deep_sleep_ship_store("Emergency battery levels.");
-  }
+  else if (data_current.b > 0.0) return false;             // battery critical
+  // else {
+  //   // emergency shutoff workaround to prevent the Imp 'red light bricked' state
+  //   power.enter_deep_sleep_ship_store("Emergency battery levels.");
+  // }
 
-  // send updates more often when data has changed frequently and battery life is good
-  if (data_current.b > 3.25
-    && (math.fabs(data_last_sent.t - data_current.t) > 5.0
-      || math.fabs(data_last_sent.h - data_current.h) > 5.0
-      || math.fabs(data_last_sent.l - data_current.l) > 50.0
-      || math.fabs(data_last_sent.m - data_current.m) > 0.2
-      || math.fabs(data_last_sent.b - data_current.b) > 0.2)) {
-    if (debug == true) server.log("Data is changing quickly, so send updates more often.");
-    send_interval_s /= 4;
-  }
+  // // send updates more often when data has changed frequently and battery life is good
+  // if (data_current.b > 3.25
+  //   && (math.fabs(data_last_sent.t - data_current.t) > 5.0
+  //     || math.fabs(data_last_sent.h - data_current.h) > 5.0
+  //     || math.fabs(data_last_sent.l - data_current.l) > 50.0
+  //     || math.fabs(data_last_sent.m - data_current.m) > 0.2
+  //     || math.fabs(data_last_sent.b - data_current.b) > 0.2)) {
+  //   if (debug == true) server.log("Data is changing quickly, so send updates more often.");
+  //   send_interval_s /= 4;
+  // }
 
   // send data to the server if (current time - last send time) > send_interval_s
   return ((data_current.ts - data_last_sent.ts) > send_interval_s);
@@ -928,6 +926,18 @@ function main() {
     // if (debug == true) server.log("Sending location information without prompting.");
     // connect(send_loc, TIMEOUT_SERVER_S);
   }
+
+  // ///
+  // all the important time-sensitive decisions based on current state go here
+  // ///
+
+  // // checking source voltage not necessary in the first pass
+  // // since power will be cut to the imp below Vout of 3.1 V
+  // if (source.voltage() < 3.19) {
+  //   power.enter_deep_sleep_running("Low system voltage.");
+  // }
+  // if temperature is too hot
+  // if temperatuer is too cold
   
   else {
     server.log("Not time to send");
