@@ -68,13 +68,14 @@ device.on("data", function(data) {
   
   local newPoint = {};
   // Hacks
-  foreach (point in dataToSend.data) {
-    point.sd <- [1];
+  foreach (origPoint in dataToSend.data) {
+    origPoint.sd <- [1];
   }
   
   send_data_json(dataToSend); // JSON API
   
   foreach (point in data.data) {
+    newPoint = {};
     newPoint.timestamp <- point.ts;
     newPoint.battery <- point.b;
     newPoint.humidity <- point.h;
