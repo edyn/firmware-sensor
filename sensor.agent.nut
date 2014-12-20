@@ -42,6 +42,30 @@ function send_data_json_node(data) {
   }
 }
 
+function processResponse(incomingDataTable) {
+  // This is the completed-request callback function.
+  if (incomingDataTable.statuscode != 200) {
+    // TODO: retry?
+    // server.log("error sending message: " + res.body);
+    server.log("API status code: " + res.statuscode);
+    // server.log(res.body);
+    // server.log("error sending message: " + res.body.slice(0,40));
+    server.log("Error saving device location in DB.");
+  }
+  else {
+    server.log("Device location saved in DB successfully.");
+  }
+}
+
+// Send location of device
+function send_loc_data(data) {
+  server.log(http.jsonencode(data));
+  local message = http.jsonencode(data);
+  local readings_url = "http://edynbackendnodetest.elasticbeanstalk.com/devicelocation/";
+  local req = http.post(readings_url, {"Content-Type":"application/json", "User-Agent":"Imp", "X-Api-Key":"FEIMfjweiovm90283y3#*U)#@URvm"}, message);
+  req.sendasync(processResponse);
+}
+
 // Invoked when the device calls agent.send("data", ...)
 device.on("data", function(data) {
   // data[sd] <- [1, 2];
@@ -260,6 +284,8 @@ device.on("location", function(data) {
         locPrefs.lat <- googleData["location"].lat;
         locPrefs.lng <- googleData["location"].lng;
         server.save(locPrefs);
+        // local dataToSendApi = {};
+        send_loc_data(locPrefs);
       } 
     }
     
@@ -299,6 +325,7 @@ device.on("location", function(data) {
       locPrefs.lat <- googleData["location"].lat;
       locPrefs.lng <- googleData["location"].lng;
       server.save(locPrefs);
+      send_loc_data(locPrefs);
     }
   }
   
