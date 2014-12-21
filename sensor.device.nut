@@ -366,8 +366,14 @@ class HumidityTemperatureSensor {
   
   function sample() {
     local humidity_raw, temperature_raw, iteration = 0;
-    local data = [0x0, 0x0];
-    
+    local dataHum = [0x0, 0x0];
+    local dataTem = [0x0, 0x0];
+	
+	//some debug variables
+	local humPoll=0;
+	local temPoll=0;
+	
+	
     // Measurement Request - wakes the sensor and initiates a measurement
     // if (trace == true) server.log("Sampling temperature");
     // if (trace == true) server.log(i2c.write(ADDRESS, SUB_ADDR_TEMP).tostring());
@@ -376,16 +382,33 @@ class HumidityTemperatureSensor {
 
     // Data Fetch - poll until the 'stale data' status bit is 0
     do {
+	//sleep only after the first iteration
+	if(iteration>0)
+	{
       imp.sleep(0.1);
-      data = i2c.read(ADDRESS, SUB_ADDR_TEMP, 2);
+	}
+	  if(dataTem[0]==0&&dataTem[1]==0)
+	  {
+		dataTem = i2c.read(ADDRESS, SUB_ADDR_TEMP, 2);
+		temPoll+=1;
+	  }
+	  if(dataHum[0]==0&&dataHum[1]==0)
+	  {
+		dataHum = i2c.read(ADDRESS, SUB_ADDR_HUMID, 2);
+		humPoll+=1;
+	  }
       // if (trace == true) server.log("Read attempt");
-      
       // timeout
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX)
         break;
-    } while (data == null);
+    } while ((dataHum[0]==0&&dataHum[1]==0)|| (dataTem[0]==0&&dataTem[1]==0));
     
+	/*DustinRemove*/
+	nv.polls.append(iteration);
+	
+	//log("TemPoll= " + temPoll.tostring() + "   HumPoll= " + humPoll.tostring()+"  Iterations=" + iteration.tostring());
+	
     // THE TWO STATUS BITS, THE LAST BITS OF THE LEAST SIGNIFICANT BYTE,
     // MUST BE SET TO '0' BEFORE CALCULATING PHYSICAL VALUES
     // This happens automatically, though, through the i2c.read function
@@ -396,28 +419,13 @@ class HumidityTemperatureSensor {
     //server.log(data[0] << 8);
     //server.log(data[1]);
     //server.log(data[1] & 0xfc);
-    temperature_raw = (data[0] << 8) + (data[1] & 0xfc);
+    temperature_raw = (dataTem[0] << 8) + (dataTem[1] & 0xfc);
     temperature = temperature_raw * 175.72 / 65536.0 - 46.85;
-    
-    
-    iteration = 0;
-    data = [0x0, 0x0];
     // Measurement Request - wakes the sensor and initiates a measurement
     // if (trace == true) server.log("Sampling humidity");
     // if (trace == true) server.log(i2c.write(ADDRESS, SUB_ADDR_HUMID).tostring());
     // Data Fetch - poll until the 'stale data' status bit is 0
-    do {
-      imp.sleep(0.1);
-      data = i2c.read(ADDRESS, SUB_ADDR_HUMID, 2);
-      // if (trace == true) server.log("Read attempt");
-      
-      // timeout
-      iteration += 1;
-      if (iteration > POLL_ITERATION_MAX)
-        break;
-    } while (data == null);
-    
-    humidity_raw = (data[0] << 8) + (data[1] & 0xfc);
+    humidity_raw = (dataHum[0] << 8) + (dataHum[1] & 0xfc);
     humidity = humidity_raw * 125.0 / 65536.0 - 6.0;
   }
 }
@@ -724,15 +732,24 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 // Callback for server status changes.
 function send_data(status) {
   // update last sent data (even on failure, so the next send attempt is not immediate)
+  local power_manager_data=[];
   nv.data_sent = nv.data.top();
   
   if (status == SERVER_CONNECTED) {
     // ok: send data
     // server.log(imp.scanwifinetworks());
+	//
+	power_manager_data.append(powerManager.reg_0);
+	power_manager_data.append(powerManager.reg_1);
+	power_manager_data.append(powerManager.reg_2);
+	power_manager_data.append(powerManager.reg_3);
+	power_manager_data.append(powerManager.reg_4);
+	power_manager_data.append(powerManager.reg_5);
     if (debug == true) server.log("Connected to server.");
     agent.send("data", {
       device = hardware.getdeviceid(),
-      data = nv.data
+      data = nv.data,
+	  power_data=power_manager_data
     }); // TODO: send error codes
     local success = server.flush(TIMEOUT_SERVER_S);
     if (success) {
@@ -812,6 +829,8 @@ function blinkAll(duration, count = 1) {
   }
 }
 
+
+
 function main() {
   // manual control of Wi-Fi state and other setup
   server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
@@ -877,7 +896,7 @@ function main() {
   
   // create non-volatile storage if it doesn't exist
   if (!("nv" in getroottable() && "data" in nv)) {
-    nv <- { data = [], data_sent = null, running_state = true };
+    nv <- { data = [], data_sent = null, running_state = true, /*DustinRemove:*/polls=[]};
   }
   
   // we have entered the running state
@@ -910,19 +929,23 @@ function main() {
     h = humidityTemperatureSensor.humidity,
     l = solar.voltage(),
     m = soil.voltage(),
-    b = source.voltage(),
-    r3 = powerManager.reg_3,
-    r2 = powerManager.reg_2,
-    r0 = powerManager.reg_0,
-    r1 = powerManager.reg_1,
-    r5 = powerManager.reg_5,
-    r4 = powerManager.reg_4
+    b = source.voltage()
   });
+  
+  
 
   //Send sensor data
   if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
     if (debug == true) server.log("Server refresh needed");
     connect(send_data, TIMEOUT_SERVER_S);
+	
+	/*DustinRemove:*/
+	server.log("Polls:")
+	for(local z=0;z<nv.polls.len();z+=1)
+	{
+		server.log(nv.polls[z].tostring());
+	}
+	
     // if (debug == true) server.log("Sending location information without prompting.");
     // connect(send_loc, TIMEOUT_SERVER_S);
   }
@@ -961,6 +984,7 @@ function disconnectHandler(reason) {
     power.enter_deep_sleep_failed("Unexpectedly lost wifi connection.");
   }
 }
+
 
 ///
 // End of functions
