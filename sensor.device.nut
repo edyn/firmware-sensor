@@ -10,7 +10,7 @@
 // If there is a wifi communication error, the device will
 // resume after a timeout. 
 //
-// TODO:
+// TODO:ch
 // - need ability to reset (magnetic reset, or power switch)
 // - merge similar consecutive data points
 // - return error data (i2c sensor error, etc) to host
@@ -42,8 +42,9 @@ attemptNumber <- 0;
 //0.1
 //if runtest is true, the unit test defined below main will run
 runTest<-false;
-
-
+//feature 0.2
+maxBatteryTemp<- 100.0;
+minBatteryTemp<- 10.0;
 ///
 // Classes
 ///
@@ -272,35 +273,33 @@ class PowerManager {
   }
   //0.1 charging functions enable/disable/suspend/resume
   //check the logic of 0C and FC in reg 2
-  function enableCharging()
+  //0.2 Changed to make the functions not overwrite vfloat settings
+  function enableCharging(toWrite=0x0C)
   {
-    //local chargerstate= regToArr(registerNumber)[1].tostring();
-    //nv.chargertwo="\x0"+nv.chargertwo.slice(3,3);
-    //_i2c.write(_addr, SA_REG_2 + nv.chargertwo);
-    _i2c.write(_addr, SA_REG_2 + "\x0C");
+    writeToReg("\x02",0xF0,toWrite);
+	nv.PMRegC[0]=0xF0;
   }
-  function disableCharging()
+  function disableCharging(toWrite=0x0C)
   {
-    //local chargerstate= regToArr(registerNumber)[1].tostring();
-    //nv.chargertwo="\xF"+nv.chargertwo.slice(3,3);
-    //_i2c.write(_addr, SA_REG_2 + nv.chargertwo);
-    _i2c.write(_addr, SA_REG_2 + "\xFC"+chargerstate);
+    writeToReg("\x02",0x00,toWrite);
+	nv.PMRegC[0]=0x00;
   }
-  function suspendCharging(toWrite="\x00")
+  function suspendCharging(toWrite=0x00)
   {
-    _i2c.write(_addr, SA_REG_1 +toWrite);
-    //pollingLoop(SA_REG_1,"\x00");
+    writeToReg("\x01",toWrite,0x00);
+	nv.PMRegB[1]=0x00;
   }
   //01 is our default setting of 500ma Max
-  function resumeCharging(toWrite="\x01")
+  function resumeCharging(toWrite=0x00)
   {
-    _i2c.write(_addr, SA_REG_1 + toWrite);
-    //pollingLoop(SA_REG_1,"\x01");
+    writeToReg("\x01",toWrite,0x01);
+	nv.PMRegB[1]=0x01;
   }
     
   //0.1
   //Set vfloat based on battery voltage, close is defaulted to 0.03 volts
-  
+  //feature 0.2
+  //now this does not overwrite the MSB when changing vfloat
   function changevfloat(inputVoltage,close=0.03)
   {
     //TODO: add MSB input: ,MSBin="" to set MSB
@@ -316,27 +315,30 @@ class PowerManager {
     xxxx10xx=3.60
     xxxx11xx=3.80 (This is our default setting)
     note that this function only works if the two LSB in reg 2 remain xxxxxx00
-    */
+    */   
     if(inputVoltage<3.55-close)
     {
-       _i2c.write(_addr, SA_REG_2 + "\xF0");
+	   nv.PMRegC[1]=0x00;
+	   writeToReg("\x02",nv.PMRegC[0],nv.PMRegC[1]);
     }
     else if (inputVoltage<3.60-close)
-    {
-       _i2c.write(_addr, SA_REG_2 + "\xF4"); 
+    {	   
+	   nv.PMRegC[1]=0x04;
+	   writeToReg("\x02",nv.PMRegC[0],nv.PMRegC[1]);
     }
     else if(inputVoltage<3.8-close)
-    {
-        _i2c.write(_addr, SA_REG_2 + "\xF8"); 
+    {	   
+	   nv.PMRegC[1]=0x08;
+	   writeToReg("\x02",nv.PMRegC[0],nv.PMRegC[1]);
     }
     else
     {
-        _i2c.write(_addr, SA_REG_2 + "\xFC"); 
+	   nv.PMRegC[1]=0x0C;
+	   writeToReg("\x02",nv.PMRegC[0],nv.PMRegC[1]);
     }
-    
 
+    
   }
-  
   //0.1
   //returns the value of a register as a string
   //Example call: regToStr("\x02")
@@ -356,7 +358,47 @@ class PowerManager {
     local temp = format("%X", word[0] & 0xff);
     return [temp.slice(0,1),temp.slice(1,2)]
   }
-  
+  //feature 0.2
+  function writeToReg(subreg,MSB=0x00,LSB=0x00)
+  {
+    local towrite=MSB|LSB;
+    _i2c.write(_addr, subreg+towrite.tochar());
+  }
+  //feature 0.2
+  //tempcontrol disables the charger if it exceeds max or min temperature
+  //sends warnings if the temperature is in the danger zone, which defaults to 10 degrees from max/min
+  function tempControl(temperature, dangerZone=10.0)
+  {
+      
+    //disable/enable charging based on temp function
+    if((temperature>maxBatteryTemp || temperature<minBatteryTemp)&&nv.PMRegC[0]!=0x00)
+    {
+      //disable charging
+      server.log("Temperature outside of operational range " + temperature.tostring());
+      disableCharging();
+    }
+    else
+    {
+
+      //temperature warning system
+      if(temperature>(maxBatteryTemp-dangerZone))
+      {
+        server.log("Nearing max temp warning: "+temperature.tostring());
+      }
+      if(temperature<(minBatteryTemp+dangerZone))
+      {
+        server.log("Nearing min temp warning: "+temperature.tostring());
+      }
+      if(debug){
+      server.log("Temperature is: "+temperature.tostring()+ ", Charger Enabled")
+      }
+      //enable charging
+	  if(nv.PMRegC[0]==0x00)
+	  {
+      enableCharging();
+	  }
+    }
+  }
 }
 
 ////////////////////////////////////////////////////////////
@@ -933,10 +975,7 @@ function main() {
   imp.enableblinkup(false);
   // create non-volatile storage if it doesn't exist
   if (!("nv" in getroottable() && "data" in nv)) {
-
-        nv<-{data = [], data_sent = null, running_state = true};
-    
-    
+        nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00]};   
   }
   
   
@@ -968,6 +1007,13 @@ function main() {
   // store sensor data in non-volatile storage
   //0.1
   //testing or not
+  powerManager.disableCharging();
+  local batvol = source.voltage();
+  powerManager.enableCharging();
+  
+  powerManager.changevfloat(batvol);
+  powerManager.tempControl(humidityTemperatureSensor.temperature);
+  
   if(runTest)
   {
       nv.data.push({
@@ -991,8 +1037,8 @@ function main() {
         b = source.voltage()
         });
   }
-  
 
+//feature 0.2 important
   //Send sensor data
   if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
     if (debug == true) server.log("Server refresh needed");
@@ -1043,7 +1089,6 @@ function disconnectHandler(reason) {
 //added unit test here
 function unitTest()
 {
-
 }
 
 
