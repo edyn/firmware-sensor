@@ -10,7 +10,7 @@
 // If there is a wifi communication error, the device will
 // resume after a timeout. 
 //
-// TODO:
+// TODO:ch
 // - need ability to reset (magnetic reset, or power switch)
 // - merge similar consecutive data points
 // - return error data (i2c sensor error, etc) to host
@@ -33,13 +33,18 @@ trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
 demo <- false; // Should we send data really fast?
 ship_and_store <- false; // Directly go to ship and store?
-
+firstPress<-false;
 // offline logging
 offline <- [];
-alreadyPressed <- false;
+pressit<- 0;
 attemptNumber <- 0;
 
-
+//0.1
+//if runtest is true, the unit test defined below main will run
+runTest<-false;
+//feature 0.2
+maxBatteryTemp<- 60.0;
+minBatteryTemp<- 0.0;
 ///
 // Classes
 ///
@@ -204,10 +209,33 @@ class PowerManager {
     // if (trace == true) server.log(result.tostring());
   }
 
+  
+  
+  //the polling loop used to populate registers
+  //polls up to 100 times, returns the result once it's attained.
+  //To be implemented: 
+  //1)callback function  
+  //2)double checking safety/functionality of null vs 0x0
+  function pollingLoop(subreg, stringtocat=""){
+    local iteration =0;
+    local word = 0x0;
+    _i2c.write(_addr, subreg+stringtocat) 
+    do {
+    word = _i2c.read(_addr, subreg, 1);
+    iteration += 1;
+    if (iteration > POLL_ITERATION_MAX) {
+      break;
+    }
+    } while (word == null);
+    return word[0] & 0xff;
+  }
+    
   // EVT wifi sensor can measure Solar panel voltage (PIN7)
   // and output voltage (PINB)
   // Once PIN7>PINB voltage & charging is enabled electricimp
   // needn’t be sleeping and control charging
+
+  //runs polling loop six times to populate each register
   function sample() {
     // The transaction is initiated by the bus master with a START condition
     // The SMBus command code corresponds to the sub address pointer value
@@ -215,127 +243,26 @@ class PowerManager {
     // Note: Imp I2C command values are strings with 
     // the \x escape character to indicate a hex value
     
-    local iteration = 0;
-    local word = 0x0;
-    _i2c.write(_addr, SA_REG_3);
-    do {
-      // imp.sleep(0.1);
-      word = _i2c.read(_addr, SA_REG_3, 1);
-      // server.log(word);
-      iteration += 1;
-      if (iteration > POLL_ITERATION_MAX) {
-        // if (trace == true) server.log("Polled 100 times and gave up.");
-        break;
-      }
-    } while (word == null);
-    // server.log("Charger status, etc.:");
-    // reg_3 = (word[0] & 0xe0) >> 5;
-    reg_3 = (word[0] & 0xff);
-    // reg_3 = word[0];
-    // if (trace == true) server.log("REG 3 = " + reg_3);
-    
-    
-    iteration = 0;
-    word = 0x0;
+    //REG 0:Charge current, float voltage, c/x detection
+    reg_0=pollingLoop(SA_REG_0);
+    //REG 1 Info:
+    // 0 Wall Input Prioritized +
+    // 00 Battery Charger Safety Timer +
+    // 00001 500 mA Max WALLILIM 
+    // 00000001
+    reg_1=pollingLoop(SA_REG_1,"\x01");
     // REG 2 has the V float setting
     // write 1111 (battery charger current at 100% full-scale DEFAULT) + 
     // 11 (vfloat of 3.8V) +
     // 00 (full capacity charge indication threshold of 10% full-scale current DEFAULT) = 
     // 11111100
-    _i2c.write(_addr, SA_REG_2 + "\xFC");
-    // _i2c.write(_addr, SA_REG_2 + "\xF0");
-    do {
-      // imp.sleep(0.1);
-      word = _i2c.read(_addr, SA_REG_2, 1);
-      // server.log(word);
-      iteration += 1;
-      if (iteration > POLL_ITERATION_MAX) {
-        // if (trace == true) server.log("Polled 100 times and gave up.");
-        break;
-      }
-    } while (word == null);
-    // server.log("Charge current, float voltage, c/x detection:");
-    // charge_current = (word[0] & 0xf0) >> 4;
-    reg_2 = (word[0] & 0xff);
-    // if (trace == true) server.log("REG 2 = " + reg_2);
-    
-    iteration = 0;
-    word = 0x0;
-    _i2c.write(_addr, SA_REG_0);
-    do {
-      // imp.sleep(0.1);
-      word = _i2c.read(_addr, SA_REG_0, 1);
-      // server.log(word);
-      iteration += 1;
-      if (iteration > POLL_ITERATION_MAX) {
-        // if (trace == true) server.log("Polled 100 times and gave up.");
-        break;
-      }
-    } while (word == null);
-    // server.log("Charge current, float voltage, c/x detection:");
-    // charge_current = (word[0] & 0xf0) >> 4;
-    reg_0 = (word[0] & 0xff);
-    // if (trace == true) server.log("REG 0 = " + reg_0);
-    
-    iteration = 0;
-    word = 0x0;
-    // _i2c.write(_addr, SA_REG_1);
-    // 0 Wall Input Prioritized +
-    // 00 Battery Charger Safety Timer +
-    // 00001 500 mA Max WALLILIM =
-    // 00000001
-    _i2c.write(_addr, SA_REG_1 + "\x01");
-    do {
-      // imp.sleep(0.1);
-      word = _i2c.read(_addr, SA_REG_1, 1);
-      // server.log(word);
-      iteration += 1;
-      if (iteration > POLL_ITERATION_MAX) {
-        // if (trace == true) server.log("Polled 100 times and gave up.");
-        break;
-      }
-    } while (word == null);
-    // server.log("Charge current, float voltage, c/x detection:");
-    // charge_current = (word[0] & 0xf0) >> 4;
-    reg_1 = (word[0] & 0xff);
-    // if (trace == true) server.log("REG 1 = " + reg_1);
-
-    // external power
-    iteration = 0;
-    word = 0x0;
-    _i2c.write(_addr, SA_REG_4);
-    do {
-      // imp.sleep(0.1);
-      word = _i2c.read(_addr, SA_REG_4, 1);
-      // server.log(word);
-      iteration += 1;
-      if (iteration > POLL_ITERATION_MAX) {
-        // if (trace == true) server.log("Polled 100 times and gave up.");
-        break;
-      }
-    } while (word == null);
-    // server.log("Charge current, float voltage, c/x detection:");
-    reg_4 = (word[0] & 0xff);
-    // if (trace == true) server.log("REG 4 = " + reg_4);
-    
-    // ntc warning
-    iteration = 0;
-    word = 0x0;
-    _i2c.write(_addr, SA_REG_5);
-    do {
-      // imp.sleep(0.1);
-      word = _i2c.read(_addr, SA_REG_5, 1);
-      // server.log(word);
-      iteration += 1;
-      if (iteration > POLL_ITERATION_MAX) {
-        // if (trace == true) server.log("Polled 100 times and gave up.");
-        break;
-      }
-    } while (word == null);
-    // server.log("Charge current, float voltage, c/x detection:");
-    reg_5 = (word[0] & 0xff);
-    // if (trace == true) server.log("REG 5 = " + reg_5);
-
+    reg_2=pollingLoop(SA_REG_2,"\xFC");
+    //REG 3:Charger status
+    reg_3=pollingLoop(SA_REG_3);
+    // REG 4:external power
+    reg_4=pollingLoop(SA_REG_4);
+    // REG 5:ntc warning
+    reg_5=pollingLoop(SA_REG_5);
     // server.log(output);
     // _i2c.readerror();
     // Wait for the sensor to finish the reading
@@ -343,6 +270,134 @@ class PowerManager {
     //  server.log(_i2c.read(_addr, SA_REG_3 + "", 1));
     // }
     // timeout
+  }
+  //0.1 charging functions enable/disable/suspend/resume
+  //check the logic of 0C and FC in reg 2
+  //0.2 Changed to make the functions not overwrite vfloat settings
+  function enableCharging(toWrite=0x0C)
+  {
+    writeToReg("\x02",0xF0,toWrite);
+    nv.PMRegC[0]=0xF0;
+  }
+  function disableCharging(toWrite=0x0C)
+  {
+    writeToReg("\x02",0x00,toWrite);
+    nv.PMRegC[0]=0x00;
+  }
+  function suspendCharging(toWrite=0x00)
+  {
+    writeToReg("\x01",toWrite,0x00);
+    nv.PMRegB[1]=0x00;
+  }
+  //01 is our default setting of 500ma Max
+  function resumeCharging(toWrite=0x00)
+  {
+    writeToReg("\x01",toWrite,0x01);
+    nv.PMRegB[1]=0x01;
+  }
+    
+  //0.1
+  //Set vfloat based on battery voltage, close is defaulted to 0.03 volts
+  //feature 0.2
+  //now this does not overwrite the MSB when changing vfloat
+  function changevfloat(inputVoltage,close=0.03)
+  {
+    //TODO: add MSB input: ,MSBin="" to set MSB
+    //local vfloatin=nv.chargertwo.slice(3,3);
+    //local chargestate=nv.chargertwo.slice(2,2);
+    
+    //local oldreg=regToArr("\x02");
+    //local vfloatin=oldreg[1];
+    //local MSBin=oldreg[0];
+    /*In reg 2, vfloat is controlled by the 3rd and 4th LSB:
+    xxxx00xx=3.45
+    xxxx01xx=3.55
+    xxxx10xx=3.60
+    xxxx11xx=3.80 (This is our default setting)
+    note that this function only works if the two LSB in reg 2 remain xxxxxx00
+    */   
+    if(inputVoltage<3.55-close)
+    {
+       nv.PMRegC[1]=0x00;
+       writeToReg("\x02",nv.PMRegC[0],nv.PMRegC[1]);
+    }
+    else if (inputVoltage<3.60-close)
+    {       
+       nv.PMRegC[1]=0x04;
+       writeToReg("\x02",nv.PMRegC[0],nv.PMRegC[1]);
+    }
+    else if(inputVoltage<3.8-close)
+    {       
+       nv.PMRegC[1]=0x08;
+       writeToReg("\x02",nv.PMRegC[0],nv.PMRegC[1]);
+    }
+    else
+    {
+       nv.PMRegC[1]=0x0C;
+       writeToReg("\x02",nv.PMRegC[0],nv.PMRegC[1]);
+    }
+
+    
+  }
+  //0.1
+  //returns the value of a register as a string
+  //Example call: regToStr("\x02")
+  //example return: FC
+  function regToStr(registerNumber)
+  {
+    local word = _i2c.read(_addr, registerNumber, 1);
+    return format("%X", word[0] & 0xff)
+  }
+  //0.1
+  //returns two single character strings in an array
+  //Example call: regToStr("\x02")
+  //example return: [F,C] <-both strings NOT characters 
+  function regToArr(registerNumber)
+  {
+    local word = _i2c.read(_addr, registerNumber, 1);
+    local temp = format("%X", word[0] & 0xff);
+    return [temp.slice(0,1),temp.slice(1,2)]
+  }
+  //feature 0.2
+  function writeToReg(subreg,MSB=0x00,LSB=0x00)
+  {
+    local towrite=MSB|LSB;
+    _i2c.write(_addr, subreg+towrite.tochar());
+  }
+  //feature 0.2
+  //tempcontrol disables the charger if it exceeds max or min temperature
+  //sends warnings if the temperature is in the danger zone, which defaults to 10 degrees from max/min
+  function tempControl(temperature, dangerZone=5.0)
+  {
+      
+    //disable/enable charging based on temp function
+    if((temperature>maxBatteryTemp || temperature<minBatteryTemp)&&nv.PMRegC[0]!=0x00)
+    {
+      //disable charging
+      server.log("Temperature outside of operational range " + temperature.tostring());
+      disableCharging();
+    }
+    else
+    {
+
+      //temperature warning system
+      if(temperature>(maxBatteryTemp-dangerZone))
+      {
+        server.log("Nearing max temp warning: "+temperature.tostring());
+      }
+      if(temperature<(minBatteryTemp+dangerZone))
+      {
+        server.log("Nearing min temp warning: "+temperature.tostring());
+      }
+      if(debug){
+      server.log("Temperature is: "+temperature.tostring()+ ", Charger Enabled")
+      }
+      //enable charging
+      if(nv.PMRegC[0]==0x00)
+      {
+      enableCharging();
+      }
+    }
   }
 }
 
@@ -354,8 +409,7 @@ class HumidityTemperatureSensor {
   static COMMAND_MODE_BIT = 0x80;
   static STATUS_STALE_BIT = 0x40;
   static SUB_ADDR_TEMP = "\xE3";
-  static SUB_ADDR_HUMID = "\xE5";
-  
+  static SUB_ADDR_HUMID = "\xE5";  
   static i2c = hardware.i2c89;
   humidity = 0.0;
   temperature = 0.0;
@@ -363,29 +417,46 @@ class HumidityTemperatureSensor {
   constructor() {
     i2c.configure(CLOCK_SPEED_400_KHZ);
   }
-  
+  //samples retrieves the humidity and temperature register values
+  //converts them and returns them
   function sample() {
     local humidity_raw, temperature_raw, iteration = 0;
-    local data = [0x0, 0x0];
-    
+    local dataHum = [0x0,0x0];
+    local dataTem = [0x0,0x0];
+    //temporary arrays to store dataHum and dataTem
+    //to avoid fatal error caused by i2c read making data=null and failing loop condition
+    local tempTem=[];
+    local tempHum=[];
     // Measurement Request - wakes the sensor and initiates a measurement
     // if (trace == true) server.log("Sampling temperature");
     // if (trace == true) server.log(i2c.write(ADDRESS, SUB_ADDR_TEMP).tostring());
     // if (i2c.write(ADDRESS, SUB_ADDR_TEMP) == null)
     //  return -1;
-
     // Data Fetch - poll until the 'stale data' status bit is 0
     do {
-      imp.sleep(0.1);
-      data = i2c.read(ADDRESS, SUB_ADDR_TEMP, 2);
+    //sleep only after the first iteration    
+      if(iteration>0){
+        imp.sleep(0.1);
+      }
+      if(dataTem[0]==0&&dataTem[1]==0){
+        tempTem=i2c.read(ADDRESS, SUB_ADDR_TEMP, 2);
+        if(tempTem!=null){
+          dataTem=tempTem;
+        }
+      }
+      if(dataHum[0]==0&&dataHum[1]==0){
+        tempHum = i2c.read(ADDRESS, SUB_ADDR_HUMID, 2);
+        if(tempHum!=null){
+          dataHum=tempHum;
+        }
+      }
       // if (trace == true) server.log("Read attempt");
-      
       // timeout
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX)
         break;
-    } while (data == null);
-    
+    } while ((dataHum[0]==0&&dataHum[1]==0) || (dataTem[0]==0&&dataTem[1]==0));
+    //log("TemPoll= " + temPoll.tostring() + "   HumPoll= " + humPoll.tostring()+"  Iterations=" + iteration.tostring());
     // THE TWO STATUS BITS, THE LAST BITS OF THE LEAST SIGNIFICANT BYTE,
     // MUST BE SET TO '0' BEFORE CALCULATING PHYSICAL VALUES
     // This happens automatically, though, through the i2c.read function
@@ -396,35 +467,19 @@ class HumidityTemperatureSensor {
     //server.log(data[0] << 8);
     //server.log(data[1]);
     //server.log(data[1] & 0xfc);
-    temperature_raw = (data[0] << 8) + (data[1] & 0xfc);
+    temperature_raw = (dataTem[0] << 8) + (dataTem[1] & 0xfc);
     temperature = temperature_raw * 175.72 / 65536.0 - 46.85;
-    
-    
-    iteration = 0;
-    data = [0x0, 0x0];
     // Measurement Request - wakes the sensor and initiates a measurement
     // if (trace == true) server.log("Sampling humidity");
     // if (trace == true) server.log(i2c.write(ADDRESS, SUB_ADDR_HUMID).tostring());
     // Data Fetch - poll until the 'stale data' status bit is 0
-    do {
-      imp.sleep(0.1);
-      data = i2c.read(ADDRESS, SUB_ADDR_HUMID, 2);
-      // if (trace == true) server.log("Read attempt");
-      
-      // timeout
-      iteration += 1;
-      if (iteration > POLL_ITERATION_MAX)
-        break;
-    } while (data == null);
-    
-    humidity_raw = (data[0] << 8) + (data[1] & 0xfc);
+    humidity_raw = (dataHum[0] << 8) + (dataHum[1] & 0xfc);
     humidity = humidity_raw * 125.0 / 65536.0 - 6.0;
   }
 }
 
 
 // VREF is VSYS – voltage=2.8V 
-
 // PIN A- ADC_S – soil moisture sensor (up to Vsys) 
 // Soil probe voltage sensor
 class soil {
@@ -584,14 +639,12 @@ function logDeviceOnline()
 
 function onConnectedTimeout(state) {
   //If we're connected...
-  if (state == SERVER_CONNECTED) 
-  {
+  if (state == SERVER_CONNECTED) {
     // ...do something
     if (debug == true) server.log("After allowing a chance to blinkup, succesfully connected to server.");
     main();
   } 
-  else 
-  {
+  else {
     // Otherwise, do something else
     // power.enter_deep_sleep_ship_store("Conservatively going into ship and store mode after failing to connect to server.");
     if (debug == true) server.log("Gave a chance to blink up, then tried to connect to server but failed.");
@@ -615,30 +668,57 @@ function connect(callback, timeout) {
   }
 }
 
+//interruptPin is tied to the pin wakeup condition of the device
+//the user can check the on/off status of the device by pressing the button once
+//the user then has 5 seconds (for which the LED will be green) to press the button again
+//pressing the button a second time enables blinkup
 
 function interruptPin() {
-  logDeviceOnline();
-  alreadyPressed = true;
-  if (debug == true) server.log("Button pressed");
-  // led.blink(0.1, 10);
-  imp.enableblinkup(true);
-  // blueLed.pulse();
-  // greenLed.blink(0.1,6);
-  // redLed.blink(0.1,6);
-  blinkAll(0.1,6);
-  // Enable blinkup for 30s
-  imp.sleep(30);
-  // led.blink(0.1, 10);
-  // blueLed.pulse();
-  // greenLed.blink(0.1,6);
-  // redLed.blink(0.1,6);
-  blinkAll(0.1,6);
-  imp.enableblinkup(false);
-  // imp.setwificonfiguration("doesntexist", "lalala");
-  connect(onConnectedTimeout, TIMEOUT_SERVER_S);
-  // imp.sleep(21);
-  alreadyPressed = false;
-  // server.connect(send_data, TIMEOUT_SERVER_S);
+  logDeviceOnline();  
+  local secondPress=false;
+  //first press is needed to prohibit multiple instances of interruptPin from overlapping
+  if(firstPress==false){
+    firstPress=true;
+    local iterator=250;
+    //turn the LED green, poll for 5 seconds
+    greenLed.on();
+    do{
+      if(hardware.pin1.read()==1){
+        //exit early on button press
+        secondPress=true;
+        iterator=0;
+      }
+      iterator-=1;
+      imp.sleep(0.02);
+    }while(iterator>0)
+    greenLed.off();
+    if(secondPress==true){
+      imp.enableblinkup(true);
+      // blueLed.pulse();
+      // greenLed.blink(0.1,6);
+      // redLed.blink(0.1,6);
+      blinkAll(0.1,6);
+      // Enable blinkup for 30s
+      imp.sleep(30);
+      // led.blink(0.1, 10);
+      // blueLed.pulse();
+      // greenLed.blink(0.1,6);
+      // redLed.blink(0.1,6);
+      blinkAll(0.1,6);      
+      imp.enableblinkup(false);
+      // imp.setwificonfiguration("doesntexist", "lalala");  
+      firstPress=false;
+      connect(onConnectedTimeout, TIMEOUT_SERVER_S);
+      // imp.sleep(21);
+      // server.connect(send_data, TIMEOUT_SERVER_S);
+      firstPress = false;
+    }
+  }
+  
+  if (debug == true){
+    server.log("Button pressed");
+  }  
+  firstPress=false;
 }
 
 // return true iff the collected data should be sent to the server
@@ -724,15 +804,24 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 // Callback for server status changes.
 function send_data(status) {
   // update last sent data (even on failure, so the next send attempt is not immediate)
+  local power_manager_data=[];
   nv.data_sent = nv.data.top();
   
   if (status == SERVER_CONNECTED) {
     // ok: send data
     // server.log(imp.scanwifinetworks());
+    //
+    power_manager_data.append(powerManager.reg_0);
+    power_manager_data.append(powerManager.reg_1);
+    power_manager_data.append(powerManager.reg_2);
+    power_manager_data.append(powerManager.reg_3);
+    power_manager_data.append(powerManager.reg_4);
+    power_manager_data.append(powerManager.reg_5);
     if (debug == true) server.log("Connected to server.");
     agent.send("data", {
       device = hardware.getdeviceid(),
-      data = nv.data
+      data = nv.data,
+      power_data=power_manager_data
     }); // TODO: send error codes
     local success = server.flush(TIMEOUT_SERVER_S);
     if (success) {
@@ -812,6 +901,15 @@ function blinkAll(duration, count = 1) {
   }
 }
 
+//0.1
+//should return a string that can be written to a register
+//needs some testing
+function toHexStr(firstByte="0",secondByte="0")
+{
+  return "\\x"+firstByte+secondByte;
+}
+
+
 function main() {
   // manual control of Wi-Fi state and other setup
   server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
@@ -852,6 +950,7 @@ function main() {
 
   // hardware.pin1.configure("DIGITAL_IN_WAKEUP", function(){server.log("imp woken") });
   hardware.pin1.configure(DIGITAL_IN_WAKEUP, interruptPin);
+  
 
   ///
   // End of event handlers
@@ -874,11 +973,11 @@ function main() {
   // Useless according to Hugo from Electric Imp
   // imp.setpowersave(true);
   imp.enableblinkup(false);
-  
   // create non-volatile storage if it doesn't exist
   if (!("nv" in getroottable() && "data" in nv)) {
-    nv <- { data = [], data_sent = null, running_state = true };
+        nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00]};   
   }
+  
   
   // we have entered the running state
   nv.running_state = true;
@@ -892,6 +991,8 @@ function main() {
   humidityTemperatureSensor <- HumidityTemperatureSensor();
   humidityTemperatureSensor.sample();
 
+  
+  
   // nv space is limited to 4kB and will not notify of failure
   // discard every second entry if over MAX entries
   // TODO: combine similar data points instead of discarding them
@@ -904,25 +1005,47 @@ function main() {
   }
 
   // store sensor data in non-volatile storage
-  nv.data.push({
-    ts = time(),
-    t = humidityTemperatureSensor.temperature,
-    h = humidityTemperatureSensor.humidity,
-    l = solar.voltage(),
-    m = soil.voltage(),
-    b = source.voltage(),
-    r3 = powerManager.reg_3,
-    r2 = powerManager.reg_2,
-    r0 = powerManager.reg_0,
-    r1 = powerManager.reg_1,
-    r5 = powerManager.reg_5,
-    r4 = powerManager.reg_4
-  });
+  //0.1
+  //testing or not
+  powerManager.disableCharging();
+  local batvol = source.voltage();
+  powerManager.enableCharging();
+  
+  powerManager.changevfloat(batvol);
+  powerManager.tempControl(humidityTemperatureSensor.temperature);
+  
+  if(runTest)
+  {
+      nv.data.push({
+        ts = time(),
+        t = humidityTemperatureSensor.temperature,
+        h = humidityTemperatureSensor.humidity,
+        l = solar.voltage(),
+        m = soil.voltage(),
+        b = source.voltage()
+        testResults=unitTest()
+      });
+  }
+  else
+  {
+        nv.data.push({
+        ts = time(),
+        t = humidityTemperatureSensor.temperature,
+        h = humidityTemperatureSensor.humidity,
+        l = solar.voltage(),
+        m = soil.voltage(),
+        b = source.voltage()
+        });
+  }
 
+//feature 0.2 important
   //Send sensor data
   if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
     if (debug == true) server.log("Server refresh needed");
     connect(send_data, TIMEOUT_SERVER_S);
+    
+
+    
     // if (debug == true) server.log("Sending location information without prompting.");
     // connect(send_loc, TIMEOUT_SERVER_S);
   }
@@ -951,16 +1074,24 @@ function main() {
   }
   
 }
-
+    
+    
 // Define a function to handle disconnections
  
 function disconnectHandler(reason) {
-  if (reason != SERVER_CONNECTED)
-  {
+  if (reason != SERVER_CONNECTED){
     if (debug == true) server.log("Unexpectedly lost wifi connection.");
     power.enter_deep_sleep_failed("Unexpectedly lost wifi connection.");
   }
 }
+
+//0.1
+//added unit test here
+function unitTest()
+{
+}
+
+
 
 ///
 // End of functions
