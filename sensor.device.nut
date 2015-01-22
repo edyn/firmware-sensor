@@ -43,8 +43,8 @@ attemptNumber <- 0;
 //if runtest is true, the unit test defined below main will run
 runTest<-false;
 //feature 0.2
-maxBatteryTemp<- 100.0;
-minBatteryTemp<- 10.0;
+maxBatteryTemp<- 60.0;
+minBatteryTemp<- 0.0;
 ///
 // Classes
 ///
