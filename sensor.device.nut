@@ -680,8 +680,18 @@ function interruptPin() {
   if(firstPress==false){
     firstPress=true;
     local iterator=250;
-    //turn the LED green, poll for 5 seconds
-    greenLed.on();
+	//0.3
+	local batstat=source.voltage();
+
+	local greenLight=true;
+	if(batstat<3.2750){
+		greenLight=false;
+		redLed.on();
+	}
+	else{
+		//turn the LED green, poll for 5 seconds
+		greenLed.on();
+	}
     do{
       if(hardware.pin1.read()==1){
         //exit early on button press
@@ -691,7 +701,13 @@ function interruptPin() {
       iterator-=1;
       imp.sleep(0.02);
     }while(iterator>0)
-    greenLed.off();
+	//0.3
+	if(greenLight){
+		greenLed.off();
+	}
+	else{
+		redLed.off();
+	}
     if(secondPress==true){
       imp.enableblinkup(true);
       // blueLed.pulse();
