@@ -421,12 +421,8 @@ class HumidityTemperatureSensor {
   //converts them and returns them
   function sample() {
     local humidity_raw, temperature_raw, iteration = 0;
-    local dataHum = [0x0,0x0];
-    local dataTem = [0x0,0x0];
-    //temporary arrays to store dataHum and dataTem
-    //to avoid fatal error caused by i2c read making data=null and failing loop condition
-    local tempTem=[];
-    local tempHum=[];
+    local dataHum = null;
+    local dataTem = null;
     // Measurement Request - wakes the sensor and initiates a measurement
     // if (trace == true) server.log("Sampling temperature");
     // if (trace == true) server.log(i2c.write(ADDRESS, SUB_ADDR_TEMP).tostring());
@@ -438,24 +434,18 @@ class HumidityTemperatureSensor {
       if(iteration>0){
         imp.sleep(0.1);
       }
-      if(dataTem[0]==0&&dataTem[1]==0){
-        tempTem=i2c.read(ADDRESS, SUB_ADDR_TEMP, 2);
-        if(tempTem!=null){
-          dataTem=tempTem;
-        }
-      }
-      if(dataHum[0]==0&&dataHum[1]==0){
-        tempHum = i2c.read(ADDRESS, SUB_ADDR_HUMID, 2);
-        if(tempHum!=null){
-          dataHum=tempHum;
-        }
+      if(dataTem=null){
+        dataTem=i2c.read(ADDRESS, SUB_ADDR_TEMP, 2);
+	  }
+      if(dataHum==null){
+        dataHum= i2c.read(ADDRESS, SUB_ADDR_HUMID, 2);
       }
       // if (trace == true) server.log("Read attempt");
       // timeout
       iteration += 1;
       if (iteration > POLL_ITERATION_MAX)
         break;
-    } while ((dataHum[0]==0&&dataHum[1]==0) || (dataTem[0]==0&&dataTem[1]==0));
+    } while (dataHum==null||dataTem==null);
     //log("TemPoll= " + temPoll.tostring() + "   HumPoll= " + humPoll.tostring()+"  Iterations=" + iteration.tostring());
     // THE TWO STATUS BITS, THE LAST BITS OF THE LEAST SIGNIFICANT BYTE,
     // MUST BE SET TO '0' BEFORE CALCULATING PHYSICAL VALUES
