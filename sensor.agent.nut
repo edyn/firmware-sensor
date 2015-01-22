@@ -61,7 +61,7 @@ function processResponse(incomingDataTable) {
 function send_loc_data(data) {
   server.log(http.jsonencode(data));
   local message = http.jsonencode(data);
-  local readings_url = "http://edynbackendnodetest.elasticbeanstalk.com/devicelocation/";
+  local readings_url = "http://edynbackenddev.elasticbeanstalk.com/devicelocation/";
   local req = http.post(readings_url, {"Content-Type":"application/json", "User-Agent":"Imp", "X-Api-Key":"FEIMfjweiovm90283y3#*U)#@URvm"}, message);
   req.sendasync(processResponse);
 }
