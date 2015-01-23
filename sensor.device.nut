@@ -18,11 +18,13 @@
 // - give up when the device doesn't see wifi
 ////////////////////////////////////////////////////////////
 
+const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
+server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
+
 const INTERVAL_SENSOR_SAMPLE_S = 60; // sample sensors this often
 const INTERVAL_SLEEP_FAILED_S = 3600; // sample sensors this often
 // const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
 const INTERVAL_SLEEP_SHIP_STORE_S = 2419198;
-const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 const POLL_ITERATION_MAX = 100; // maximum number of iterations for sensor polling loop
 // const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
 // New setting now that we're recording register values
@@ -918,7 +920,6 @@ function toHexStr(firstByte="0",secondByte="0")
 
 function main() {
   // manual control of Wi-Fi state and other setup
-  server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 
   // I could remove this, since, according to Hugo:
   // When you wake from an imp.deepsleep or server.sleep,
