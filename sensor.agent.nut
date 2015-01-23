@@ -61,7 +61,7 @@ function processResponse(incomingDataTable) {
 function send_loc_data(data) {
   server.log(http.jsonencode(data));
   local message = http.jsonencode(data);
-  local readings_url = "http://edynbackenddev.elasticbeanstalk.com/devicelocation/";
+  local readings_url = "http://edynbackendprod.elasticbeanstalk.com/devicelocation/";
   local req = http.post(readings_url, {"Content-Type":"application/json", "User-Agent":"Imp", "X-Api-Key":"FEIMfjweiovm90283y3#*U)#@URvm"}, message);
   req.sendasync(processResponse);
 }
@@ -69,40 +69,214 @@ function send_loc_data(data) {
 // Invoked when the device calls agent.send("data", ...)
 device.on("data", function(data) {
   // data[sd] <- [1, 2];
-  local dataToSend = data;
-  local dataToSendNode = {};
-  dataToSendNode.uuid <- data.device;
-  dataToSendNode.data <- [];
-  dataToSendNode.powerData<-{};
-  // temp code to work with back end expectation of sd key
-  // dataToSend.data[0].sd <- [];
-  
-  local settings = server.load();
-  // If no preferences have been saved, settings will be empty
-  if (settings.len() != 0) {
+  if(!("power_data" in data)) {//WITHOUT powerdata
+    // data[sd] <- [1, 2];
+    local dataToSend = data;
+    local dataToSendNode = {};
+    dataToSendNode.uuid <- data.device;
+    dataToSendNode.data <- [];
+    // temp code to work with back end expectation of sd key
+    // dataToSend.data[0].sd <- [];
+    
+    local settings = server.load();
+    // If no preferences have been saved, settings will be empty
+    if (settings.len() != 0) {
     // Settings table is NOT empty so set the
     // lat and lng to the values from the loaded table
     dataToSend.lat <- settings.lat;
     dataToSend.lng <- settings.lng;
-  } else {
+    } else {
     // Settings table IS empty
     // Default values are the Oakland office
     dataToSend.lat <- 37.362517;
     dataToSend.lng <- -122.03476;
-  }
-  
-  local newPoint = {};
-  // Hacks
-  foreach (origPoint in dataToSend.data) {
+    }
+    
+    local newPoint = {};
+    // Hacks
+    foreach (origPoint in dataToSend.data) {
     origPoint.sd <- [1];
-  }
-  
-  send_data_json(dataToSend); // JSON API
-  
-  
-  //Seperated powermanager register data from data.data
-  //added testResults handling for unit tests (checks for them first)
-  foreach (point in data.data) {
+    }
+    
+    send_data_json(dataToSend); // JSON API
+    
+    foreach (point in data.data) {
+    newPoint = {};
+    newPoint.timestamp <- point.ts;
+    newPoint.battery <- point.b;
+    newPoint.humidity <- point.h;
+    newPoint.temperature <- point.t;
+    newPoint.electrical_conductivity <- point.m;
+    newPoint.light <- point.l;
+
+    // newPoint.disable_input_uvcl <- false;
+    newPoint.disable_input_uvcl <- (point.r0 & 0x80) != 0x00;
+
+    local convertCurrentLim = function(input) {
+      if (input == 0x00) return "100mA Max (USB Low Power)"
+      if (input == 0x01) return "500mA Max (USB High Power)"
+      if (input == 0x02) return "600mA Max"
+      if (input == 0x03) return "700mA Max"
+      if (input == 0x04) return "800mA Max"
+      if (input == 0x05) return "900mA Max (USB 3.0)"
+      if (input == 0x06) return "1000mA Typical"
+      if (input == 0x07) return "1250mA Typical"
+      if (input == 0x08) return "1500mA Typical"
+      if (input == 0x09) return "1750mA Typical"
+      if (input == 0x0A) return "2000mA Typical"
+      if (input == 0x0B) return "2250mA Typical"
+      if (input == 0x0C) return "2500mA Typical"
+      if (input == 0x0D) return "2750mA Typical"
+      if (input == 0x0E) return "3000mA Typical"
+      if (input == 0x0F) return "2.5mA Max (USB Suspend)"
+      if (input == 0x1F) return "SELECT CLPROG1"
+    }
+
+    // NEED TO THINK ABOUT MORE
+    // newPoint.wall_i_lim <- 0;
+    local wall_i_lim = (point.r1 & 0x1f);
+    newPoint.wall_i_lim <- convertCurrentLim(wall_i_lim);
+
+    // In minutes, different than data sheet
+    // newPoint.timer <- 60;
+    local timer = (point.r1 & 0x60) >> 5;
+    if (timer == 0x0) newPoint.timer <- 60;
+    if (timer == 0x1) newPoint.timer <- 240;
+    if (timer == 0x2) newPoint.timer <- 15;
+    if (timer == 0x3) newPoint.timer <- 30;
+    
+    // newPoint.i_charge <- 100.0;
+    local i_charge = ((point.r2 & 0xf0) >> 4).tofloat();
+    newPoint.i_charge <- ((i_charge-1)*6.25)+12.5
+    if (newPoint.i_charge < 12.49) newPoint.i_charge = 0.0;
+    
+    // newPoint.v_float <- 3.45;
+    local v_float = (point.r2 & 0xc) >> 2;
+    if (v_float == 0x0) newPoint.v_float <- 3.45;
+    if (v_float == 0x1) newPoint.v_float <- 3.55;
+    if (v_float == 0x2) newPoint.v_float <- 3.60;
+    if (v_float == 0x3) newPoint.v_float <- 3.80;
+    
+    // newPoint.c_x_set <- 10;
+    local c_x_set = (point.r2 & 0x3);
+    if (c_x_set == 0x0) newPoint.c_x_set <- 10;
+    if (c_x_set == 0x1) newPoint.c_x_set <- 20;
+    if (c_x_set == 0x2) newPoint.c_x_set <- 2;
+    if (c_x_set == 0x3) newPoint.c_x_set <- 5;
+    
+    // newPoint.charger_status <- "Charger Off";
+    local charger_status = (point.r3 & 0xe0) >> 5;
+    if (charger_status == 0x0) newPoint.charger_status <- "Charger Off";
+    if (charger_status == 0x1) newPoint.charger_status <- "Low Battery Voltage";
+    if (charger_status == 0x2) newPoint.charger_status <- "Constant Current";
+    if (charger_status == 0x3) newPoint.charger_status <- "Constant Voltage, VPROG>VC/X";
+    if (charger_status == 0x4) newPoint.charger_status <- "Constant Voltage, VPROG<VC/X";
+    if (charger_status == 0x6) newPoint.charger_status <- "NTC TOO COLD, Charging Paused";
+    if (charger_status == 0x7) newPoint.charger_status <- "NTC HOT FAULT, Charging Paused";
+
+    // newPoint.ntc_stat <- "NTC Normal";
+    local ntc_stat = (point.r3 & 0x6) >> 1;
+    if (ntc_stat == 0x0) newPoint.ntc_stat <- "NTC Normal";
+    if (ntc_stat == 0x1) newPoint.ntc_stat <- "NTC_TOO_COLD";
+    if (ntc_stat == 0x3) newPoint.ntc_stat <- "NTC_HOT_FAULT";
+    
+    // newPoint.low_bat <- true;
+    newPoint.low_bat <- (point.r3 & 0x1) != 0x00;
+    
+    // newPoint.ext_pwr_good <- true;
+    newPoint.ext_pwr_good <- (point.r4 & 0x80) != 0x00;
+    
+    // newPoint.wall_sns_good <- true;
+    newPoint.wall_sns_good <- (point.r4 & 0x20) != 0x00;
+    
+    // newPoint.at_input_ilim <- false;
+    newPoint.at_input_ilim <- (point.r4 & 0x10) != 0x00;
+    
+    // newPoint.input_uvcl_active <- false;
+    newPoint.input_uvcl_active <- (point.r4 & 0x8) != 0x00;
+    
+    // newPoint.ovp_active <- false;
+    newPoint.ovp_active <- (point.r4 & 0x4) != 0x00;
+    
+    // newPoint.bad_cell <- false;
+    newPoint.bad_cell <- (point.r4 & 0x1) != 0x00;
+    
+    // SWITCHED THIS TO INTEGER!
+    // newPoint.ntc_val <- 20.0;
+    newPoint.ntc_val <- ((point.r5 & 0xfe) >> 1).tointeger();
+    
+    // newPoint.ntc_warning <- false;
+    newPoint.ntc_warning <- (point.r5 & 0x1) != 0x00;
+
+    dataToSendNode.data.append(newPoint);
+    }
+    
+    //data_buffer.extend(data.data); // for debug
+    server.log(http.jsonencode(dataToSend));
+    server.log("Number of sensor measurements and power manager statuses is " + dataToSendNode.data[0].len());
+    
+    // Core
+    server.log("timestamp " + dataToSendNode.data[0].timestamp + ", battery " + dataToSendNode.data[0].battery);
+    server.log("temperature " + dataToSendNode.data[0].temperature + ", humidity " + dataToSendNode.data[0].humidity);
+    server.log("light " + dataToSendNode.data[0].light + ", electrical_conductivity " + dataToSendNode.data[0].electrical_conductivity);
+    
+    // Text
+    server.log("charger_status " + dataToSendNode.data[0].charger_status);
+    server.log("ntc_stat " + dataToSendNode.data[0].ntc_stat);
+    server.log("wall_i_lim " + dataToSendNode.data[0].wall_i_lim);
+    
+    // Numbers
+    server.log("i_charge " + dataToSendNode.data[0].i_charge);
+    server.log("ntc_val " + dataToSendNode.data[0].ntc_val + ", timer " + dataToSendNode.data[0].timer);
+    server.log("v_float " + dataToSendNode.data[0].v_float + ", c_x_set " + dataToSendNode.data[0].c_x_set);
+    
+    // Booleans
+    server.log("ext_pwr_good " + dataToSendNode.data[0].ext_pwr_good + ", wall_sns_good " + dataToSendNode.data[0].wall_sns_good);
+    // Low cell voltage is only meaningful when input (WALL or USB) power is available
+    // and the battery charger is enabled,
+    // or when automatic or manual enable of the step-up regulator has been requested.
+    server.log("low_bat (with caveats) " + dataToSendNode.data[0].low_bat + ", bad_cell " + dataToSendNode.data[0].bad_cell);
+    server.log("at_input_ilim " + dataToSendNode.data[0].at_input_ilim + ", ovp_active " + dataToSendNode.data[0].ovp_active);
+    server.log("input_uvcl_active " + dataToSendNode.data[0].input_uvcl_active + ", disable_input_uvcl " + dataToSendNode.data[0].disable_input_uvcl);
+    server.log("ntc_warning " + dataToSendNode.data[0].ntc_warning);
+    
+    // Commented out while hacking on the new power controller
+    send_data_json_node(dataToSendNode);
+  } else {//WITH powerdata
+    local dataToSend = data;
+    local dataToSendNode = {};
+    dataToSendNode.uuid <- data.device;
+    dataToSendNode.data <- [];
+    dataToSendNode.powerData<-{};
+    // temp code to work with back end expectation of sd key
+    // dataToSend.data[0].sd <- [];
+    
+    local settings = server.load();
+    // If no preferences have been saved, settings will be empty
+    if (settings.len() != 0) {
+      // Settings table is NOT empty so set the
+      // lat and lng to the values from the loaded table
+      dataToSend.lat <- settings.lat;
+      dataToSend.lng <- settings.lng;
+    } else {
+      // Settings table IS empty
+      // Default values are the Oakland office
+      dataToSend.lat <- 37.362517;
+      dataToSend.lng <- -122.03476;
+    }
+    
+    local newPoint = {};
+    // Hacks
+    foreach (origPoint in dataToSend.data) {
+      origPoint.sd <- [1];
+    }
+    
+    send_data_json(dataToSend); // JSON API
+    
+    
+    //Seperated powermanager register data from data.data
+    //added testResults handling for unit tests (checks for them first)
+    foreach (point in data.data) {
     newPoint = {};
     newPoint.timestamp <- point.ts;
     newPoint.battery <- point.b;
@@ -111,23 +285,23 @@ device.on("data", function(data) {
     newPoint.electrical_conductivity <- point.m;
     newPoint.light <- point.l;
     if("testResults" in point){
-        if(typeof(point.testResults)=="array"){
-            for(local i=0; i<point.testResults.len(); i++){
-            server.log("Test Results " + i + " = " +point.testResults[i])
-            }
+      if(typeof(point.testResults)=="array"){
+        for(local i=0; i<point.testResults.len(); i++){
+        server.log("Test Results " + i + " = " +point.testResults[i])
         }
-        else /*if(typeof(point.testResults)=="string")*/{
-           server.log(point.testResults)
-        }
-        //server.log("TestResults:"+typeof(point.testResults))
+      }
+      else /*if(typeof(point.testResults)=="string")*/{
+         server.log(point.testResults)
+      }
+      //server.log("TestResults:"+typeof(point.testResults))
     }
     //dataToSendNode.data.append(newPoint);
     dataToSendNode.data.append(newPoint);
-  }
-  
-  //Table of power information passed to agent
-  local powerPoint={};
-  
+    }
+    
+    //Table of power information passed to agent
+    local powerPoint={};
+    
     powerPoint.disable_input_uvcl <- (data.power_data[0] & 0x80) != 0x00;
     
     local convertCurrentLim = function(input) {
@@ -225,44 +399,48 @@ device.on("data", function(data) {
     
     // newPoint.ntc_warning <- false;
     powerPoint.ntc_warning <- (data.power_data[5] & 0x1) != 0x00;
-  
+    
     //append to dataToSendNode
     
     dataToSendNode.powerData=powerPoint;
 
-  
-  
-  //data_buffer.extend(data.data); // for debug
-  server.log(http.jsonencode(dataToSend));
-  server.log("Number of sensor measurements and power manager statuses is " + dataToSendNode.data[0].len());
-  
-  // Core
-  server.log("timestamp " + dataToSendNode.data[0].timestamp + ", battery " + dataToSendNode.data[0].battery);
-  server.log("temperature " + dataToSendNode.data[0].temperature + ", humidity " + dataToSendNode.data[0].humidity);
-  server.log("light " + dataToSendNode.data[0].light + ", electrical_conductivity " + dataToSendNode.data[0].electrical_conductivity);
-  
-  // Text
-  server.log("charger_status " + dataToSendNode.powerData.charger_status);
-  server.log("ntc_stat " + dataToSendNode.powerData.ntc_stat);
-  server.log("wall_i_lim " + dataToSendNode.powerData.wall_i_lim);
-  
-  // Numbers
-  server.log("i_charge " + dataToSendNode.powerData.i_charge);
-  server.log("ntc_val " + dataToSendNode.powerData.ntc_val + ", timer " + dataToSendNode.powerData.timer);
-  server.log("v_float " + dataToSendNode.powerData.v_float + ", c_x_set " + dataToSendNode.powerData.c_x_set);
-  
-  // Booleans
-  server.log("ext_pwr_good " + dataToSendNode.powerData.ext_pwr_good + ", wall_sns_good " + dataToSendNode.powerData.wall_sns_good);
-  // Low cell voltage is only meaningful when input (WALL or USB) power is available
-  // and the battery charger is enabled,
-  // or when automatic or manual enable of the step-up regulator has been requested.
-  server.log("low_bat (with caveats) " + dataToSendNode.powerData.low_bat + ", bad_cell " + dataToSendNode.powerData.bad_cell);
-  server.log("at_input_ilim " + dataToSendNode.powerData.at_input_ilim + ", ovp_active " + dataToSendNode.powerData.ovp_active);
-  server.log("input_uvcl_active " + dataToSendNode.powerData.input_uvcl_active + ", disable_input_uvcl " + dataToSendNode.powerData.disable_input_uvcl);
-  server.log("ntc_warning " + dataToSendNode.powerData.ntc_warning);
+    //data_buffer.extend(data.data); // for debug
+    server.log(http.jsonencode(dataToSend));
+    server.log("Number of sensor measurements and power manager statuses is " + dataToSendNode.data[0].len());
+    
+    // Core
+    server.log("timestamp " + dataToSendNode.data[0].timestamp + ", battery " + dataToSendNode.data[0].battery);
+    server.log("temperature " + dataToSendNode.data[0].temperature + ", humidity " + dataToSendNode.data[0].humidity);
+    server.log("light " + dataToSendNode.data[0].light + ", electrical_conductivity " + dataToSendNode.data[0].electrical_conductivity);
+    
+    // Text
+    server.log("charger_status " + dataToSendNode.powerData.charger_status);
+    server.log("ntc_stat " + dataToSendNode.powerData.ntc_stat);
+    server.log("wall_i_lim " + dataToSendNode.powerData.wall_i_lim);
+    
+    // Numbers
+    server.log("i_charge " + dataToSendNode.powerData.i_charge);
+    server.log("ntc_val " + dataToSendNode.powerData.ntc_val + ", timer " + dataToSendNode.powerData.timer);
+    server.log("v_float " + dataToSendNode.powerData.v_float + ", c_x_set " + dataToSendNode.powerData.c_x_set);
+    
+    // Booleans
+    server.log("ext_pwr_good " + dataToSendNode.powerData.ext_pwr_good + ", wall_sns_good " + dataToSendNode.powerData.wall_sns_good);
+    // Low cell voltage is only meaningful when input (WALL or USB) power is available
+    // and the battery charger is enabled,
+    // or when automatic or manual enable of the step-up regulator has been requested.
+    server.log("low_bat (with caveats) " + dataToSendNode.powerData.low_bat + ", bad_cell " + dataToSendNode.powerData.bad_cell);
+    server.log("at_input_ilim " + dataToSendNode.powerData.at_input_ilim + ", ovp_active " + dataToSendNode.powerData.ovp_active);
+    server.log("input_uvcl_active " + dataToSendNode.powerData.input_uvcl_active + ", disable_input_uvcl " + dataToSendNode.powerData.disable_input_uvcl);
+    server.log("ntc_warning " + dataToSendNode.powerData.ntc_warning);
 
-  // Commented out while hacking on the new power controller
-  send_data_json_node(dataToSendNode);
+    // Commented out while hacking on the new power controller
+    send_data_json_node(dataToSendNode);
+  }
+    
+  
+  
+  
+
 });
 
 // Invoked when the device calls agent.send("location", ...)
