@@ -436,7 +436,7 @@ class HumidityTemperatureSensor {
       if(iteration>0){
         imp.sleep(0.1);
       }
-      if(dataTem=null){
+      if(dataTem==null){
         dataTem=i2c.read(ADDRESS, SUB_ADDR_TEMP, 2);
       }
       if(dataHum==null){
