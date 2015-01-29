@@ -373,9 +373,14 @@ class PowerManager {
   {
       
     //disable/enable charging based on temp function
-    if((temperature>maxBatteryTemp || temperature<minBatteryTemp)&&nv.PMRegC[0]!=0x00)
+    if(temperature>maxBatteryTemp || temperature<minBatteryTemp)
     {
-      //disable charging
+      //disable charging\
+      for(local a=0;a<20;a+=1)
+      {
+          blueLed.blink(0.1,1);
+          redLed.blink(0.1,1);
+      }
       server.log("Temperature outside of operational range " + temperature.tostring());
       disableCharging();
     }
@@ -459,29 +464,30 @@ class HumidityTemperatureSensor {
     //server.log(data[0] << 8);
     //server.log(data[1]);
     //server.log(data[1] & 0xfc);
-    
-    //if dataHum is null, instead of throwing an error, just return the last measurement 
-    //if the temperature is 0.0 (initial value) return 33.33 because a reading of 0.0 will turn off the charger
-    if(dataTem!=null){
-        temperature_raw = (dataTem[0] << 8) + (dataTem[1] & 0xfc);
-        temperature = temperature_raw * 175.72 / 65536.0 - 46.85;
+    if(dataTem!=null)
+    {
+    temperature_raw = (dataTem[0] << 8) + (dataTem[1] & 0xfc);
+    temperature = temperature_raw * 175.72 / 65536.0 - 46.85;
     }
-    else{
-        if(temperature==0.0)
-        {
-            temperature=33.33;
-        }
+    else
+    {
+        temperature=50.0;
     }
     // Measurement Request - wakes the sensor and initiates a measurement
     // if (trace == true) server.log("Sampling humidity");
     // if (trace == true) server.log(i2c.write(ADDRESS, SUB_ADDR_HUMID).tostring());
     // Data Fetch - poll until the 'stale data' status bit is 0
-    //if dataHum is null, instead of throwing an error, just return the last measurement (may be 0.0 on first run)
-    if(dataHum!=null){
-        humidity_raw = (dataHum[0] << 8) + (dataHum[1] & 0xfc);
-        humidity = humidity_raw * 125.0 / 65536.0 - 6.0;
+    if(dataHum!=null)
+    {
+    humidity_raw = (dataHum[0] << 8) + (dataHum[1] & 0xfc);
+    humidity = humidity_raw * 125.0 / 65536.0 - 6.0;
     }
-  }
+    else
+    {
+        humidity=0.20;
+    }
+        
+    }
 }
 
 
@@ -543,7 +549,11 @@ class power {
         if (debug == true) server.log("Starting deep sleep (running).");
         // if (trace == true) server.log("Note that subsequent 'sensing' wakes won't log here.");
         // if (trace == true) server.log("The next wake to log will be the 'data transmission' wake.");
-        server.sleepfor(INTERVAL_SENSOR_SAMPLE_S);
+        if(nv.nextwake!=null)
+        {
+        imp.cancelwakeup(nv.nextwake);
+        }
+        nv.nextwake=imp.wakeup(INTERVAL_SENSOR_SAMPLE_S,main);
       });
     });
   }
@@ -553,12 +563,16 @@ class power {
     //Old version before Electric Imp's sleeping fix
     //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
     //Implementing Electric Imp's sleeping fix
-    blueLed.pulse();
+    //blueLed.pulse();
     if (debug == true) server.log("Deep sleep (storage) call because: "+reason)
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
-        if (debug == true) server.log("Starting deep sleep (ship and store).");
-        server.sleepfor(INTERVAL_SLEEP_SHIP_STORE_S);
+        if (debug == true) server.log("Starting deep sleep (ship and store).");       
+        if(nv.nextwake!=null)
+        {
+        imp.cancelwakeup(nv.nextwake);
+        }
+        nv.nextwake=imp.wakeup(INTERVAL_SLEEP_SHIP_STORE_S,main);
       });
     });
   }
@@ -573,7 +587,11 @@ class power {
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) server.log("Starting deep sleep (failed).");
-        server.sleepfor(INTERVAL_SLEEP_FAILED_S);
+        if(nv.nextwake!=null)
+        {
+        imp.cancelwakeup(nv.nextwake);
+        }
+        nv.nextwake=imp.wakeup(60,main);
       });
     });
   }
@@ -674,51 +692,31 @@ function connect(callback, timeout) {
   }
 }
 
-
-//new interrupt handler, to prevent interruptPin() from running twice
-function interrupthandle()
-{
-    if(hardware.wakereason()!=WAKEREASON_PIN1)
-    {
-        interruptPin();
-    }
-}
-
 //interruptPin is tied to the pin wakeup condition of the device
 //the user can check the on/off status of the device by pressing the button once
 //the user then has 5 seconds (for which the LED will be green) to press the button again
 //pressing the button a second time enables blinkup
 
 function interruptPin() {
-  //needed for if the device is entering this condition immediately
   logDeviceOnline();  
   local secondPress=false;
-  source.configure();
-  greenLed.configure();
-  blueLed.configure();
-  redLed.configure();
   //first press is needed to prohibit multiple instances of interruptPin from overlapping
-  local iterator=250;
-  local batstat=source.voltage();
-  //variable to help with flow control
-  local greenLight=true;
-  //if the button was pressed and the device was not woken by the button skip to blinkup
-  if(hardware.wakereason()!=WAKEREASON_PIN1)
-  {
-    secondPress=true;
-  }
-  //display battery status (green or red)
-  else
-  {
+  if(firstPress==false){
+    firstPress=true;
+    local iterator=250;
+    //0.3
+    local batstat=source.voltage();
+    blueLed.off();
+    local greenLight=true;
     if(batstat<3.2750){
-      greenLight=false;
-      redLed.on();
+        greenLight=false;
+        redLed.on();
     }
     else{
-      //turn the LED green, poll for 5 seconds
-      greenLed.on();
+        //turn the LED green, poll for 5 seconds
+        greenLed.on();
     }
-    imp.sleep(0.5);
+    imp.sleep(1);
     do{
       if(hardware.pin1.read()==1){
         //exit early on button press
@@ -730,38 +728,44 @@ function interruptPin() {
     }while(iterator>0)
     //0.3
     if(greenLight){
-      greenLed.off();
+        greenLed.off();
     }
     else{
-      redLed.off();
+        redLed.off();
+    }
+    if(secondPress==true){
+      imp.enableblinkup(true);
+      // blueLed.pulse();
+      // greenLed.blink(0.1,6);
+      // redLed.blink(0.1,6);
+      //blinkAll(0.1,6);
+      // Enable blinkup for 30s
+      imp.sleep(30);
+      // led.blink(0.1, 10);
+      // blueLed.pulse();
+      // greenLed.blink(0.1,6);
+      // redLed.blink(0.1,6);
+      //blinkAll(0.1,6);      
+      imp.enableblinkup(false);
+      // imp.setwificonfiguration("doesntexist", "lalala");  
+      firstPress=false;
+      //connect(onConnectedTimeout, TIMEOUT_SERVER_S);
+      // imp.sleep(21);
+      // server.connect(send_data, TIMEOUT_SERVER_S);
+      firstPress = false;
     }
   }
-  //blinkup conditions
-  if(secondPress==true){
-    blueLed.on();
-    imp.enableblinkup(true);
-    // blueLed.pulse();
-    // greenLed.blink(0.1,6);
-    // redLed.blink(0.1,6);
-    blinkAll(0.1,6);
-    // Enable blinkup for 30s
-    imp.sleep(30);
-    // led.blink(0.1, 10);
-    // blueLed.pulse();
-    // greenLed.blink(0.1,6);
-    // redLed.blink(0.1,6);
-    blinkAll(0.1,6);      
-    imp.enableblinkup(false);
-    // imp.setwificonfiguration("doesntexist", "lalala");  
-    //connect(onConnectedTimeout, TIMEOUT_SERVER_S);
-    // imp.sleep(21);
-    // server.connect(send_data, TIMEOUT_SERVER_S);
-  }
+  
   if (debug == true){
     server.log("Button pressed");
   }  
-  secondPress=false;
-  server.sleepfor(INTERVAL_SENSOR_SAMPLE_S);
+  firstPress=false;
+  blueLed.on();        
+  if(nv.nextwake!=null)
+        {
+        imp.cancelwakeup(nv.nextwake);
+        }
+  nv.nextwake=imp.wakeup(60,main);
 }
 
 // return true iff the collected data should be sent to the server
@@ -953,8 +957,11 @@ function toHexStr(firstByte="0",secondByte="0")
 }
 
 
-function main() {
 
+function main() {
+blueLed.configure();
+blueLed.on();
+server.log("The Time Is: "+date().hour.tostring()+":"+date().min.tostring()+":"+date().sec.tostring());
   // manual control of Wi-Fi state and other setup
 
   // I could remove this, since, according to Hugo:
@@ -990,75 +997,82 @@ function main() {
 
   // Register the disconnection handler
   server.onunexpecteddisconnect(disconnectHandler);
-  hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
+
   // hardware.pin1.configure("DIGITAL_IN_WAKEUP", function(){server.log("imp woken") });
+  hardware.pin1.configure(DIGITAL_IN_WAKEUP, interruptPin);
+  //hardware.pin1.configure(DIGITAL_IN_PULLDOWN, interruptPin)
   
-  //HUGE if statement below containing most of our 'normal' main function
-  //this splits the main function into normal operation and how it behaves 
-  if(hardware.wakereason()!=WAKEREASON_PIN1){
-    ///
-    // End of event handlers
-    ///
-      
-    // server.disconnect();
-    if (ship_and_store == true) {
-      power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
+  
+
+  ///
+  // End of event handlers
+  ///
+  
+  // server.disconnect();
+  if (ship_and_store == true) {
+    power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
+  }
+  greenLed.configure();
+  redLed.configure();
+  //blueLed.configure();
+  // led.configure();
+  soil.configure();
+  solar.configure();
+  source.configure();
+
+  server.log("Memory free after configurations: " + imp.getmemoryfree());
+  
+  // Useless according to Hugo from Electric Imp
+  // imp.setpowersave(true);
+  imp.enableblinkup(false);
+  // create non-volatile storage if it doesn't exist
+  if (!("nv" in getroottable() && "data" in nv)) {
+        nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],nextwake=null};   
+  }
+  if(nv.nextwake!=null)
+  {
+  imp.cancelwakeup(nv.nextwake);
+  }
+  // we have entered the running state
+  nv.running_state = true;
+  
+  // Create PowerManager object
+  powerManager <- PowerManager(hardware.i2c89);
+  powerManager.changeBatteryMax();
+  powerManager.sample();
+
+  // Create HumidityTemperatureSensor object
+  humidityTemperatureSensor <- HumidityTemperatureSensor();  
+  
+  do{
+  humidityTemperatureSensor.sample();
+  powerManager.tempControl(humidityTemperatureSensor.temperature);
+  }while(humidityTemperatureSensor.temperature<minBatteryTemp||humidityTemperatureSensor.temperature>maxBatteryTemp)
+  blueLed.on();
+  
+  // nv space is limited to 4kB and will not notify of failure
+  // discard every second entry if over MAX entries
+  // TODO: combine similar data points instead of discarding them
+  if (nv.data.len() > NV_ENTRIES_MAX) {
+    local i = 1;
+    while(i < nv.data.len()) {
+      nv.data.remove(i);
+      i += 2;
     }
-    greenLed.configure();
-    redLed.configure();
-    blueLed.configure();
-    // led.configure();
-    soil.configure();
-    solar.configure();
-    source.configure();
-    
-    server.log("Memory free after configurations: " + imp.getmemoryfree());
-      
-    // Useless according to Hugo from Electric Imp
-    // imp.setpowersave(true);
-    imp.enableblinkup(false);
-    // create non-volatile storage if it doesn't exist
-    if (!("nv" in getroottable() && "data" in nv)) {
-      nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00]};   
-    }
-      
-      
-    // we have entered the running state
-    nv.running_state = true;
-      
-    // Create PowerManager object
-    powerManager <- PowerManager(hardware.i2c89);
-    powerManager.changeBatteryMax();
-    powerManager.sample();
-    
-    // Create HumidityTemperatureSensor object
-    humidityTemperatureSensor <- HumidityTemperatureSensor();
-    humidityTemperatureSensor.sample();
-    
-      
-      
-    // nv space is limited to 4kB and will not notify of failure
-    // discard every second entry if over MAX entries
-    // TODO: combine similar data points instead of discarding them
-    if (nv.data.len() > NV_ENTRIES_MAX) {
-      local i = 1;
-      while(i < nv.data.len()) {
-        nv.data.remove(i);
-        i += 2;
-      }
-    }
-    
-    // store sensor data in non-volatile storage
-    //0.1
-    //testing or not
-    powerManager.disableCharging();
-    local batvol = source.voltage();
-    powerManager.enableCharging();
-    powerManager.changevfloat(batvol);
-    powerManager.tempControl(humidityTemperatureSensor.temperature);
-      
-    if(runTest)
-    {
+  }
+
+  // store sensor data in non-volatile storage
+  //0.1
+  //testing or not
+  powerManager.disableCharging();
+  local batvol = source.voltage();
+  powerManager.enableCharging();
+  
+  powerManager.changevfloat(batvol);
+  
+
+  if(runTest)
+  {
       nv.data.push({
         ts = time(),
         t = humidityTemperatureSensor.temperature,
@@ -1067,59 +1081,55 @@ function main() {
         m = soil.voltage(),
         b = source.voltage()
         testResults=unitTest()
-        });
-    }
-    else
-    {
-      nv.data.push({
-      ts = time(),
-      t = humidityTemperatureSensor.temperature,
-      h = humidityTemperatureSensor.humidity,
-      l = solar.voltage(),
-      m = soil.voltage(),
-      b = source.voltage()
       });
-    }
-    
-    //feature 0.2 important
-    //Send sensor data
-    if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
-      if (debug == true) server.log("Server refresh needed");
-      connect(send_data, TIMEOUT_SERVER_S);
-        // if (debug == true) server.log("Sending location information without prompting.");
-        // connect(send_loc, TIMEOUT_SERVER_S);
-    }
-    
-    // ///
-    // all the important time-sensitive decisions based on current state go here
-    // ///
-    
-    // // checking source voltage not necessary in the first pass
-    // // since power will be cut to the imp below Vout of 3.1 V
-    // if (source.voltage() < 3.19) {
-    //   power.enter_deep_sleep_running("Low system voltage.");
-    // }
-    // if temperature is too hot
-    // if temperatuer is too cold
-      
-    else {
-      server.log("Not time to send");
-      if (ship_and_store == true) {
-        power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-      }
-      else {
-        // not time to send. sleep until next sensor sampling.
-        power.enter_deep_sleep_running("Not time yet");
-      }
-    }
   }
-  //the else 
   else
   {
-    //if the device wakes because of a button press, skip most of main and process only the interrupt
-    interruptPin();
+        nv.data.push({
+        ts = time(),
+        t = humidityTemperatureSensor.temperature,
+        h = humidityTemperatureSensor.humidity,
+        l = solar.voltage(),
+        m = soil.voltage(),
+        b = source.voltage()
+        });
   }
-}//end main
+
+//feature 0.2 important
+  //Send sensor data
+  if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
+    if (debug == true) server.log("Server refresh needed");
+    connect(send_data, TIMEOUT_SERVER_S);
+
+    
+    // if (debug == true) server.log("Sending location information without prompting.");
+    // connect(send_loc, TIMEOUT_SERVER_S);
+  }
+
+  // ///
+  // all the important time-sensitive decisions based on current state go here
+  // ///
+
+  // // checking source voltage not necessary in the first pass
+  // // since power will be cut to the imp below Vout of 3.1 V
+  // if (source.voltage() < 3.19) {
+  //   power.enter_deep_sleep_running("Low system voltage.");
+  // }
+  // if temperature is too hot
+  // if temperatuer is too cold
+  
+  else {
+    server.log("Not time to send");
+    if (ship_and_store == true) {
+      power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
+    }
+    else {
+      // not time to send. sleep until next sensor sampling.
+      power.enter_deep_sleep_running("Not time yet");
+    }
+  }
+  
+}
     
     
 // Define a function to handle disconnections
@@ -1127,7 +1137,7 @@ function main() {
 function disconnectHandler(reason) {
   if (reason != SERVER_CONNECTED){
     if (debug == true) server.log("Unexpectedly lost wifi connection.");
-    //power.enter_deep_sleep_failed("Unexpectedly lost wifi connection.");
+    power.enter_deep_sleep_failed("Unexpectedly lost wifi connection.");
   }
 }
 
