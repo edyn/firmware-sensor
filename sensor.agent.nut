@@ -15,7 +15,7 @@ function send_data_json(data) {
   local res = req.sendsync();
   if (res.statuscode != 200) {
     // TODO: retry?
-    // server.log("error sending message: " + res.body);
+    // server.log("error sending message: " + https://agent.electricimp.com/5nPU4AXm6yCBres.body);
     server.log("MySQL API status code: " + res.statuscode);
     // server.log("error sending message: " + res.body.slice(0,40));
     server.log("Error sending message to MySQL database.");
@@ -27,7 +27,7 @@ function send_data_json(data) {
 // Send data to the readings API
 function send_data_json_node(data) {
   server.log(http.jsonencode(data));
-  local readings_url = "http://edynapireadings.elasticbeanstalk.com/readings/";
+  local readings_url = "https://readings.edyn.com/readings/";
   local req = http.post(readings_url, {"Content-Type":"application/json", "User-Agent":"Imp", "X-Api-Key":"FEIMfjweiovm90283y3#*U)#@URvm"}, http.jsonencode(data));
   local res = req.sendsync();
   if (res.statuscode != 200) {
@@ -61,7 +61,7 @@ function processResponse(incomingDataTable) {
 function send_loc_data(data) {
   server.log(http.jsonencode(data));
   local message = http.jsonencode(data);
-  local readings_url = "http://edynbackendprod.elasticbeanstalk.com/devicelocation/";
+  local readings_url = "https://devapi.edyn.com/devicelocation/";
   local req = http.post(readings_url, {"Content-Type":"application/json", "User-Agent":"Imp", "X-Api-Key":"FEIMfjweiovm90283y3#*U)#@URvm"}, message);
   req.sendasync(processResponse);
 }
