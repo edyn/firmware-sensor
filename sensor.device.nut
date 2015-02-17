@@ -459,24 +459,25 @@ class HumidityTemperatureSensor {
     //server.log(data[0] << 8);
     //server.log(data[1]);
     //server.log(data[1] & 0xfc);
-    if(dataTem!=null){
-        temperature_raw = (dataTem[0] << 8) + (dataTem[1] & 0xfc);
-        temperature = temperature_raw * 175.72 / 65536.0 - 46.85;
+    //Try/Catch conditions now return null on failed readings
+    try{
+      temperature_raw = (dataTem[0] << 8) + (dataTem[1] & 0xfc);
+      temperature = temperature_raw * 175.72 / 65536.0 - 46.85;
     }
-    else{
-        if(temperature==0.0)
-        {
-            temperature=33.33;
-        }
+    catch(error){
+      temperature=null;
     }
     // Measurement Request - wakes the sensor and initiates a measurement
     // if (trace == true) server.log("Sampling humidity");
     // if (trace == true) server.log(i2c.write(ADDRESS, SUB_ADDR_HUMID).tostring());
     // Data Fetch - poll until the 'stale data' status bit is 0
-    //if dataHum is null, instead of throwing an error, just return the last measurement (may be 0.0 on first run)
-    if(dataHum!=null){
-        humidity_raw = (dataHum[0] << 8) + (dataHum[1] & 0xfc);
-        humidity = humidity_raw * 125.0 / 65536.0 - 6.0;
+    try{
+      humidity_raw = (dataHum[0] << 8) + (dataHum[1] & 0xfc);
+      humidity = humidity_raw * 125.0 / 65536.0 - 6.0;
+    }
+    catch(error)
+    {
+        humidity=null;
     }
   }
 }
@@ -1030,7 +1031,9 @@ function main() {
   powerManager.enableCharging();
   
   powerManager.changevfloat(batvol);
-  powerManager.tempControl(humidityTemperatureSensor.temperature);
+  if(humidityTemperatureSensor.temperature!=null){
+    powerManager.tempControl(humidityTemperatureSensor.temperature);
+  }
   
   if(runTest)
   {
