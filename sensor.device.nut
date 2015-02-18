@@ -469,28 +469,14 @@ class HumidityTemperatureSensor {
     //server.log(data[0] << 8);
     //server.log(data[1]);
     //server.log(data[1] & 0xfc);
-    
-    //if dataHum is null, instead of throwing an error, just return the last measurement 
-    //if the temperature is 0.0 (initial value) return 33.33 because a reading of 0.0 will turn off the charger
-    if(dataTem!=null){
-        temperature_raw = (dataTem[0] << 8) + (dataTem[1] & 0xfc);
-        temperature = temperature_raw * 175.72 / 65536.0 - 46.85;
-    }
-    else{
-        if(temperature==0.0)
-        {
-            temperature=33.33;
-        }
-    }
+    temperature_raw = (dataTem[0] << 8) + (dataTem[1] & 0xfc);
+    temperature = temperature_raw * 175.72 / 65536.0 - 46.85;
     // Measurement Request - wakes the sensor and initiates a measurement
     // if (trace == true) server.log("Sampling humidity");
     // if (trace == true) server.log(i2c.write(ADDRESS, SUB_ADDR_HUMID).tostring());
     // Data Fetch - poll until the 'stale data' status bit is 0
-    //if dataHum is null, instead of throwing an error, just return the last measurement (may be 0.0 on first run)
-    if(dataHum!=null){
-        humidity_raw = (dataHum[0] << 8) + (dataHum[1] & 0xfc);
-        humidity = humidity_raw * 125.0 / 65536.0 - 6.0;
-    }
+    humidity_raw = (dataHum[0] << 8) + (dataHum[1] & 0xfc);
+    humidity = humidity_raw * 125.0 / 65536.0 - 6.0;
   }
 }
 
@@ -704,6 +690,7 @@ function interrupthandle()
 //pressing the button a second time enables blinkup
 
 function interruptPin() {
+
     try
     {
       control=4;
@@ -1014,6 +1001,7 @@ function toHexStr(firstByte="0",secondByte="0")
 }
 
 
+
 //0.1
 //added unit test here
 function unitTest()
@@ -1071,6 +1059,7 @@ function startControlFlow()
     }//endswitch
     return branching
 }//endcontrolflow
+
 
 
 function main() {
@@ -1272,7 +1261,7 @@ function main() {
 function disconnectHandler(reason) {
   if (reason != SERVER_CONNECTED){
     if (debug == true) server.log("Unexpectedly lost wifi connection.");
-    //power.enter_deep_sleep_failed("Unexpectedly lost wifi connection.");
+    power.enter_deep_sleep_failed("Unexpectedly lost wifi connection.");
   }
 }
 
