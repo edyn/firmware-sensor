@@ -383,9 +383,14 @@ class PowerManager {
   {
       
     //disable/enable charging based on temp function
-    if((temperature>maxBatteryTemp || temperature<minBatteryTemp)&&nv.PMRegC[0]!=0x00)
+    if(temperature>maxBatteryTemp || temperature<minBatteryTemp)
     {
-      //disable charging
+      //disable charging\
+      for(local a=0;a<20;a+=1)
+      {
+          blueLed.blink(0.1,1);
+          redLed.blink(0.1,1);
+      }
       server.log("Temperature outside of operational range " + temperature.tostring());
       disableCharging();
     }
@@ -469,15 +474,32 @@ class HumidityTemperatureSensor {
     //server.log(data[0] << 8);
     //server.log(data[1]);
     //server.log(data[1] & 0xfc);
+
+    if(dataTem!=null)
+    {
     temperature_raw = (dataTem[0] << 8) + (dataTem[1] & 0xfc);
     temperature = temperature_raw * 175.72 / 65536.0 - 46.85;
+    }
+    else
+    {
+        temperature=50.0;
+    }
     // Measurement Request - wakes the sensor and initiates a measurement
     // if (trace == true) server.log("Sampling humidity");
     // if (trace == true) server.log(i2c.write(ADDRESS, SUB_ADDR_HUMID).tostring());
     // Data Fetch - poll until the 'stale data' status bit is 0
+
+    if(dataHum!=null)
+    {
     humidity_raw = (dataHum[0] << 8) + (dataHum[1] & 0xfc);
     humidity = humidity_raw * 125.0 / 65536.0 - 6.0;
-  }
+    }
+    else
+    {
+        humidity=0.20;
+    }
+        
+    }
 }
 
 
@@ -550,7 +572,7 @@ class power {
     //Old version before Electric Imp's sleeping fix
     //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
     //Implementing Electric Imp's sleeping fix
-    blueLed.pulse();
+    //blueLed.pulse();
     if (debug == true) server.log("Deep sleep (storage) call because: "+reason)
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
