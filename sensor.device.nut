@@ -18,7 +18,7 @@
 // - give up when the device doesn't see wifi
 ////////////////////////////////////////////////////////////
 
-const TIMEOUT_SERVER_S = 1; // timeout for wifi connect and send
+const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 
 const INTERVAL_SENSOR_SAMPLE_S = 60; // sample sensors this often
@@ -130,7 +130,7 @@ class blueLed {
   static pin = hardware.pin5;
 
   function configure() {
-    pin.configure(DIGITAL_OUT,1);
+  pin.configure(PWM_OUT, 1.0/400.0, 0.0);
     pin.write(1.0);
   }
   
@@ -785,7 +785,7 @@ function interruptPin() {
     
       }
         intertime=date().time;
-        // Do something that generates an error: mis-assign a new table slot
+        //if the imp has not connected before, use shallow sleep.
     if(nv.pastConnect==false)
         {
           //hasn't connected before, wait 60 before sleep
@@ -1095,7 +1095,7 @@ function main() {
 
     if(control==0)
     {
-                control=startControlFlow();
+      control=startControlFlow();
     }//end control 0
     
     //3 =Pin Wakeup
@@ -1118,18 +1118,6 @@ function main() {
     
     else if(control==2||control==1||control==4)
     {
-         // manual control of Wi-Fi state and other setup
-    
-      // I could remove this, since, according to Hugo:
-      // When you wake from an imp.deepsleep or server.sleep,
-      // wifi is not up - there's no need to immediately disconnect.
-      // You'd have to either explicitly connect (if you are using
-      // RETURN_ON_ERROR) or perform an operation which requires
-      // network (if you're using SUSPEND_ON_ERROR).
-      // server.disconnect();
-      // imp.onidle(function() {
-      //   server.disconnect();
-      // });
       
       if (debug == true) server.log("Device's unique id: " + hardware.getdeviceid());
       server.log("Device firmware version: " + imp.getsoftwareversion());
