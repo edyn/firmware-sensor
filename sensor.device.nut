@@ -480,10 +480,6 @@ class HumidityTemperatureSensor {
     temperature_raw = (dataTem[0] << 8) + (dataTem[1] & 0xfc);
     temperature = temperature_raw * 175.72 / 65536.0 - 46.85;
     }
-    else
-    {
-        temperature=50.0;
-    }
     // Measurement Request - wakes the sensor and initiates a measurement
     // if (trace == true) server.log("Sampling humidity");
     // if (trace == true) server.log(i2c.write(ADDRESS, SUB_ADDR_HUMID).tostring());
@@ -493,10 +489,6 @@ class HumidityTemperatureSensor {
     {
     humidity_raw = (dataHum[0] << 8) + (dataHum[1] & 0xfc);
     humidity = humidity_raw * 125.0 / 65536.0 - 6.0;
-    }
-    else
-    {
-        humidity=0.20;
     }
         
     }
