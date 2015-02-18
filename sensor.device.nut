@@ -18,7 +18,7 @@
 // - give up when the device doesn't see wifi
 ////////////////////////////////////////////////////////////
 
-const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
+const TIMEOUT_SERVER_S = 1; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 
 const INTERVAL_SENSOR_SAMPLE_S = 60; // sample sensors this often
@@ -40,13 +40,23 @@ firstPress<-false;
 offline <- [];
 pressit<- 0;
 attemptNumber <- 0;
-
 //0.1
 //if runtest is true, the unit test defined below main will run
 runTest<-false;
 //feature 0.2
 maxBatteryTemp<- 60.0;
 minBatteryTemp<- 0.0;
+//feature intelligence upgrade
+wakeR<-null;
+nextWakeCall<-null;
+//possible for intelligence
+shallow<-false;
+whenWake<- 0;
+intlast<- 0;
+control<-0;
+intertime<-0;
+
+
 ///
 // Classes
 ///
@@ -57,7 +67,7 @@ class greenLed {
   static pin = hardware.pinD;
 
   function configure() {
-    pin.configure(DIGITAL_OUT);
+    pin.configure(DIGITAL_OUT,1);
     pin.write(1);
   }
   
@@ -120,7 +130,7 @@ class blueLed {
   static pin = hardware.pin5;
 
   function configure() {
-    pin.configure(PWM_OUT, 1.0/400.0, 0.0);
+    pin.configure(DIGITAL_OUT,1);
     pin.write(1.0);
   }
   
@@ -529,6 +539,7 @@ class power {
         if (debug == true) server.log("Starting deep sleep (running).");
         // if (trace == true) server.log("Note that subsequent 'sensing' wakes won't log here.");
         // if (trace == true) server.log("The next wake to log will be the 'data transmission' wake.");
+        blueLed.on();
         server.sleepfor(INTERVAL_SENSOR_SAMPLE_S);
       });
     });
@@ -544,6 +555,7 @@ class power {
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) server.log("Starting deep sleep (ship and store).");
+        blueLed.on();
         server.sleepfor(INTERVAL_SLEEP_SHIP_STORE_S);
       });
     });
@@ -559,6 +571,7 @@ class power {
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) server.log("Starting deep sleep (failed).");
+        blueLed.on();
         server.sleepfor(INTERVAL_SLEEP_FAILED_S);
       });
     });
@@ -651,6 +664,7 @@ function connect(callback, timeout) {
   if (server.isconnected()) {
     if (debug == true) server.log("Server connected");
     // We're already connected, so execute the callback
+    nv.pastConnect=true;
     callback(SERVER_CONNECTED);
   } 
   else {
@@ -660,73 +674,142 @@ function connect(callback, timeout) {
   }
 }
 
+
+//new interrupt handler, to prevent interruptPin() from running twice
+function interrupthandle()
+{
+    if(control!=3)
+    {
+        interruptPin();
+    }
+}
+
 //interruptPin is tied to the pin wakeup condition of the device
 //the user can check the on/off status of the device by pressing the button once
 //the user then has 5 seconds (for which the LED will be green) to press the button again
 //pressing the button a second time enables blinkup
 
 function interruptPin() {
-  logDeviceOnline();  
-  local secondPress=false;
-  //first press is needed to prohibit multiple instances of interruptPin from overlapping
-  if(firstPress==false){
-    firstPress=true;
-    local iterator=250;
-	//0.3
-	local batstat=source.voltage();
 
-	local greenLight=true;
-	if(batstat<3.2750){
-		greenLight=false;
-		redLed.on();
-	}
-	else{
-		//turn the LED green, poll for 5 seconds
-		greenLed.on();
-	}
-    do{
-      if(hardware.pin1.read()==1){
-        //exit early on button press
-        secondPress=true;
-        iterator=0;
+    try
+    {
+      control=4;
+      hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
+        //explanation of the below if statement:
+        //Intertiem is recorded at the end of the interrupt (and initialized as 0)
+        //When you press the button, the code begins with an instance of interruptpin queued up
+        //BUT it also recognizes your press as another call to the interrupt 
+        //so the if statement below ensures the interrupt only runs once per press
+        //Let me know if this explanation is unclear because it's very important that if I die tomorrow somebody understands this
+      if((date().time-intertime)>1)
+      {
+          wakeCallHandle();
+          //needed for if the device is entering this condition immediately
+          local secondPress=false;
+          //first press is needed to prohibit multiple instances of interruptPin from overlapping
+          local iterator=250;
+          local batstat=source.voltage();
+          //variable to help with flow control
+          local greenLight=true;
+          //Interrupt Part 1
+        
+            if(batstat<3.2750){
+              greenLight=false;
+              redLed.on();
+            }
+            else{
+              //turn the LED green, poll for 5 seconds
+              greenLed.on();
+            }
+            imp.sleep(0.5);
+            do{
+              if(hardware.pin1.read()==1){
+                //exit early on button press
+                secondPress=true;
+                iterator=0;
+              }
+              iterator-=1;
+              imp.sleep(0.02);
+            }while(iterator>0)
+            //0.3
+            if(greenLight){
+              greenLed.off();
+            }
+            else{
+              redLed.off();
+            }
+        
+        //Interrupt Part 2
+          
+          //blinkup conditions
+          if(secondPress==true){
+            // Enable blinkup for 30s
+            imp.enableblinkup(true);
+            blinkAll(0.1,6);
+            //change the sleep to 60
+            imp.sleep(60);
+            blinkAll(0.1,6);      
+            imp.enableblinkup(false);
+            // imp.setwificonfiguration("doesntexist", "lalala");  
+            //connect(onConnectedTimeout, TIMEOUT_SERVER_S);
+            // imp.sleep(21);
+            // server.connect(send_data, TIMEOUT_SERVER_S);
+          }
+          if (debug == true){
+            server.log("Button pressed");
+          }
+          secondPress=false;
+          //testthis
+    
       }
-      iterator-=1;
-      imp.sleep(0.02);
-    }while(iterator>0)
-	//0.3
-	if(greenLight){
-		greenLed.off();
-	}
-	else{
-		redLed.off();
-	}
-    if(secondPress==true){
-      imp.enableblinkup(true);
-      // blueLed.pulse();
-      // greenLed.blink(0.1,6);
-      // redLed.blink(0.1,6);
-      blinkAll(0.1,6);
-      // Enable blinkup for 30s
-      imp.sleep(30);
-      // led.blink(0.1, 10);
-      // blueLed.pulse();
-      // greenLed.blink(0.1,6);
-      // redLed.blink(0.1,6);
-      blinkAll(0.1,6);      
-      imp.enableblinkup(false);
-      // imp.setwificonfiguration("doesntexist", "lalala");  
-      firstPress=false;
-      connect(onConnectedTimeout, TIMEOUT_SERVER_S);
-      // imp.sleep(21);
-      // server.connect(send_data, TIMEOUT_SERVER_S);
-      firstPress = false;
+        intertime=date().time;
+        // Do something that generates an error: mis-assign a new table slot
+    if(nv.pastConnect==false)
+        {
+          //hasn't connected before, wait 60 before sleep
+          hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
+          wakeCallHandle(60.0,function()
+          {
+            power.enter_deep_sleep_failed("Has Never Connected");
+          });
+        }
+        else
+        {
+            //connected before: no disadvantage to deep sleep
+            power.enter_deep_sleep_running("HasConnectedBefore");
+        }
+    }//end of try
+    catch(error)
+    {
+        blinkAll(2,2);
+        //error occurred in interrupt, control=4 and run main
+        power.enter_deep_sleep_running("Interrupt Error");
+        // Displays "Exception: the index 'newslot' does not exist" in the log
     }
-  }
-  
-  if (debug == true){
-    server.log("Button pressed");
-  }  
-  firstPress=false;
+        
+        
+        /*
+        if(nv.pastConnect==false)
+        {
+          //wake 60 then deep sleep
+          //blueLed.blink(1,2);
+          blinkAll(2,2);
+          intertime=date().time;
+          wakeCallHandle(10.0,function()
+          {
+              redLed.configure();
+            redLed.blink(0.5,10);
+          });
+        }
+        else
+        {
+          //deep sleep right away
+          //blueLed.blink(1,5);
+          wakeCallHandle(10.0,function()
+          {
+            greenLed.blink(0.5,10);
+          });
+        }*/
 }
 
 // return true iff the collected data should be sent to the server
@@ -918,169 +1001,259 @@ function toHexStr(firstByte="0",secondByte="0")
 }
 
 
-function main() {
-  // manual control of Wi-Fi state and other setup
 
-  // I could remove this, since, according to Hugo:
-  // When you wake from an imp.deepsleep or server.sleep,
-  // wifi is not up - there's no need to immediately disconnect.
-  // You'd have to either explicitly connect (if you are using
-  // RETURN_ON_ERROR) or perform an operation which requires
-  // network (if you're using SUSPEND_ON_ERROR).
-  // server.disconnect();
-  // imp.onidle(function() {
-  //   server.disconnect();
-  // });
-  
-  if (debug == true) server.log("Device's unique id: " + hardware.getdeviceid());
-  server.log("Device firmware version: " + imp.getsoftwareversion());
-  server.log("Memory free: " + imp.getmemoryfree());
-  // logDeviceOnline();
-  
-  
-  // Configure i2c bus
-  // This method configures the I²C clock speed and enables the port.
-  hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-
-  if (debug == true) server.log("Device booted.");
-
-  ///
-  // Event handlers
-  ///
-  agent.on("location_request", function(data) {
-    if (debug == true) server.log("Agent requested location information.");
-    connect(send_loc, TIMEOUT_SERVER_S);
-  });
-
-  // Register the disconnection handler
-  server.onunexpecteddisconnect(disconnectHandler);
-
-  // hardware.pin1.configure("DIGITAL_IN_WAKEUP", function(){server.log("imp woken") });
-  hardware.pin1.configure(DIGITAL_IN_WAKEUP, interruptPin);
-  
-
-  ///
-  // End of event handlers
-  ///
-  
-  // server.disconnect();
-  if (ship_and_store == true) {
-    power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-  }
-  greenLed.configure();
-  redLed.configure();
-  blueLed.configure();
-  // led.configure();
-  soil.configure();
-  solar.configure();
-  source.configure();
-
-  server.log("Memory free after configurations: " + imp.getmemoryfree());
-  
-  // Useless according to Hugo from Electric Imp
-  // imp.setpowersave(true);
-  imp.enableblinkup(false);
-  // create non-volatile storage if it doesn't exist
-  if (!("nv" in getroottable() && "data" in nv)) {
-        nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00]};   
-  }
-  
-  
-  // we have entered the running state
-  nv.running_state = true;
-  
-  // Create PowerManager object
-  powerManager <- PowerManager(hardware.i2c89);
-  powerManager.changeBatteryMax();
-  powerManager.sample();
-
-  // Create HumidityTemperatureSensor object
-  humidityTemperatureSensor <- HumidityTemperatureSensor();
-  humidityTemperatureSensor.sample();
-
-  
-  
-  // nv space is limited to 4kB and will not notify of failure
-  // discard every second entry if over MAX entries
-  // TODO: combine similar data points instead of discarding them
-  if (nv.data.len() > NV_ENTRIES_MAX) {
-    local i = 1;
-    while(i < nv.data.len()) {
-      nv.data.remove(i);
-      i += 2;
-    }
-  }
-
-  // store sensor data in non-volatile storage
-  //0.1
-  //testing or not
-  powerManager.disableCharging();
-  local batvol = source.voltage();
-  powerManager.enableCharging();
-  
-  powerManager.changevfloat(batvol);
-  powerManager.tempControl(humidityTemperatureSensor.temperature);
-  
-  if(runTest)
-  {
-      nv.data.push({
-        ts = time(),
-        t = humidityTemperatureSensor.temperature,
-        h = humidityTemperatureSensor.humidity,
-        l = solar.voltage(),
-        m = soil.voltage(),
-        b = source.voltage()
-        testResults=unitTest()
-      });
-  }
-  else
-  {
-        nv.data.push({
-        ts = time(),
-        t = humidityTemperatureSensor.temperature,
-        h = humidityTemperatureSensor.humidity,
-        l = solar.voltage(),
-        m = soil.voltage(),
-        b = source.voltage()
-        });
-  }
-
-//feature 0.2 important
-  //Send sensor data
-  if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
-    if (debug == true) server.log("Server refresh needed");
-    connect(send_data, TIMEOUT_SERVER_S);
-    
-
-    
-    // if (debug == true) server.log("Sending location information without prompting.");
-    // connect(send_loc, TIMEOUT_SERVER_S);
-  }
-
-  // ///
-  // all the important time-sensitive decisions based on current state go here
-  // ///
-
-  // // checking source voltage not necessary in the first pass
-  // // since power will be cut to the imp below Vout of 3.1 V
-  // if (source.voltage() < 3.19) {
-  //   power.enter_deep_sleep_running("Low system voltage.");
-  // }
-  // if temperature is too hot
-  // if temperatuer is too cold
-  
-  else {
-    server.log("Not time to send");
-    if (ship_and_store == true) {
-      power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-    }
-    else {
-      // not time to send. sleep until next sensor sampling.
-      power.enter_deep_sleep_running("Not time yet");
-    }
-  }
-  
+//0.1
+//added unit test here
+function unitTest()
+{
 }
+
+function startControlFlow()
+{
+    wakeR=hardware.wakereason();
+    local branching=0;
+    switch(wakeR) 
+    {
+//"A" control flow cases
+        case WAKEREASON_POWER_ON: 
+            branching=1;
+            break
+        case WAKEREASON_SW_RESET:
+            branching=1;
+            break
+        case WAKEREASON_NEW_SQUIRREL:
+            branching=1;
+            break
+        case WAKEREASON_NEW_SQUIRREL:
+            branching=1;
+            break
+        case WAKEREASON_NEW_FIRMWARE:
+            branching=1;
+            break
+            
+        //unlikely/impossible cases, but still "A"
+        case WAKEREASON_SNOOZE:
+            branching=1;
+            break
+        case WAKEREASON_HW_RESET:
+            branching=1;
+            break
+            
+//"B" cases
+        case WAKEREASON_TIMER:
+            branching=2;
+            break
+        case WAKEREASON_SQUIRREL_ERROR:
+            branching=2;
+            break
+            
+//"C" cases
+        case WAKEREASON_PIN1:
+            branching=3;
+            break
+            
+//Below this should NEVER happen, but is there to be safe
+        case null:
+            server.log("Bad Wakereason");
+            break
+    }//endswitch
+    return branching
+}//endcontrolflow
+
+
+
+function main() {
+    
+    // create non-volatile storage if it doesn't exist
+    if (!("nv" in getroottable() && "data" in nv)) {
+        nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false};   
+    }
+
+
+
+    if(control==0)
+    {
+                control=startControlFlow();
+    }//end control 0
+    
+    //3 =Pin Wakeup
+    if(control==3)
+    {
+        
+      hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+      source.configure();
+      greenLed.configure();
+      blueLed.configure();
+      redLed.configure();
+      //blueLed.blink(1,3);
+      hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
+      interruptPin();
+    }//end control 3
+    
+    //1 = cold boot, software reset, new squirrel code, firmware upgrade
+    //2 = wake from deep sleep, return on error
+    //4 = interrupt has run before3
+    
+    else if(control==2||control==1||control==4)
+    {
+         // manual control of Wi-Fi state and other setup
+    
+      // I could remove this, since, according to Hugo:
+      // When you wake from an imp.deepsleep or server.sleep,
+      // wifi is not up - there's no need to immediately disconnect.
+      // You'd have to either explicitly connect (if you are using
+      // RETURN_ON_ERROR) or perform an operation which requires
+      // network (if you're using SUSPEND_ON_ERROR).
+      // server.disconnect();
+      // imp.onidle(function() {
+      //   server.disconnect();
+      // });
+      
+      if (debug == true) server.log("Device's unique id: " + hardware.getdeviceid());
+      server.log("Device firmware version: " + imp.getsoftwareversion());
+      server.log("Memory free: " + imp.getmemoryfree());
+      // logDeviceOnline();
+      
+      
+      // Configure i2c bus
+      // This method configures the I²C clock speed and enables the port.
+      hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+    
+      if (debug == true) server.log("Device booted.");
+    
+      ///
+      // Event handlers
+      ///
+      agent.on("location_request", function(data) {
+        if (debug == true) server.log("Agent requested location information.");
+        connect(send_loc, TIMEOUT_SERVER_S);
+      });
+    
+      // Register the disconnection handler
+      server.onunexpecteddisconnect(disconnectHandler);
+      hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
+      // hardware.pin1.configure("DIGITAL_IN_WAKEUP", function(){server.log("imp woken") });
+      
+      //HUGE if statement below containing most of our 'normal' main function
+      //this splits the main function into normal operation and how it behaves 
+        ///
+        // End of event handlers
+        ///
+          
+        // server.disconnect();
+        if (ship_and_store == true) {
+          power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
+        }
+        greenLed.configure();
+        redLed.configure();
+        blueLed.configure();
+        // led.configure();
+        soil.configure();
+        solar.configure();
+        source.configure();
+        
+        server.log("Memory free after configurations: " + imp.getmemoryfree());
+          
+        // Useless according to Hugo from Electric Imp
+        // imp.setpowersave(true);
+        //imp.enableblinkup(false);
+        // create non-volatile storage if it doesn't exist
+        if (!("nv" in getroottable() && "data" in nv)) {
+          nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false};   
+        }
+          
+          
+        // we have entered the running state
+        nv.running_state = true;
+          
+        // Create PowerManager object
+        powerManager <- PowerManager(hardware.i2c89);
+        powerManager.changeBatteryMax();
+        powerManager.sample();
+        
+        // Create HumidityTemperatureSensor object
+        humidityTemperatureSensor <- HumidityTemperatureSensor();
+        humidityTemperatureSensor.sample();
+        
+          
+          
+        // nv space is limited to 4kB and will not notify of failure
+        // discard every second entry if over MAX entries
+        // TODO: combine similar data points instead of discarding them
+        if (nv.data.len() > NV_ENTRIES_MAX) {
+          local i = 1;
+          while(i < nv.data.len()) {
+            nv.data.remove(i);
+            i += 2;
+          }
+        }
+        
+        // store sensor data in non-volatile storage
+        //0.1
+        //testing or not
+        powerManager.disableCharging();
+        local batvol = source.voltage();
+        powerManager.enableCharging();
+        powerManager.changevfloat(batvol);
+        powerManager.tempControl(humidityTemperatureSensor.temperature);
+          
+        if(runTest)
+        {
+          nv.data.push({
+            ts = time(),
+            t = humidityTemperatureSensor.temperature,
+            h = humidityTemperatureSensor.humidity,
+            l = solar.voltage(),
+            m = soil.voltage(),
+            b = source.voltage()
+            testResults=unitTest()
+            });
+        }
+        else
+        {
+          nv.data.push({
+          ts = time(),
+          t = humidityTemperatureSensor.temperature,
+          h = humidityTemperatureSensor.humidity,
+          l = solar.voltage(),
+          m = soil.voltage(),
+          b = source.voltage()
+          });
+        }
+        
+        //feature 0.2 important
+        //Send sensor data
+        if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
+          if (debug == true) server.log("Server refresh needed");
+          connect(send_data, TIMEOUT_SERVER_S);
+                // if (debug == true) server.log("Sending location information without prompting.");
+            // connect(send_loc, TIMEOUT_SERVER_S);
+        }
+        
+        // ///
+        // all the important time-sensitive decisions based on current state go here
+        // ///
+        
+        // // checking source voltage not necessary in the first pass
+        // // since power will be cut to the imp below Vout of 3.1 V
+        // if (source.voltage() < 3.19) {
+        //   power.enter_deep_sleep_running("Low system voltage.");
+        // }
+        // if temperature is too hot
+        // if temperatuer is too cold
+          
+        else {
+          server.log("Not time to send");
+          if (ship_and_store == true) {
+            power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
+          }
+          else {
+            // not time to send. sleep until next sensor sampling.
+            power.enter_deep_sleep_running("Not time yet");
+          }
+        }
+    }//end control 2
+}//end main
     
     
 // Define a function to handle disconnections
@@ -1092,13 +1265,25 @@ function disconnectHandler(reason) {
   }
 }
 
-//0.1
-//added unit test here
-function unitTest()
+
+function wakeCallHandle(time=null,func=null)
 {
+    if(time==null&&func==null)
+    {
+        if(nextWakeCall!=null)
+        {
+            imp.cancelwakeup(nextWakeCall);
+        }
+    }
+    else
+    {
+        if(nextWakeCall!=null)
+        {
+            imp.cancelwakeup(nextWakeCall);
+        }
+        nextWakeCall=imp.wakeup(time,func);//end naxt wake call
+    }
 }
-
-
 
 ///
 // End of functions
