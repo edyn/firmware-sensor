@@ -209,38 +209,26 @@ class PowerManager {
     // Note: Imp I2C address values are integers
     _addr = 0x12;
   }
-
-  function changeBatteryMax() {
+  
+//Set Defs and Sample are used in conjunction to replace polling loop
+//set defs sets registers to their desired 'default values'
+    function setDefs()
+    {    
+        local successful=0;
+    //REG 1 Info:
+    // 0 Wall Input Prioritized +
+    // 00 Battery Charger Safety Timer +
+    // 00001 500 mA Max WALLILIM 
+    // 00000001
+        successful+=writeReg(1,"\x01");
     // REG 2 has the V float setting
     // write 1111 (battery charger current at 100% full-scale DEFAULT) + 
     // 11 (vfloat of 3.8V) +
     // 00 (full capacity charge indication threshold of 10% full-scale current DEFAULT) = 
     // 11111100
-
-    local result = _i2c.write(_addr, SA_REG_2 + "\xFC");
-    // if (trace == true) server.log(result.tostring());
-  }
-
-  
-  
-  //the polling loop used to populate registers
-  //polls up to 100 times, returns the result once it's attained.
-  //To be implemented: 
-  //1)callback function  
-  //2)double checking safety/functionality of null vs 0x0
-  function pollingLoop(subreg, stringtocat=""){
-    local iteration =0;
-    local word = 0x0;
-    _i2c.write(_addr, subreg+stringtocat) 
-    do {
-    word = _i2c.read(_addr, subreg, 1);
-    iteration += 1;
-    if (iteration > POLL_ITERATION_MAX) {
-      break;
+        successful+=writeReg(2,"\xFC");
+        return successful;
     }
-    } while (word == null);
-    return word[0] & 0xff;
-  }
     
   // EVT wifi sensor can measure Solar panel voltage (PIN7)
   // and output voltage (PINB)
@@ -256,58 +244,105 @@ class PowerManager {
     // the \x escape character to indicate a hex value
     
     //REG 0:Charge current, float voltage, c/x detection
-    reg_0=pollingLoop(SA_REG_0);
-    //REG 1 Info:
-    // 0 Wall Input Prioritized +
-    // 00 Battery Charger Safety Timer +
-    // 00001 500 mA Max WALLILIM 
-    // 00000001
-    reg_1=pollingLoop(SA_REG_1,"\x01");
-    // REG 2 has the V float setting
-    // write 1111 (battery charger current at 100% full-scale DEFAULT) + 
-    // 11 (vfloat of 3.8V) +
-    // 00 (full capacity charge indication threshold of 10% full-scale current DEFAULT) = 
-    // 11111100
-    reg_2=pollingLoop(SA_REG_2,"\xFC");
+    reg_0=readReg(0);
+    //Reg 1:Charger functionality
+    reg_1=readReg(1);
+    //REG 2:V float
+    reg_2=readReg(2);
     //REG 3:Charger status
-    reg_3=pollingLoop(SA_REG_3);
-    // REG 4:external power
-    reg_4=pollingLoop(SA_REG_4);
-    // REG 5:ntc warning
-    reg_5=pollingLoop(SA_REG_5);
-    // server.log(output);
-    // _i2c.readerror();
-    // Wait for the sensor to finish the reading
-    // while ((_i2c.read(_addr, SA_REG_3 + "", 1)[0] & 0x80) == 0x80) {
-    //  server.log(_i2c.read(_addr, SA_REG_3 + "", 1));
-    // }
-    // timeout
+    reg_3=readReg(3);
+    // REG 4:External power
+    reg_4=readReg(4);
+    // REG 5:Ntc warning
+    reg_5=readReg(5);
   }
   //0.1 charging functions enable/disable/suspend/resume
   //check the logic of 0C and FC in reg 2
   //0.2 Changed to make the functions not overwrite vfloat settings
-  function enableCharging(toWrite=0x0C)
+
+  function suspendCharging()
   {
-    writeToReg("\x02",0xF0,toWrite);
-    nv.PMRegC[0]=0xF0;
-  }
-  function disableCharging(toWrite=0x0C)
-  {
-    writeToReg("\x02",0x00,toWrite);
-    nv.PMRegC[0]=0x00;
-  }
-  function suspendCharging(toWrite=0x00)
-  {
-    writeToReg("\x01",toWrite,0x00);
-    nv.PMRegB[1]=0x00;
+    writeReg(1,"\x0F");
   }
   //01 is our default setting of 500ma Max
   function resumeCharging(toWrite=0x00)
   {
-    writeToReg("\x01",toWrite,0x01);
-    nv.PMRegB[1]=0x01;
+    writeReg(1,"\x01");
   }
+
+  function readReg(subreg,trynum=0,maxtry=5)
+  {
+    local returnValue=null;
+    switch(subreg)
+    {
+      case 0:
+        returnValue = _i2c.read(_addr, SA_REG_0, 1);
+      break
+      case 1:
+        returnValue = _i2c.read(_addr, SA_REG_1, 1);
+      break
+      case 2:
+        returnValue = _i2c.read(_addr, SA_REG_2, 1);
+      break
+      case 3:
+        returnValue = _i2c.read(_addr, SA_REG_3, 1);
+      break
+      case 4:
+        returnValue = _i2c.read(_addr, SA_REG_4, 1);
+      break
+      case 5:
+        returnValue = _i2c.read(_addr, SA_REG_5, 1);
+      break
+    }  
     
+      if(returnValue!=null){
+        returnValue=returnValue[0] & 0xff;
+      }
+      else
+      {
+        if(trynum>=maxtry)
+        {
+            returnValue=null;
+        }
+        else
+        {
+            returnValue=readReg(subreg,trynum+1,maxtry);
+        }
+      }
+      return returnValue;
+  }
+  function writeReg(subreg,valuex,trynum=0,maxtry=5)
+  {
+    local returnValue=-1;
+    switch(subreg)
+    {
+      case 0:
+        returnValue = _i2c.write(_addr, SA_REG_0+valuex);
+      break
+      case 1:
+        returnValue = _i2c.write(_addr, SA_REG_1+valuex);
+      break
+      case 2:
+        returnValue = _i2c.write(_addr, SA_REG_2+valuex);
+      break
+      case 3:
+        returnValue = _i2c.write(_addr, SA_REG_3+valuex);
+      break
+      case 4:
+        returnValue = _i2c.write(_addr, SA_REG_4+valuex);
+      break
+      case 5:
+        returnValue = _i2c.write(_addr, SA_REG_5+valuex);
+      break
+    }  
+    if(returnValue!=0){
+      if(trynum<maxtry){
+        returnValue=writeReg(subreg,valuex,trynum+1,maxtry);
+      }
+    }
+    return returnValue;
+  }
+  
   //0.1
   //Set vfloat based on battery voltage, close is defaulted to 0.03 volts
   //feature 0.2
@@ -348,75 +383,8 @@ class PowerManager {
        nv.PMRegC[1]=0x0C;
        writeToReg("\x02",nv.PMRegC[0],nv.PMRegC[1]);
     }
-
-    
-  }
-  //0.1
-  //returns the value of a register as a string
-  //Example call: regToStr("\x02")
-  //example return: FC
-  function regToStr(registerNumber)
-  {
-    local word = _i2c.read(_addr, registerNumber, 1);
-    return format("%X", word[0] & 0xff)
-  }
-  //0.1
-  //returns two single character strings in an array
-  //Example call: regToStr("\x02")
-  //example return: [F,C] <-both strings NOT characters 
-  function regToArr(registerNumber)
-  {
-    local word = _i2c.read(_addr, registerNumber, 1);
-    local temp = format("%X", word[0] & 0xff);
-    return [temp.slice(0,1),temp.slice(1,2)]
-  }
-  //feature 0.2
-  function writeToReg(subreg,MSB=0x00,LSB=0x00)
-  {
-    local towrite=MSB|LSB;
-    _i2c.write(_addr, subreg+towrite.tochar());
-  }
-  //feature 0.2
-  //tempcontrol disables the charger if it exceeds max or min temperature
-  //sends warnings if the temperature is in the danger zone, which defaults to 10 degrees from max/min
-  function tempControl(temperature, dangerZone=5.0)
-  {
-      
-    //disable/enable charging based on temp function
-    if(temperature>maxBatteryTemp || temperature<minBatteryTemp)
-    {
-      //disable charging\
-      for(local a=0;a<20;a+=1)
-      {
-          blueLed.blink(0.1,1);
-          redLed.blink(0.1,1);
-      }
-      server.log("Temperature outside of operational range " + temperature.tostring());
-      disableCharging();
-    }
-    else
-    {
-
-      //temperature warning system
-      if(temperature>(maxBatteryTemp-dangerZone))
-      {
-        server.log("Nearing max temp warning: "+temperature.tostring());
-      }
-      if(temperature<(minBatteryTemp+dangerZone))
-      {
-        server.log("Nearing min temp warning: "+temperature.tostring());
-      }
-      if(debug){
-      server.log("Temperature is: "+temperature.tostring()+ ", Charger Enabled")
-      }
-      //enable charging
-      if(nv.PMRegC[0]==0x00)
-      {
-      enableCharging();
-      }
-    }
-  }
-}
+  }//end changevfloat
+}//end PM class
 
 ////////////////////////////////////////////////////////////
 // HTU21D ambient humidity sensor
@@ -705,8 +673,8 @@ function interrupthandle()
 
 function interruptPin() {
 
-    try
-    {
+    //try
+    //{
       control=4;
       hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
         //explanation of the below if statement:
@@ -722,7 +690,9 @@ function interruptPin() {
           local secondPress=false;
           //first press is needed to prohibit multiple instances of interruptPin from overlapping
           local iterator=250;
+          powerManager.suspendCharging();
           local batstat=source.voltage();
+          powerManager.resumeCharging();
           //variable to help with flow control
           local greenLight=true;
           //Interrupt Part 1
@@ -791,15 +761,16 @@ function interruptPin() {
         {
             //connected before: no disadvantage to deep sleep
             power.enter_deep_sleep_running("HasConnectedBefore");
-        }
+        }/*
     }//end of try
     catch(error)
     {
+        server.log(error);
         blinkAll(2,2);
         //error occurred in interrupt, control=4 and run main
         power.enter_deep_sleep_running("Interrupt Error");
         // Displays "Exception: the index 'newslot' does not exist" in the log
-    }
+    }*/
         
         
         /*
@@ -1083,7 +1054,8 @@ function main() {
         nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false};   
     }
 
-
+    // Create PowerManager object
+    powerManager <- PowerManager(hardware.i2c89);
 
     if(control==0)
     {
@@ -1168,9 +1140,9 @@ function main() {
         // we have entered the running state
         nv.running_state = true;
           
-        // Create PowerManager object
-        powerManager <- PowerManager(hardware.i2c89);
-        powerManager.changeBatteryMax();
+
+        //removed set defaults from sample() method into it's own method
+        powerManager.setDefs();
         powerManager.sample();
         
         // Create HumidityTemperatureSensor object
@@ -1193,11 +1165,8 @@ function main() {
         // store sensor data in non-volatile storage
         //0.1
         //testing or not
-        powerManager.disableCharging();
+        powerManager.suspendCharging();
         local batvol = source.voltage();
-        powerManager.enableCharging();
-        powerManager.changevfloat(batvol);
-        powerManager.tempControl(humidityTemperatureSensor.temperature);
           
         if(runTest)
         {
@@ -1222,6 +1191,8 @@ function main() {
           b = source.voltage()
           });
         }
+        
+        powerManager.resumeCharging();
         
         //feature 0.2 important
         //Send sensor data
