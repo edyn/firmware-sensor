@@ -673,8 +673,8 @@ function interrupthandle()
 
 function interruptPin() {
 
-    //try
-    //{
+    try
+    {
       control=4;
       hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
         //explanation of the below if statement:
@@ -723,7 +723,7 @@ function interruptPin() {
               redLed.off();
             }
         
-        //Interrupt Part 2
+        //Interrupt Part two
           
           //blinkup conditions
           if(secondPress==true){
@@ -761,7 +761,7 @@ function interruptPin() {
         {
             //connected before: no disadvantage to deep sleep
             power.enter_deep_sleep_running("HasConnectedBefore");
-        }/*
+        }
     }//end of try
     catch(error)
     {
@@ -770,31 +770,7 @@ function interruptPin() {
         //error occurred in interrupt, control=4 and run main
         power.enter_deep_sleep_running("Interrupt Error");
         // Displays "Exception: the index 'newslot' does not exist" in the log
-    }*/
-        
-        
-        /*
-        if(nv.pastConnect==false)
-        {
-          //wake 60 then deep sleep
-          //blueLed.blink(1,2);
-          blinkAll(2,2);
-          intertime=date().time;
-          wakeCallHandle(10.0,function()
-          {
-              redLed.configure();
-            redLed.blink(0.5,10);
-          });
-        }
-        else
-        {
-          //deep sleep right away
-          //blueLed.blink(1,5);
-          wakeCallHandle(10.0,function()
-          {
-            greenLed.blink(0.5,10);
-          });
-        }*/
+    }//end catch
 }
 
 // return true iff the collected data should be sent to the server
