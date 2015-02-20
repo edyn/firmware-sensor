@@ -15,7 +15,7 @@ function send_data_json(data) {
   local res = req.sendsync();
   if (res.statuscode != 200) {
     // TODO: retry?
-    // server.log("error sending message: " + https://agent.electricimp.com/5nPU4AXm6yCBres.body);
+    // server.log("error sending message: " + res.body);
     server.log("MySQL API status code: " + res.statuscode);
     // server.log("error sending message: " + res.body.slice(0,40));
     server.log("Error sending message to MySQL database.");
