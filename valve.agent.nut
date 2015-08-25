@@ -16,6 +16,8 @@
 // duration specified in seconds.
 ////////////////////////////////////////////////////////////
 
+//this comment is a feature!
+
 // Invoked when the device calls agent.send(...)
 device.on("action_request", function(data) {
     // send the action to the device and clear it
