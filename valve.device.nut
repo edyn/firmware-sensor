@@ -13,6 +13,8 @@
 //   with no wifi connection
 ////////////////////////////////////////////////////////////
 
+//Small Addition
+
 const INTERVAL_VALVE_OPEN_MAX_S = 7200; // 2hr limit on keeping valve open
 const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
