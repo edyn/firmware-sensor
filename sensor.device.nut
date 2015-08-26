@@ -18,6 +18,8 @@
 // - give up when the device doesn't see wifi
 ////////////////////////////////////////////////////////////
 
+//commenting in the develop branch
+
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 
