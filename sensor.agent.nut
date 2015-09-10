@@ -11,7 +11,7 @@ THEMACADDRESSAGENTSIDE<-"unknownMacAddress"
 // Send data to Edyn server
 function send_data_json(data) {
   // local soil_url = "https://edyn.com/api/v1/readings?" + "impee_id=" + data.device;
-//  local soil_url = "http://edynbackendpythonstag.elasticbeanstalk.com/api/readings/";
+  //  local soil_url = "http://edynbackendpythonstag.elasticbeanstalk.com/api/readings/";
   local soil_url = "http://edynbackendpythondev.elasticbeanstalk.com/api/readings/";
   // local soil_url = "http://Soil-IQ-stag-zhipffkaue.elasticbeanstalk.com/api/readings/";
   local req = http.post(soil_url, {"Content-Type":"application/json", "User-Agent":"Imp"}, http.jsonencode(data));
@@ -87,44 +87,44 @@ device.on("data", function(data) {
     local settings = server.load();
     // If no preferences have been saved, settings will be empty
     if (settings.len() != 0) {
-    // Settings table is NOT empty so set the
-    // lat and lng to the values from the loaded table
-    dataToSend.lat <- settings.lat;
-    dataToSend.lng <- settings.lng;
+      // Settings table is NOT empty so set the
+      // lat and lng to the values from the loaded table
+      dataToSend.lat <- settings.lat;
+      dataToSend.lng <- settings.lng;
     } else {
-    // Settings table IS empty
-    // Default values are the Oakland office
-    dataToSend.lat <- 37.362517;
-    dataToSend.lng <- -122.03476;
+      // Settings table IS empty
+      // Default values are the Oakland office
+      dataToSend.lat <- 37.362517;
+      dataToSend.lng <- -122.03476;
     }
     
     local newPoint = {};
     // Hacks
     foreach (origPoint in dataToSend.data) {
-    origPoint.sd <- [1];
+      origPoint.sd <- [1];
     }
     
     //commented out 17/6/15
     //send_data_json(dataToSend); // JSON API
     
     foreach (point in data.data) {
-    newPoint = {};
-    newPoint.timestamp <- point.ts;
-    newPoint.battery <- point.b;
-    newPoint.humidity <- point.h;
-    newPoint.temperature <- point.t;
-    newPoint.electrical_conductivity <- point.m;
-    newPoint.light <- point.l;
-    newPoint.capacitance<-point.c;
+      newPoint = {};
+      newPoint.timestamp <- point.ts;
+      newPoint.battery <- point.b;
+      newPoint.humidity <- point.h;
+      newPoint.temperature <- point.t;
+      newPoint.electrical_conductivity <- point.m;
+      newPoint.light <- point.l;
+      newPoint.capacitance<-point.c;
     
-    server.log("Agent CAPACITANCE:")
-    server.log(point.c)
-    server.log(newPoint.capacitance)
+      server.log("Agent CAPACITANCE:")
+      server.log(point.c)
+      server.log(newPoint.capacitance)
     
-    // newPoint.disable_input_uvcl <- false;
-    newPoint.disable_input_uvcl <- (point.r0 & 0x80) != 0x00;
+      // newPoint.disable_input_uvcl <- false;
+      newPoint.disable_input_uvcl <- (point.r0 & 0x80) != 0x00;
 
-    local convertCurrentLim = function(input) {
+      local convertCurrentLim = function(input) {
       if (input == 0x00) return "100mA Max (USB Low Power)"
       if (input == 0x01) return "500mA Max (USB High Power)"
       if (input == 0x02) return "600mA Max"
@@ -193,9 +193,9 @@ device.on("data", function(data) {
     else if (ntc_stat == 0x3) newPoint.ntc_stat <- "NTC_HOT_FAULT";
     else 
     {
-        server.log("NTC STAT IS:")
-        server.log(ntc_stat)
-        newPoint.ntc_stat <- "NTC BUGGED OUT"
+      server.log("NTC STAT IS:")
+      server.log(ntc_stat)
+      newPoint.ntc_stat <- "NTC BUGGED OUT"
     }
     
     server.log("NTC STAT IS:")
@@ -297,28 +297,28 @@ device.on("data", function(data) {
     //Seperated powermanager register data from data.data
     //added testResults handling for unit tests (checks for them first)
     foreach (point in data.data) {
-    newPoint = {};
-    newPoint.timestamp <- point.ts;
-    newPoint.battery <- point.b;
-    newPoint.humidity <- point.h;
-    newPoint.temperature <- point.t;
-    newPoint.electrical_conductivity <- point.m;
-    newPoint.light <- point.l;
-    newPoint.capacitance <- point.c;
+      newPoint = {};
+      newPoint.timestamp <- point.ts;
+      newPoint.battery <- point.b;
+      newPoint.humidity <- point.h;
+      newPoint.temperature <- point.t;
+      newPoint.electrical_conductivity <- point.m;
+      newPoint.light <- point.l;
+      newPoint.capacitance <- point.c;
     
-    if("testResults" in point){
-      if(typeof(point.testResults)=="array"){
-        for(local i=0; i<point.testResults.len(); i++){
-        server.log("Test Results " + i + " = " +point.testResults[i])
+      if("testResults" in point){
+        if(typeof(point.testResults)=="array"){
+          for(local i=0; i<point.testResults.len(); i++){
+          server.log("Test Results " + i + " = " +point.testResults[i])
+          }
         }
+        else /*if(typeof(point.testResults)=="string")*/{
+          server.log(point.testResults)
+        }
+        //server.log("TestResults:"+typeof(point.testResults))
       }
-      else /*if(typeof(point.testResults)=="string")*/{
-         server.log(point.testResults)
-      }
-      //server.log("TestResults:"+typeof(point.testResults))
-    }
-    //dataToSendNode.data.append(newPoint);
-    dataToSendNode.data.append(newPoint);
+      //dataToSendNode.data.append(newPoint);
+      dataToSendNode.data.append(newPoint);
     }
     
     //Table of power information passed to agent
@@ -393,11 +393,10 @@ device.on("data", function(data) {
     if (ntc_stat == 0x0) powerPoint.ntc_stat <- "NTC Normal";
     else if (ntc_stat == 0x1) powerPoint.ntc_stat <- "NTC_TOO_COLD";
     else if (ntc_stat == 0x3) powerPoint.ntc_stat <- "NTC_HOT_FAULT";
-    else 
-    {
-        server.log("NTC STAT IS:")
-        server.log(ntc_stat)
-        powerPoint.ntc_stat <- "NTC BUGGED OUT"
+    else {
+      server.log("NTC STAT IS:")
+      server.log(ntc_stat)
+      powerPoint.ntc_stat <- "NTC BUGGED OUT"
     }
     
     server.log("NTC STAT IS:")
@@ -583,14 +582,13 @@ device.onconnect(function() {
   local settings = server.load();
   
   
-  if(fullResSet)
-    {
-        server.log("here")
-        device.send("fullRes", {data="1"})
-        server.log("Full Res Set request sent")
-        server.log("Full Res Set To False")
-        fullResSet=false
-    }
+  if(fullResSet){
+    server.log("here")
+    device.send("fullRes", {data="1"})
+    server.log("Full Res Set request sent")
+    server.log("Full Res Set To False")
+    fullResSet=false
+  }
   
   
   // If no preferences have been saved, settings will be empty
@@ -698,30 +696,24 @@ http.onrequest(function(request, response){
 
 
 //Full res related stuff:
-device.on("fullRes",function(data)
-{
-    
-    local fullTailSend=array(10000);
-    local fullBendSend=array(10000);
-    for(local z=0;z<20000;z+=2)
-    {
-        local currentReadinga=0
-        local currentReadingb=0
-        currentReadinga=((data.tail[z+1]*256)+data.tail[z])*(3.0/65536)
-        currentReadingb=((data.bend[z+1]*256)+data.bend[z])*(3.0/65536)
-        fullTailSend[z/2]=(currentReadinga)
-        fullBendSend[z/2]=(currentReadingb)
-    }
-    server.log("AGENT HIGH RES POSTPROCESSING COMPLETE, SENDING DATA")
-            local themac=data.macid
-            firebase.write("/"+themac+"/"+data.timestamp+"/tail/" , fullTailSend);
-            firebase.write("/" +themac+"/"+data.timestamp+"/bend/", fullBendSend);
-            //data.data[0]["ts"].tostring().slice(0,5)+"/"
-            server.log("SENT HIGH RES DATA")
-
-    
-}
-)
+device.on("fullRes",function(data){
+  local fullTailSend=array(10000);
+  local fullBendSend=array(10000);
+  for(local z=0;z<20000;z+=2){
+    local currentReadinga=0
+    local currentReadingb=0
+    currentReadinga=((data.tail[z+1]*256)+data.tail[z])*(3.0/65536)
+    currentReadingb=((data.bend[z+1]*256)+data.bend[z])*(3.0/65536)
+    fullTailSend[z/2]=(currentReadinga)
+    fullBendSend[z/2]=(currentReadingb)
+  }
+  server.log("AGENT HIGH RES POSTPROCESSING COMPLETE, SENDING DATA")
+  local themac=data.macid
+  firebase.write("/"+themac+"/"+data.timestamp+"/tail/" , fullTailSend);
+  firebase.write("/" +themac+"/"+data.timestamp+"/bend/", fullBendSend);
+  //data.data[0]["ts"].tostring().slice(0,5)+"/"
+  server.log("SENT HIGH RES DATA")    
+})
 
 
 // Accept requests to open/close the valve
@@ -752,7 +744,7 @@ http.onrequest(function (request, response) {
 });
 
 
-
+//NOT reformatting the firebase class.
 
 //created 15/5/1 "firebase test"
 //renamed 15/5/18 "High Resolution Sampling" used with group 5 for capacitance test in bucket

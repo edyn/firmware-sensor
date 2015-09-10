@@ -79,7 +79,7 @@ agent.on("fullRes",function(data){
     server.log("FULL RES FUNCTION")
     server.log("FULL RES BABY")
     agent.send("fullRes", {
-    bend=buffer1,
+    ebend=buffer1,
     tail=buffer2,
     macid=hardware.getdeviceid()
     timestamp=theCurrentTimestamp.tostring()
@@ -90,110 +90,104 @@ agent.on("fullRes",function(data){
 //Needs to be moved to the proper location
 function configCapSense()
 {
-    hardware.pinE.configure(DIGITAL_OUT);
+  hardware.pinE.configure(DIGITAL_OUT);
 }
 
 
 function capSense(ModeSelect=true){
-    //initializations
-    
-    local capacitance = 0;
-    hardware.pinE.configure(DIGITAL_OUT); 
-    local maxVSoil=0;
-    local  minVSoil=66000;
-    local lastlastreading=0;
-    local kneeIndex=0;
-    local kneeThresh=-1.00;
-    local vmaxIndex=0;
-    local eNegOne=0.632;
-    local thresheNeg=-1.00;
-    local indexeNeg=0
-    //configurations
-    hardware.sampler.configure(hardware.pinA, 900000, [buffer1], samplesReady);
-    hardware.sampler.start();
-    //take a reading
-    hardware.pinE.write(1);
-    imp.sleep(0.1)
-    hardware.sampler.stop()
-    hardware.sampler.configure(hardware.pinA, 10000, [buffer2], samplesReady);
-    hardware.sampler.start();
-    if(ModeSelect==true){
-        if(readingDebug==true){
-        server.log("RegularCapsense")
-        }
-        imp.sleep(1)
+//initializations
+  local capacitance = 0;
+  hardware.pinE.configure(DIGITAL_OUT); 
+  local maxVSoil=0;
+  local  minVSoil=66000;
+  local lastlastreading=0;
+  local kneeIndex=0;
+  local kneeThresh=-1.00;
+  local vmaxIndex=0;
+  local eNegOne=0.632;
+  local thresheNeg=-1.00;
+  local indexeNeg=0
+  //configurations
+  hardware.sampler.configure(hardware.pinA, 900000, [buffer1], samplesReady);
+  hardware.sampler.start();
+  //take a reading
+  hardware.pinE.write(1);
+  imp.sleep(0.1)
+  hardware.sampler.stop()
+  hardware.sampler.configure(hardware.pinA, 10000, [buffer2], samplesReady);
+  hardware.sampler.start();
+  if(ModeSelect==true){
+    if(readingDebug==true){
+      server.log("RegularCapsense")
     }
-    else
-    {
-        if(readingDebug==true){
-        server.log("ColdBootCapsense")
-        }
-        imp.sleep(1)
+    imp.sleep(1)
+  }
+  else{
+    if(readingDebug==true){
+      server.log("ColdBootCapsense")
     }
-    //1 second for the minimum read
-    //The sampler stops at 200 ms - thought it was 2 seconds!!!! AGH!
-    hardware.sampler.stop();
-    local lastreading=hardware.pinA.read()
-    imp.sleep(0.01)
-    //server.log(hardware.pinA.read())
-    hardware.pinE.write(0);
-    //Can't use max() function because the reading is in two pieces and creating an array of 'actual' readings would take more memory
-    //So we do it this way which only takes a couple of bytes more:
-    //finding the capacitance
-    local kneeIndex=0;
+    imp.sleep(1)
+  }
+  //1 second for the minimum read
+  //The sampler stops at 200 ms - thought it was 2 seconds!!!! AGH!
+  hardware.sampler.stop();
+  local lastreading=hardware.pinA.read()
+  imp.sleep(0.01)
+  //server.log(hardware.pinA.read())
+  hardware.pinE.write(0);
+  //Can't use max() function because the reading is in two pieces and creating an array of 'actual' readings would take more memory
+  //So we do it this way which only takes a couple of bytes more:
+  //finding the capacitance
+  local kneeIndex=0;
 
-    for(local z=19998;z>=0;z-=2)
-    {
-        local currentReading=0
-        currentReading=(buffer1[z+1]*256)+buffer1[z]
-        if(currentReading>maxVSoil)
-        {
-            maxVSoil=currentReading
-            vmaxIndex=z/2
-            thresheNeg=maxVSoil*eNegOne
-            kneeThresh=0.10*maxVSoil
-        }
+  for(local z=19998;z>=0;z-=2)
+  {
+    local currentReading=0
+    currentReading=(buffer1[z+1]*256)+buffer1[z]
+    if(currentReading>maxVSoil){
+      maxVSoil=currentReading
+      vmaxIndex=z/2
+      thresheNeg=maxVSoil*eNegOne
+      kneeThresh=0.10*maxVSoil
     }
-    
-    for(local z=0;z<20000;z+=2)
-    {
-        local currentReading=0
-        currentReading=(buffer1[z+1]*256)+buffer1[z]
-        if(currentReading>thresheNeg&&indexeNeg==0)
-        {
-            indexeNeg=z/2
-        }
-        if(currentReading>kneeThresh&&kneeIndex==0)
-        {
-            kneeIndex=z/2
-        }
+  }
+  for(local z=0;z<20000;z+=2)
+  {
+    local currentReading=0
+    currentReading=(buffer1[z+1]*256)+buffer1[z]
+    if(currentReading>thresheNeg&&indexeNeg==0){
+      indexeNeg=z/2
     }
-    server.log("Index:")
-    server.log(indexeNeg-kneeIndex)
-    //SHOULD return data like a normal function, but right now it just stores data in global variables
-    lastReading=lastreading
-    lastLastReading=lastReading
-    lastlastreading=lastLastReading
-    //timeDiffOne=threshBendIndex
-    timeDiffTwo=indexeNeg-kneeIndex
-    highread=maxVSoil
-    //debugs
-    if(true){
-      server.log("Last Sample:")
-      server.log(lastreading)
-      server.log("MaxVSoil:")
-      server.log(maxVSoil)
-      server.log("Knee Index:")
-      server.log(kneeIndex)
-      server.log("indexeNeg:")
-      server.log(indexeNeg)
-      server.log("timeDiffTwo:")
-      server.log(timeDiffTwo)
-      server.log("MaxIndex:")
-      server.log(vmaxIndex)
-      server.log("LastLastReading:")
-      server.log(lastlastreading)
+    if(currentReading>kneeThresh&&kneeIndex==0){
+      kneeIndex=z/2
     }
+  }
+  server.log("Index:")
+  server.log(indexeNeg-kneeIndex)
+  //SHOULD return data like a normal function, but right now it just stores data in global variables
+  lastReading=lastreading
+  lastLastReading=lastReading
+  lastlastreading=lastLastReading
+  //timeDiffOne=threshBendIndex
+  timeDiffTwo=indexeNeg-kneeIndex
+  highread=maxVSoil
+  //debugs
+  if(true){
+    server.log("Last Sample:")
+    server.log(lastreading)
+    server.log("MaxVSoil:")
+    server.log(maxVSoil)
+    server.log("Knee Index:")
+    server.log(kneeIndex)
+    server.log("indexeNeg:")
+    server.log(indexeNeg)
+    server.log("timeDiffTwo:")
+    server.log(timeDiffTwo)
+    server.log("MaxIndex:")
+    server.log(vmaxIndex)
+    server.log("LastLastReading:")
+    server.log(lastlastreading)
+  }
 }
 //Should move to something like this eventually to do analysis, but right now it's just needed for capsense to work:
 function samplesReady(a,b){}
@@ -598,9 +592,8 @@ class HumidityTemperatureSensor {
     {
     humidity_raw = (dataHum[0] << 8) + (dataHum[1] & 0xfc);
     humidity = humidity_raw * 125.0 / 65536.0 - 6.0;
-    }
-        
-    }
+    }      
+  }
 }
 
 
@@ -1026,8 +1019,7 @@ function unitTest()
 {
 }
 //0.0.1.2
-function startControlFlow()
-{
+function startControlFlow(){
     wakeR=hardware.wakereason();
     local branching=0;
     switch(wakeR) 
@@ -1081,12 +1073,11 @@ function startControlFlow()
 
 
 //new interrupt handler, to prevent interruptPin() from running twice
-function interrupthandle()
-{
-    if(control!=3)
-    {
-        interruptPin();
-    }
+function interrupthandle(){
+  if(control!=3)
+  {
+    interruptPin();
+  }
 }
 
 //interruptPin is tied to the pin wakeup condition of the device
@@ -1095,295 +1086,291 @@ function interrupthandle()
 //pressing the button a second time enables blinkup
 
 function interruptPin() {
-
-    try
-    {
-      control=4;
-      hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
-        //explanation of the below if statement:
-        //Intertiem is recorded at the end of the interrupt (and initialized as 0)
-        //When you press the button, the code begins with an instance of interruptpin queued up
-        //BUT it also recognizes your press as another call to the interrupt 
-        //so the if statement below ensures the interrupt only runs once per press
-        //Let me know if this explanation is unclear because it's very important that if I die tomorrow somebody understands this
-      if((date().time-intertime)>1)
-      {
-          imp.sleep(10)
-        blinkupFor(blinkupTime)
-          if (debug == true){
-            server.log("Button pressed");
-          }
+  try
+  {
+    control=4;
+    hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
+    //explanation of the below if statement:
+    //Intertiem is recorded at the end of the interrupt (and initialized as 0)
+    //When you press the button, the code begins with an instance of interruptpin queued up
+    //BUT it also recognizes your press as another call to the interrupt 
+    //so the if statement below ensures the interrupt only runs once per press
+    //Let me know if this explanation is unclear because it's very important that if I die tomorrow somebody understands this
+    if((date().time-intertime)>1){
+      imp.sleep(10)
+      blinkupFor(blinkupTime)
+      if (debug == true){
+        server.log("Button pressed");
       }
+    }
       
-        intertime=date().time;
-        //if the imp has not connected before, use shallow sleep.
-    if(nv.pastConnect==false)
-        {
-          //hasn't connected before, wait 60 before sleep
-          hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
-          wakeCallHandle(60.0,function()
-          {
-            power.enter_deep_sleep_failed("Has Never Connected");
-          });
-        }
-        else
-        {
-            //connected before: no disadvantage to deep sleep
-            power.enter_deep_sleep_running("HasConnectedBefore");
-        }
-    }//end of try
-    catch(error)
-    {
-        server.log(error);
-        blinkAll(2,2);
-        //error occurred in interrupt, control=4 and run main
-        power.enter_deep_sleep_running("Interrupt Error");
-    }//end catch
-}
-
-function blinkupFor(timer=90)
-{      
-    greenLed.configure();
-    blueLed.configure();
-    redLed.configure();
-    // Enable blinkup for 30s
-    imp.enableblinkup(true);
-    blueLed.on()
-    redLed.on()
-    greenLed.on()
-    //change the sleep to 90
-    imp.sleep(timer);
-    blueLed.off()
-    redLed.off()
-    greenLed.off()
-    imp.enableblinkup(false);
-}
-
-function regularOperation()
-    {
-      
-      if (debug == true) server.log("Device booted.");
-      if (debug == true) server.log("Device's unique id: " + hardware.getdeviceid());
-      server.log("Device firmware version: " + imp.getsoftwareversion());
-      server.log("Memory free: " + imp.getmemoryfree());
-      // Configure i2c bus
-      // This method configures the I²C clock speed and enables the port.
-     
-      ///
-      // Event handlers
-      ///
-      agent.on("location_request", function(data) {
-        if (debug == true) server.log("Agent requested location information.");
-        connect(send_loc, TIMEOUT_SERVER_S);
+    intertime=date().time;
+    //if the imp has not connected before, use shallow sleep.
+    if(nv.pastConnect==false){
+      //hasn't connected before, wait 60 before sleep
+      hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
+      wakeCallHandle(60.0,function(){
+        power.enter_deep_sleep_failed("Has Never Connected");
       });
+    }
+    else
+    {
+      //connected before: no disadvantage to deep sleep
+      power.enter_deep_sleep_running("HasConnectedBefore");
+    }
+  }//end of try
+  catch(error)
+  {
+    server.log(error);
+    blinkAll(2,2);
+    //error occurred in interrupt, control=4 and run main
+    power.enter_deep_sleep_running("Interrupt Error");
+  }//end catch
+}
+
+
+//"MAIN" FUNCTIONS:
+
+//Turns on a white light and enables blinkup for X seconds
+function blinkupFor(timer=90){      
+  greenLed.configure();
+  blueLed.configure();
+  redLed.configure();
+  //turn on blinkup and white light:
+  imp.enableblinkup(true);
+  blueLed.on()
+  redLed.on()
+  greenLed.on()
+  //wait
+  imp.sleep(timer);
+  //turn off blinkup and white light:
+  blueLed.off()
+  redLed.off()
+  greenLed.off()
+  imp.enableblinkup(false);
+}
+
+
+//this is basically the old main function
+//A high level view of what regularOperation() accomplishes:
+//configuration of sensors and Power Manager
+//collecting a sample from all sensors and Power Manager
+//sending sample and returning to sleep
+function regularOperation(){
+  if (debug == true) server.log("Device booted.");
+  if (debug == true) server.log("Device's unique id: " + hardware.getdeviceid());
+  server.log("Device firmware version: " + imp.getsoftwareversion());
+  server.log("Memory free: " + imp.getmemoryfree());
+     
+  ///
+  // Event handlers
+  ///
+  agent.on("location_request", function(data) {
+    if (debug == true) server.log("Agent requested location information.");
+    connect(send_loc, TIMEOUT_SERVER_S);
+  });
     
-      // Register the disconnect handler
-      server.onunexpecteddisconnect(disconnectHandler);
+  // Register the disconnect handler
+  server.onunexpecteddisconnect(disconnectHandler);
 
-      //set the pin interrupt
-      hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
+  //set the pin interrupt
+  hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
 
-      ///
-      // End of event handlers
-      ///
+  ///
+  // End of event handlers
+  ///
 
-      ////////////////////
-      // Configurations //
-      ////////////////////
+  ////////////////////
+  // Configurations //
+  ////////////////////
 
-      hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+  hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
     
-      //LED configurations
-      greenLed.configure();
-      redLed.configure();
-      blueLed.configure();
+  //LED configurations
+  greenLed.configure();
+  redLed.configure();
+  blueLed.configure();
       
-      // sensor configurations
-      soil.configure();
-      solar.configure();
-      source.configure();
+  // sensor configurations
+  soil.configure();
+  solar.configure();
+  source.configure();
 
-      // Create PowerManager object
-      powerManager <- PowerManager(hardware.i2c89);
-      powerManager.setDefs();
+  // Create PowerManager object
+  powerManager <- PowerManager(hardware.i2c89);
+  powerManager.setDefs();
 
-      //Create humidityTemperatureSensor object
-      humidityTemperatureSensor <- HumidityTemperatureSensor();
+  //Create humidityTemperatureSensor object
+  humidityTemperatureSensor <- HumidityTemperatureSensor();
 
-      //Configure Capacitive sensing:
-      configCapSense();
+  //Configure Capacitive sensing:
+  configCapSense();
 
-      server.log("Memory free after configurations: " + imp.getmemoryfree());
+  server.log("Memory free after configurations: " + imp.getmemoryfree());
       
-      ///
-      // End of Configurations
-      ///
+  ///
+  // End of Configurations
+  ///
 
-      if (ship_and_store == true) {
-        power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-      }
+  if (ship_and_store == true) {
+    power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
+  }
 
-      // we have entered the running state
-      nv.running_state = true;
+  // we have entered the running state
+  nv.running_state = true;
 
-      ///////////////////////
-      // Sample, Save, Send//
-      ///////////////////////
+  ///////////////////////
+  // Sample, Save, Send//
+  ///////////////////////
 
-      //Sampling
+  //Sampling
 
-      //capSense returns nothing, see the function itself
+  //capSense returns nothing, see the function itself
       
-      capSense(true);
+  capSense(true);
 
-      lastLastReading=lastLastReading*(0.666)
-      powerManager.sample();
-      try{
-      imp.sleep(0.1);
-      if(powerManager.reg_3==null)
-      {
-          local counterI2C=1;
-          while(powerManager.reg_3==null && counterI2C<6)
-          {
-              //arbitrary, possibly unnecessary sleeps that might make it more stable
-              //"check redundancies twice"
+  lastLastReading=lastLastReading*(0.666)
+  powerManager.sample();
+  try{
+    imp.sleep(0.1);
+    if(powerManager.reg_3==null){
+      local counterI2C=1;
+      while(powerManager.reg_3==null && counterI2C<6){
+        //arbitrary, possibly unnecessary sleeps that might make it more stable
+        //"check redundancies twice"
               
-              server.log("POWER MANAGER FAIL # " + counterI2C);
-              server.log(powerManager.reg_3)
-              imp.sleep(0.01);
-              hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-              imp.sleep(0.1);
-              powerManager.sample();
-              imp.sleep(0.1);
-              counterI2C+=1;
-          }
-          //will show up only when it's probably true:
-          if(powerManager.reg_3==null)
-          {
-            server.log("Possible damage to the LTC or I2C busses.");
-          }
+        server.log("POWER MANAGER FAIL # " + counterI2C);
+        server.log(powerManager.reg_3)
+        imp.sleep(0.01);
+        hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+        imp.sleep(0.1);
+        powerManager.sample();
+        imp.sleep(0.1);
+        counterI2C+=1;
       }
-      else{imp.sleep(0.1)};
-      }
-      catch(error)
-      {server.log("LTC SAMPLING ERROR");}
-        
-      //server.log("PM PASS");
-      humidityTemperatureSensor.sample();
-      try{
-      if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32)
-      {
-          local counterI2C=1;
-          while((humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32) && counterI2C<6)
-          {
-              //arbitrary, possibly unnecessary sleeps that might make it more stable
-              //"check redundancies twice"
-              server.log("HUMIDITY TEMPERATURE FAIL # " + counterI2C)
-              
-              server.log(humidityTemperatureSensor.humidity)
-              server.log(humidityTemperatureSensor.temperature)
-              imp.sleep(0.01);
-              hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-              imp.sleep(0.1);
-              humidityTemperatureSensor.sample();
-              imp.sleep(0.1);
-              counterI2C+=1;
-          }
-          //will show up only when it's probably true:
-          if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32)
-          {
-            server.log("Possible damage to the Humidity/Temperature Sensor or I2C busses.");
-          }
-      }
-      }
-      catch(error)
-      {server.log("Hum/Temp Error");}
-        
-      //server.log("Humidity/Temperature Pass")
-      server.log("Memory free after sampling: " + imp.getmemoryfree());
-       
-      //End Sampling
-      //Begin Saving
-
-        // nv space is limited to 4kB and will not notify of failure
-        // discard every second entry if over MAX entries
-        // TODO: combine similar data points instead of discarding them
-        if (nv.data.len() > NV_ENTRIES_MAX) {
-          local i = 1;
-          while(i < nv.data.len()) {
-            nv.data.remove(i);
-            i += 2;
-          }
-        }
-        
-        // store sensor data in non-volatile storage
-        //0.1
-        //testing or not
-        powerManager.suspendCharging();
-        local batvol = source.voltage();
-        if(runTest)
+        //will show up only when it's probably true:
+        if(powerManager.reg_3==null)
         {
-            nv.data.push({
-              ts = theCurrentTimestamp,
-              t = humidityTemperatureSensor.temperature,
-              h = humidityTemperatureSensor.humidity,
-              l = solar.voltage(),
-              m = soil.voltage(),
-              b = source.voltage()
-              testResults=unitTest()
-            });
-        }
-        else
-        {
-              nv.data.push({
-              ts = theCurrentTimestamp,
-              t = humidityTemperatureSensor.temperature,
-              h = humidityTemperatureSensor.humidity,
-              l = solar.voltage(),
-              m = lastLastReading*(3.0/65536.0),
-              b = source.voltage(),
-              c = timeDiffTwo*(1.0/samplerHzA)
-              });
-              //server.log("DEVICE SIDE CAPACITANCE:"+nv.data.top().c);
-        }        
-        powerManager.resumeCharging();
-      
-      // End Saving
-      //Begin Sending
-        
-        //feature 0.2 important
-        //Send sensor data
-        if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
-          if (debug == true) server.log("Server refresh needed");
-          connect(send_data, TIMEOUT_SERVER_S);
-                // if (debug == true) server.log("Sending location information without prompting.");
-            // connect(send_loc, TIMEOUT_SERVER_S);
-        }
-        
-        // ///
-        // all the important time-sensitive decisions based on current state go here
-        // ///
-        
-        // // checking source voltage not necessary in the first pass
-        // // since power will be cut to the imp below Vout of 3.1 V
-        // if (source.voltage() < 3.19) {
-        //   power.enter_deep_sleep_running("Low system voltage.");
-        // }
-        // if temperature is too hot
-        // if temperatuer is too cold
-          
-        else {
-          server.log("Not time to send");
-          if (ship_and_store == true) {
-            power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-          }
-          else {
-            // not time to send. sleep until next sensor sampling.
-            power.enter_deep_sleep_running("Not time yet");
-          }
+          server.log("Possible damage to the LTC or I2C busses.");
         }
     }
-    //end regularOperation
+    else{imp.sleep(0.1)};
+  }
+  catch(error){server.log("LTC SAMPLING ERROR");}
+        
+  //server.log("PM PASS");
+  humidityTemperatureSensor.sample();
+  try{
+    if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32)
+    {
+      local counterI2C=1;
+      while((humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32) && counterI2C<6)
+      {
+        //arbitrary, possibly unnecessary sleeps that might make it more stable
+        //"check redundancies twice"
+        server.log("HUMIDITY TEMPERATURE FAIL # " + counterI2C)
+              
+        server.log(humidityTemperatureSensor.humidity)
+        server.log(humidityTemperatureSensor.temperature)
+        imp.sleep(0.01);
+        hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+        imp.sleep(0.1);
+        humidityTemperatureSensor.sample();
+        imp.sleep(0.1);
+        counterI2C+=1;
+      }
+      //will show up only when it's probably true:
+      if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32){
+        server.log("Possible damage to the Humidity/Temperature Sensor or I2C busses.");
+      }
+    }
+  }
+  catch(error){server.log("Hum/Temp Error");}
+        
+  //server.log("Humidity/Temperature Pass")
+  server.log("Memory free after sampling: " + imp.getmemoryfree());
+       
+  //End Sampling
+  //Begin Saving
+
+  // nv space is limited to 4kB and will not notify of failure
+  // discard every second entry if over MAX entries
+  // TODO: combine similar data points instead of discarding them
+  if (nv.data.len() > NV_ENTRIES_MAX) {
+    local i = 1;
+    while(i < nv.data.len()) {
+      nv.data.remove(i);
+      i += 2;
+    }
+  }
+        
+  // store sensor data in non-volatile storage
+  //0.1
+  //testing or not
+  powerManager.suspendCharging();
+  local batvol = source.voltage();
+  if(runTest){
+    nv.data.push({
+      ts = theCurrentTimestamp,
+      t = humidityTemperatureSensor.temperature,
+      h = humidityTemperatureSensor.humidity,
+      l = solar.voltage(),
+      m = soil.voltage(),
+      b = source.voltage()
+      testResults=unitTest()
+    });
+  }
+  else
+  {
+    nv.data.push({
+      ts = theCurrentTimestamp,
+      t = humidityTemperatureSensor.temperature,
+      h = humidityTemperatureSensor.humidity,
+      l = solar.voltage(),
+      m = lastLastReading*(3.0/65536.0),
+      b = source.voltage(),
+      c = timeDiffTwo*(1.0/samplerHzA)
+    });
+    //server.log("DEVICE SIDE CAPACITANCE:"+nv.data.top().c);
+  }        
+  powerManager.resumeCharging();
+      
+  // End Saving
+  //Begin Sending
+        
+  //feature 0.2 important
+  //Send sensor data
+  if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
+    if (debug == true) server.log("Server refresh needed");
+    connect(send_data, TIMEOUT_SERVER_S);
+    // if (debug == true) server.log("Sending location information without prompting.");
+    // connect(send_loc, TIMEOUT_SERVER_S);
+  }
+        
+  // ///
+  // all the important time-sensitive decisions based on current state go here
+  // ///
+        
+  // // checking source voltage not necessary in the first pass
+  // // since power will be cut to the imp below Vout of 3.1 V 
+  // if (source.voltage() < 3.19) {
+  //   power.enter_deep_sleep_running("Low system voltage.");
+  // }
+  // if temperature is too hot
+  // if temperatuer is too cold
+          
+  else {
+    server.log("Not time to send");
+    if (ship_and_store == true) {
+      power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
+    }
+    else {
+      // not time to send. sleep until next sensor sampling.
+      power.enter_deep_sleep_running("Not time yet");
+    }
+  }
+}
+//end regularOperation
 
 
 function main() {
@@ -1404,25 +1391,19 @@ function main() {
       //5 = blinkUp Successful (9)
     }//end control 0
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
-    if(control==1)
-    {
-        if(server.isconnected())
-        {
+    if(control==1){
+        if(server.isconnected()){
             imp.sleep(10)
             regularOperation()
         }
-        
-    //blinkupfor should happen before regular operation, but we can fix that later
-        blinkupFor(blinkupTime)
+      //blinkupfor should happen before regular operation, but we can fix that later
+      blinkupFor(blinkupTime)
     }
-
-    else if(control==2)
-    {
-        regularOperation()
+    else if(control==2){
+      regularOperation()
     }
     //3 =Pin Wakeup, do some configurations
-    else if(control==3)
-    {
+    else if(control==3){
       hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
       source.configure();
       local counterI2C=0;
@@ -1433,26 +1414,23 @@ function main() {
       //blueLed.blink(1,3);
       hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
       interruptPin();
-      
     }//end control 3
-    else if (control==5)
-    {        
-        if(server.isconnected())
-        {
-            blueLed.configure()
-            #blueLed.blink(2,2)
+    else if (control==5){        
+      if(server.isconnected()){
+        blueLed.configure()
+        #blueLed.blink(2,2)
             server.log("Is connected")
             regularOperation()
             imp.sleep(10)
-        }
-        else
-        {
-            blueLed.configure()
-            blueLed.blink(1,4)
-            imp.sleep(10)
-            server.log("not connected")
-            blinkupFor(blinkupTime)
-        }
+      }
+      else{
+        blueLed.configure()
+        //look, another blueLed!
+        blueLed.blink(1,4)
+        imp.sleep(10)
+        server.log("not connected")
+        blinkupFor(blinkupTime)
+      }
     }
 }//end main
     
@@ -1467,23 +1445,18 @@ function disconnectHandler(reason) {
 }
 
 
-function wakeCallHandle(time=null,func=null)
-{
-    if(time==null&&func==null)
-    {
-        if(nextWakeCall!=null)
-        {
-            imp.cancelwakeup(nextWakeCall);
-        }
+function wakeCallHandle(time=null,func=null){
+  if(time==null&&func==null){
+    if(nextWakeCall!=null){
+      imp.cancelwakeup(nextWakeCall);
     }
-    else
-    {
-        if(nextWakeCall!=null)
-        {
-            imp.cancelwakeup(nextWakeCall);
-        }
-        nextWakeCall=imp.wakeup(time,func);//end naxt wake call
+  }
+  else{
+    if(nextWakeCall!=null){
+      imp.cancelwakeup(nextWakeCall);
     }
+    nextWakeCall=imp.wakeup(time,func);//end naxt wake call
+  }
 }
 
 ///
@@ -1491,7 +1464,7 @@ function wakeCallHandle(time=null,func=null)
 ///
 function WatchDog()
 {
-    power.enter_deep_sleep_failed("watchdog")
+  power.enter_deep_sleep_failed("watchdog")
 }
 WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
 main();
