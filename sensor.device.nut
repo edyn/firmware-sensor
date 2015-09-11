@@ -361,7 +361,7 @@ class PowerManager {
     // 00 Battery Charger Safety Timer +
     // 00001 500 mA Max WALLILIM 
     // 00000001
-        successful+=writeReg(1,"\x01");
+        successful+=writeReg(1,"\x00");
     // REG 2 has the V float setting
     // write 1111 (battery charger current at 100% full-scale DEFAULT) + 
     // 11 (vfloat of 3.8V) +
@@ -1321,6 +1321,7 @@ function regularOperation()
         //testing or not
         powerManager.suspendCharging();
         local batvol = source.voltage();
+        imp.sleep(0.1);
         if(runTest)
         {
             nv.data.push({
