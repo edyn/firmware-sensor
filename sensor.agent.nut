@@ -11,7 +11,7 @@ THEMACADDRESSAGENTSIDE<-"unknownMacAddress"
 // Send data to Edyn server
 function send_data_json(data) {
   // local soil_url = "https://edyn.com/api/v1/readings?" + "impee_id=" + data.device;
-//  local soil_url = "http://edynbackendpythonstag.elasticbeanstalk.com/api/readings/";
+  //  local soil_url = "http://edynbackendpythonstag.elasticbeanstalk.com/api/readings/";
   local soil_url = "http://edynbackendpythondev.elasticbeanstalk.com/api/readings/";
   // local soil_url = "http://Soil-IQ-stag-zhipffkaue.elasticbeanstalk.com/api/readings/";
   local req = http.post(soil_url, {"Content-Type":"application/json", "User-Agent":"Imp"}, http.jsonencode(data));
@@ -22,7 +22,8 @@ function send_data_json(data) {
     server.log("MySQL API status code: " + res.statuscode);
     // server.log("error sending message: " + res.body.slice(0,40));
     server.log("Error sending message to MySQL database.");
-  } else {
+  } 
+  else {
     server.log("Data sent successfully to MySQL database.");
   }
 }
@@ -42,10 +43,12 @@ function send_data_json_node(data) {
     server.log(res.body);
     // server.log("error sending message: " + res.body.slice(0,40));
     server.log("Error sending message to Postgres database.");
-  } else {
+  } 
+  else {
     server.log("Data sent successfully to Postgres database.");
   }
 }
+
 
 function processResponse(incomingDataTable) {
   // This is the completed-request callback function.
@@ -79,7 +82,7 @@ device.on("data", function(data) {
     local dataToSend = data;
     local dataToSendNode = {};
     dataToSendNode.uuid <- data.device;
-    THEMACADDRESSAGENTSIDE=data.device
+    THEMACADDRESSAGENTSIDE=data.device;
     dataToSendNode.data <- [];
     // temp code to work with back end expectation of sd key
     // dataToSend.data[0].sd <- [];
@@ -87,44 +90,45 @@ device.on("data", function(data) {
     local settings = server.load();
     // If no preferences have been saved, settings will be empty
     if (settings.len() != 0) {
-    // Settings table is NOT empty so set the
-    // lat and lng to the values from the loaded table
-    dataToSend.lat <- settings.lat;
-    dataToSend.lng <- settings.lng;
-    } else {
-    // Settings table IS empty
-    // Default values are the Oakland office
-    dataToSend.lat <- 37.362517;
-    dataToSend.lng <- -122.03476;
+      // Settings table is NOT empty so set the
+      // lat and lng to the values from the loaded table
+      dataToSend.lat <- settings.lat;
+      dataToSend.lng <- settings.lng;
+    } 
+    else {
+      // Settings table IS empty
+      // Default values are the Oakland office
+      dataToSend.lat <- 37.362517;
+      dataToSend.lng <- -122.03476;
     }
     
     local newPoint = {};
     // Hacks
     foreach (origPoint in dataToSend.data) {
-    origPoint.sd <- [1];
+      origPoint.sd <- [1];
     }
     
     //commented out 17/6/15
     //send_data_json(dataToSend); // JSON API
     
     foreach (point in data.data) {
-    newPoint = {};
-    newPoint.timestamp <- point.ts;
-    newPoint.battery <- point.b;
-    newPoint.humidity <- point.h;
-    newPoint.temperature <- point.t;
-    newPoint.electrical_conductivity <- point.m;
-    newPoint.light <- point.l;
-    newPoint.capacitance<-point.c;
+      newPoint = {};
+      newPoint.timestamp <- point.ts;
+      newPoint.battery <- point.b;
+      newPoint.humidity <- point.h;
+      newPoint.temperature <- point.t;
+      newPoint.electrical_conductivity <- point.m;
+      newPoint.light <- point.l;
+      newPoint.capacitance<-point.c;
     
-    server.log("Agent CAPACITANCE:")
-    server.log(point.c)
-    server.log(newPoint.capacitance)
+      server.log("Agent CAPACITANCE:")
+      server.log(point.c)
+      server.log(newPoint.capacitance)
     
-    // newPoint.disable_input_uvcl <- false;
-    newPoint.disable_input_uvcl <- (point.r0 & 0x80) != 0x00;
+      // newPoint.disable_input_uvcl <- false;
+      newPoint.disable_input_uvcl <- (point.r0 & 0x80) != 0x00;
 
-    local convertCurrentLim = function(input) {
+      local convertCurrentLim = function(input) {
       if (input == 0x00) return "100mA Max (USB Low Power)"
       if (input == 0x01) return "500mA Max (USB High Power)"
       if (input == 0x02) return "600mA Max"
@@ -191,11 +195,10 @@ device.on("data", function(data) {
     if (ntc_stat == 0x0) newPoint.ntc_stat <- "NTC Normal";
     else if (ntc_stat == 0x1) newPoint.ntc_stat <- "NTC_TOO_COLD";
     else if (ntc_stat == 0x3) newPoint.ntc_stat <- "NTC_HOT_FAULT";
-    else 
-    {
-        server.log("NTC STAT IS:")
-        server.log(ntc_stat)
-        newPoint.ntc_stat <- "NTC BUGGED OUT"
+    else {
+      server.log("NTC STAT IS:");
+      server.log(ntc_stat);
+      newPoint.ntc_stat <- "NTC BUGGED OUT";
     }
     
     server.log("NTC STAT IS:")
@@ -261,7 +264,8 @@ device.on("data", function(data) {
     server.log("ntc_warning " + dataToSendNode.data[0].ntc_warning);
     // Commented out while hacking on the new power controller
     send_data_json_node(dataToSendNode);
-  } else {//WITH powerdata
+  } 
+  else {//WITH powerdata
     local dataToSend = data;
     local dataToSendNode = {};
     dataToSendNode.uuid <- data.device;
@@ -277,7 +281,8 @@ device.on("data", function(data) {
       // lat and lng to the values from the loaded table
       dataToSend.lat <- settings.lat;
       dataToSend.lng <- settings.lng;
-    } else {
+    }
+    else {
       // Settings table IS empty
       // Default values are the Oakland office
       dataToSend.lat <- 37.362517;
@@ -297,28 +302,28 @@ device.on("data", function(data) {
     //Seperated powermanager register data from data.data
     //added testResults handling for unit tests (checks for them first)
     foreach (point in data.data) {
-    newPoint = {};
-    newPoint.timestamp <- point.ts;
-    newPoint.battery <- point.b;
-    newPoint.humidity <- point.h;
-    newPoint.temperature <- point.t;
-    newPoint.electrical_conductivity <- point.m;
-    newPoint.light <- point.l;
-    newPoint.capacitance <- point.c;
+      newPoint = {};
+      newPoint.timestamp <- point.ts;
+      newPoint.battery <- point.b;
+      newPoint.humidity <- point.h;
+      newPoint.temperature <- point.t;
+      newPoint.electrical_conductivity <- point.m;
+      newPoint.light <- point.l;
+      newPoint.capacitance <- point.c;
     
-    if("testResults" in point){
-      if(typeof(point.testResults)=="array"){
-        for(local i=0; i<point.testResults.len(); i++){
-        server.log("Test Results " + i + " = " +point.testResults[i])
+      if("testResults" in point){
+        if(typeof(point.testResults)=="array"){
+          for(local i=0; i<point.testResults.len(); i++){
+            server.log("Test Results " + i + " = " +point.testResults[i])
+          }
         }
+        else /*if(typeof(point.testResults)=="string")*/{
+          server.log(point.testResults)
+        }
+        //server.log("TestResults:"+typeof(point.testResults))
       }
-      else /*if(typeof(point.testResults)=="string")*/{
-         server.log(point.testResults)
-      }
-      //server.log("TestResults:"+typeof(point.testResults))
-    }
-    //dataToSendNode.data.append(newPoint);
-    dataToSendNode.data.append(newPoint);
+      //dataToSendNode.data.append(newPoint);
+      dataToSendNode.data.append(newPoint);
     }
     
     //Table of power information passed to agent
@@ -393,11 +398,10 @@ device.on("data", function(data) {
     if (ntc_stat == 0x0) powerPoint.ntc_stat <- "NTC Normal";
     else if (ntc_stat == 0x1) powerPoint.ntc_stat <- "NTC_TOO_COLD";
     else if (ntc_stat == 0x3) powerPoint.ntc_stat <- "NTC_HOT_FAULT";
-    else 
-    {
-        server.log("NTC STAT IS:")
-        server.log(ntc_stat)
-        powerPoint.ntc_stat <- "NTC BUGGED OUT"
+    else {
+      server.log("NTC STAT IS:")
+      server.log(ntc_stat)
+      powerPoint.ntc_stat <- "NTC BUGGED OUT"
     }
     
     server.log("NTC STAT IS:")
@@ -466,11 +470,6 @@ device.on("data", function(data) {
     // Commented out while hacking on the new power controller
     send_data_json_node(dataToSendNode);
   }
-    
-  
-  
-  
-
 });
 
 // Invoked when the device calls agent.send("location", ...)
@@ -519,7 +518,6 @@ device.on("location", function(data) {
         send_loc_data(locPrefs);
       } 
     }
-    
     else {
       // If we were already using this SSID
       server.log("We already know the lat and lng for this device: lat,lng = " + settings.lat + "," + settings.lng);
@@ -559,7 +557,6 @@ device.on("location", function(data) {
       send_loc_data(locPrefs);
     }
   }
-  
 });
 
 function addColons(bssid) {
@@ -583,14 +580,13 @@ device.onconnect(function() {
   local settings = server.load();
   
   
-  if(fullResSet)
-    {
-        server.log("here")
-        device.send("fullRes", {data="1"})
-        server.log("Full Res Set request sent")
-        server.log("Full Res Set To False")
-        fullResSet=false
-    }
+  if(fullResSet){
+    server.log("here");
+    device.send("fullRes", {data="1"});
+    server.log("Full Res Set request sent");
+    server.log("Full Res Set To False");
+    fullResSet=false;
+  }
   
   
   // If no preferences have been saved, settings will be empty
@@ -598,14 +594,12 @@ device.onconnect(function() {
     // Settings table has all the values we expected,
     // so set the locPrefs to the loaded table
     server.log("Device connected - We already know the lat and lng for this device: lat,lng = " + settings.lat + "," + settings.lng);
-    
   }
   
   else {
     // Settings table doesn't have all the values we expected,
     // so figure out the locPrefs and save as a table
     device.send("location_request", {test = "t"});
-
   }
 });
 
@@ -651,11 +645,11 @@ http.onrequest(function(request, response){
       //https://api.edyn.com/users/:id/devices
       // local url = "http://edynbackendnodedev.elasticbeanstalk.com/users/";
       local url = "https://api.edyn.com/users/" + request.query.uid + "/devices";
-      local headers = {}
-      headers["X-Api-Key"] <- "FEIMfjweiovm90283y3#*U)#@URvm"
-      headers["Content-Type"] <- "application/json"
+      local headers = {};
+      headers["X-Api-Key"] <- "FEIMfjweiovm90283y3#*U)#@URvm";
+      headers["Content-Type"] <- "application/json";
       local stringToSend = "";
-      server.log(settings.len())
+      server.log(settings.len());
       // if we have all the settings we should expect from the device
       if (settings.len() == 4) {
         server.log("Loading real device uuid");
@@ -671,64 +665,46 @@ http.onrequest(function(request, response){
         // stringToSend = "{\"uuid\": " + "\"20000c2a690226d1\"" + "}";
         server.log("Error");
       }
-      
     }
   }
     
   // send response to whoever hit the agent url
   if (settings.len() == 4) {
     response.send(200, settings.device);
-  } else {
+  }
+  else {
     response.send(500, "Error");
   }
 });
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 //Full res related stuff:
-device.on("fullRes",function(data)
-{
-    
-    local fullTailSend=array(10000);
-    local fullBendSend=array(10000);
-    for(local z=0;z<20000;z+=2)
-    {
-        local currentReadinga=0
-        local currentReadingb=0
-        currentReadinga=((data.tail[z+1]*256)+data.tail[z])*(3.0/65536)
-        currentReadingb=((data.bend[z+1]*256)+data.bend[z])*(3.0/65536)
-        fullTailSend[z/2]=(currentReadinga)
-        fullBendSend[z/2]=(currentReadingb)
-    }
-    server.log("AGENT HIGH RES POSTPROCESSING COMPLETE, SENDING DATA")
-            local themac=data.macid
-            firebase.write("/"+themac+"/"+data.timestamp+"/tail/" , fullTailSend);
-            firebase.write("/" +themac+"/"+data.timestamp+"/bend/", fullBendSend);
-            //data.data[0]["ts"].tostring().slice(0,5)+"/"
-            server.log("SENT HIGH RES DATA")
-
-    
-}
-)
+device.on("fullRes",function(data){
+  local fullTailSend=array(10000);
+  local fullBendSend=array(10000);
+  for(local z=0;z<20000;z+=2){
+    local currentReadinga=0;
+    local currentReadingb=0;
+    currentReadinga=((data.tail[z+1]*256)+data.tail[z])*(3.0/65536);
+    currentReadingb=((data.bend[z+1]*256)+data.bend[z])*(3.0/65536);
+    fullTailSend[z/2]=(currentReadinga);
+    fullBendSend[z/2]=(currentReadingb);
+  }
+  server.log("AGENT HIGH RES POSTPROCESSING COMPLETE, SENDING DATA")
+  local themac=data.macid
+  firebase.write("/"+themac+"/"+data.timestamp+"/tail/" , fullTailSend);
+  firebase.write("/" +themac+"/"+data.timestamp+"/bend/", fullBendSend);
+  //data.data[0]["ts"].tostring().slice(0,5)+"/"
+  server.log("SENT HIGH RES DATA")    
+})
 
 
 // Accept requests to open/close the valve
 http.onrequest(function (request, response) {
     try {
-        response.header("Access-Control-Allow-Origin", "*");
-/*
+      response.header("Access-Control-Allow-Origin", "*");
+      /*
         if (request.query.action == "open") {
             server.save({action = request.query.action, time = request.query.time.tointeger(), duration = request.query.duration.tointeger()}); // seconds
             response.send(200, "OK");
@@ -737,22 +713,24 @@ http.onrequest(function (request, response) {
             response.send(200, "OK");
         } else {
             response.send(500, "Error: Action should be 'open' or 'close'.");
-        }*/
-        if ("fullRes" in request.query) {
-        // if it was, send the value of it to the device
-            device.send("fullRes", request.query["fullRes"]);
-            fullResSet = true
-            server.log("Full Res Set to True")
         }
-        // send a response back to whoever made the request
-        response.send(200, "OK");
-    } catch (ex) {
-        response.send(500, "Error: " + ex);
+      */
+      if ("fullRes" in request.query) {
+        // if it was, send the value of it to the device
+        device.send("fullRes", request.query["fullRes"]);
+        fullResSet = true
+        server.log("Full Res Set to True")
+      }
+      // send a response back to whoever made the request
+      response.send(200, "OK");
+    } 
+    catch (ex) {
+      response.send(500, "Error: " + ex);
     }
 });
 
 
-
+//NOT reformatting the firebase class.
 
 //created 15/5/1 "firebase test"
 //renamed 15/5/18 "High Resolution Sampling" used with group 5 for capacitance test in bucket
@@ -827,12 +805,14 @@ class Firebase {
                     baseUrl = location.slice(0, p);
                     // server.log("Redirecting to " + baseUrl);
                     return stream(path, onError);
-                } else if (resp.statuscode == 28 || resp.statuscode == 429) {
+                } 
+                else if (resp.statuscode == 28 || resp.statuscode == 429) {
                     // if we timed out, just reconnect after a small delay
                     imp.wakeup(1, function() {
                         return stream(path, onError);
                     }.bindenv(this))
-                } else {
+                } 
+                else {
                     // Reconnect unless the stream after an error
                     server.error("Stream closed with error " + resp.statuscode);
                     imp.wakeup(1, function() {
@@ -861,7 +841,8 @@ class Firebase {
                         if (path == "/" || path == message.path || message.path.find(path + "/") == 0) {
                             // This is an exact match or a subbranch 
                             callback(message.path, message.data);
-                        } else if (message.event == "patch") {
+                        } 
+                        else if (message.event == "patch") {
                             // This is a patch for a (potentially) parent node
                             foreach (head,body in message.data) {
                                 local newmessagepath = ((message.path == "/") ? "" : message.path) + "/" + head;
@@ -871,11 +852,13 @@ class Firebase {
                                     callback(newmessagepath, subdata);
                                 }
                             }
-                        } else if (message.path == "/" || path.find(message.path + "/") == 0) {
+                        } 
+                        else if (message.path == "/" || path.find(message.path + "/") == 0) {
                             // This is the root or a superbranch for a put or delete
                             local subdata = _getDataFromPath(path, message.path, data);
                             callback(path, subdata);
-                        } else {
+                        } 
+                        else {
                             // server.log("No match for: " + path + " vs. " + message.path);
                         }
                         
