@@ -408,7 +408,7 @@ class PowerManager {
   //01 is our default setting of 500ma Max
   function resumeCharging(toWrite=0x00)
   {
-    writeReg(1,"\x01");
+    writeReg(1,"\x00");
   }
 
   function readReg(subreg,trynum=0,maxtry=5)
@@ -1321,7 +1321,8 @@ function regularOperation()
         //testing or not
         powerManager.suspendCharging();
         local batvol = source.voltage();
-        imp.sleep(0.1);
+        //uncomment this sleep to get the light reading value change:
+        //imp.sleep(0.1);
         if(runTest)
         {
             nv.data.push({
