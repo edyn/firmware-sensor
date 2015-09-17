@@ -1442,7 +1442,7 @@ function main() {
         if(server.isconnected())
         {
             blueLed.configure()
-            #blueLed.blink(2,2)
+            //blueLed.blink(2,2)
             server.log("Is connected")
             regularOperation()
             imp.sleep(10)
@@ -1450,7 +1450,7 @@ function main() {
         else
         {
             blueLed.configure()
-            blueLed.blink(1,4)
+            //blueLed.blink(1,4)
             imp.sleep(10)
             server.log("not connected")
             blinkupFor(blinkupTime)
