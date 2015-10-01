@@ -53,3 +53,36 @@ function close() {
     reversePin.write(0);
     controlPin.write(0);
 }
+
+//Red Led Functions
+function redConfigure(){
+    hardware.pin2.configure(DIGITAL_OUT)
+}
+function redOn(){
+    hardware.pin2.write(0)
+}
+function redOff(){
+    hardware.pin2.write(1)
+}
+
+//Blue Led Functions
+function blueConfigure(){
+    hardware.pinC.configure(DIGITAL_OUT)
+}
+function blueOn(){
+    hardware.pinC.write(0)
+}
+function blueOff(){
+    hardware.pinC.write(1)
+}
+
+//Green Led Functions
+function greenConfigure(){
+    hardware.pinD.configure(DIGITAL_OUT)
+}
+function greenOn(){
+    hardware.pinD.write(0)
+}
+function greenOff(){
+    hardware.pinD.write(1)
+}
