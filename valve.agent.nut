@@ -4,7 +4,14 @@ firebaseAuth<-"qxIFLzJKuewlDIGAUXaB3r0pkjO7Ua5LIrcZBPWg";
 
 function send_data_json_node(data) {
     local readings_url = firebase;
-    local req = http.post(readings_url+"readings.json", {"Content-Type":"application/json", "User-Agent":"Imp", "X-Api-Key":firebaseAuth}, http.jsonencode(data));
+    local urlConcatenation=readings_url+"readings.json";
+    local headers={
+        "Content-Type":"application/json", 
+        "User-Agent":"Imp", 
+        "X-Api-Key":firebaseAuth
+    };
+    local jsonData=http.jsonencode(data);
+    local req = http.post(urlConcatenation, headers, jsonData);
     local res = req.sendsync();
     if (res.statuscode != 200) {
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
