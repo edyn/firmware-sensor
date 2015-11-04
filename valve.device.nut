@@ -105,10 +105,13 @@ device-side API functions
 ************************/
 
 //function to simplify our deep sleep calls
-function deepSleepUntilTime(inputTime=date().time+1800){
+function deepSleepUntilTime(inputTime){
+    //TODO: add some robust error handling to this function in particular
     imp.wakeup(0.5,function() {
         imp.onidle(function() {
-            server.sleepfor(inputTime-date().time);
+            //TODO: if the below expression evaluates negative or inputTime is not a string that's bad
+            local sleepTime=inputTime-date().time;
+            server.sleepfor(sleepTime);
         });
     });
 }
