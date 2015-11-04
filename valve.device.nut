@@ -1,8 +1,6 @@
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
-const INTERVAL_SENSOR_SAMPLE_S = 60; // sample sensors this often
-const INTERVAL_SLEEP_FAILED_S = 600; // sample sensors this often
-const blinkupTime = 90;
+
 
 
 /**************
