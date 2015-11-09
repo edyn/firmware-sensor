@@ -31,7 +31,7 @@ function sendDataFromDevice(data) {
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return 0
     } else {
-        server.log("Readings sent successfully to Postgres database.");
+        server.log("Readings send successfully to backend.");
         return 1
     }
 }
@@ -39,6 +39,7 @@ function sendDataFromDevice(data) {
 device.on("sendData" , function(data) {
     //the next few lines add the device mac address to agent memory
     //surprisingly, there isn't an agent side command to do this.
+    //TODO: add auth stuff
     server.log("Received readings data from device")
     try {
         if(macAgentSide == ""){
@@ -84,6 +85,7 @@ device.on("sendData" , function(data) {
 function getSuggestedValveState(){
     //a2e2b needs to be replaced by device specific mac address
     //this url is only for early stage development
+    //TODO: add auth stuff
     local url = "https://valvetest.firebaseio.com/valve/20000c2a690a2e2b/now.json"
     local request = http.get(url);
     local response = request.sendsync();
@@ -93,7 +95,6 @@ function getSuggestedValveState(){
         //anything that is not false or 0 in squirrel evaluates as True
         return false
     }
-    //redundant 'else', but helps readability:
     else{
         local resBod = response.body;
         resBod = http.jsondecode(resBod);
