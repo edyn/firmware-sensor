@@ -138,8 +138,7 @@ function sendData(){
         firmwareVersion=0.1
     });
 }
-
-agent.on("receiveInstructions",function(instructions){
+function receiveInstructions(instructions){
     server.log("received New Instructions");
     local sleepUntil = 0;
     server.log(instructions.open);
@@ -159,8 +158,12 @@ agent.on("receiveInstructions",function(instructions){
         close();
         server.log("closing valve");
     }
-    deepSleepForTime(instructions.nextCheckIn * 60.0);
-});
+    if(!unitTesting){
+        deepSleepForTime(instructions.nextCheckIn * 60.0);
+    }
+}
+
+agent.on("receiveInstructions", receiveInstructions());
 
 function onConnectedCallback(state) {
     // If we're connected...
@@ -171,6 +174,7 @@ function onConnectedCallback(state) {
         // Otherwise, do something else
     }
 }
+
 
 function connect(callback, timeout) {
     // Check if we're connected before calling server.connect()
