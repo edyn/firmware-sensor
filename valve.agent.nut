@@ -35,12 +35,11 @@ function sendDataFromDevice(data) {
         return 1
     }
 }
-
-device.on("sendData" , function(data) {
-    //the next few lines add the device mac address to agent memory
+function sendDataHandling(data){
+   //the next few lines add the device mac address to agent memory
     //surprisingly, there isn't an agent side command to do this.
     //TODO: add auth stuff
-    server.log("Received readings data from device")
+    server.log("Received readings data from device");
     try {
         if(macAgentSide == ""){
             server.log("Registering mac address");
@@ -59,7 +58,7 @@ device.on("sendData" , function(data) {
             //toDo: make sure we don't store too much here if this fails repeatedly
             globalDataStore.append(data);
             //default sleep in this mode of failure is 20 minutes, we can change whenver.
-            instructions={"open" : false , "nextCheckIn" : date.time() + defaultSleepTime}
+            instructions={"open" : false , "nextCheckIn" : date.time() + defaultSleepTime};
             device.send("receiveInstructions" , instructions);
         }
         //if fetching instructions succeeds
@@ -68,21 +67,26 @@ device.on("sendData" , function(data) {
             local instructions = getSuggestedValveState();
             if(!instructions){
                 server.log("could not fetch instructions");
+                return 0
             }
             else{
                 server.log("sending instructions to device");
                 device.send("receiveInstructions" , instructions);
+                return 1
             }
         }
-        server.log("retrieving next instruction from the server");
 
     } catch(error) {
         server.log("Error from device.on(senddata)");
         server.log(error);
     }
-});
+}
 
-device.on("valveStateChange", function(data){
+
+device.on("sendData" , sendDataHandling(data));
+
+
+function valveStateChangeHandling(data){
     local valveStateURL = firebase + "valveState.json";
     local headers = {
         "Content-Type":"application/json", 
@@ -101,7 +105,9 @@ device.on("valveStateChange", function(data){
         server.log("Readings send successfully to backend.");
         return 1
     }
-});
+}
+
+device.on("valveStateChange", valveStateChangeHandling(data));
 
 
 function getSuggestedValveState(){
@@ -126,6 +132,7 @@ function getSuggestedValveState(){
         return resBod;
     }
 }    
+
 
 device.onconnect(function() { 
     server.log("Device connected to agent");
