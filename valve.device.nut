@@ -135,7 +135,8 @@ function sendData(){
         valveOpen = nv.valveState,
         timestamp = date().time,
         rssi = imp.rssi(),
-        firmwareVersion=0.1
+        firmwareVersion=imp.getsoftwareversion(),
+        hardwareVersion=0.1 //this SHOULD be hardcoded, right?
     });
 }
 function receiveInstructions(instructions){
@@ -145,18 +146,24 @@ function receiveInstructions(instructions){
     server.log(instructions.nextCheckIn);
     //if neither of the below statements 
     //TODO: battery check before opening
-    if(instructions.open == true && nv.valveState == false){
-        //sleep to ensure we don't open/close valve too quickly
-        imp.sleep(0.5);
-        agent.send("valveStateChange" , {valveOpen = true});
-        open();
-        server.log("opening Valve");
+    try{
+        if(instructions.open == true && nv.valveState == false){
+            //sleep to ensure we don't open/close valve too quickly
+            imp.sleep(0.5);
+            agent.send("valveStateChange" , {valveOpen = true});
+            open();
+            server.log("opening Valve");
+        }
+        else if (instructions.open == false && nv.valveState == true){
+            imp.sleep(0.5);
+            agent.send("valveStateChange" , {valveOpen = false});
+            close();
+            server.log("closing valve");
+        }
     }
-    else if (instructions.open == false && nv.valveState == true){
-        imp.sleep(0.5);
-        agent.send("valveStateChange" , {valveOpen = false});
+    catch(error){
         close();
-        server.log("closing valve");
+        server.log("ERROR IN VALVE STATE CHANGE! closing just in case. error is " + error);
     }
     if(!unitTesting){
         deepSleepForTime(instructions.nextCheckIn * 60.0);

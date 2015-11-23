@@ -1,19 +1,15 @@
 /*Interactions Outline
-1)Device wakes from sleep
-2)Device samples it's sensors, sends that information + current valve state to agent
-3)Agent saves this information to backend, 
-4)agent retrieves next instruction (next valve state and length of time)
-5)Device receives this information, validates it (checks it's power before opening valve, makes sure minutes is a valid value)
-6)Valve sends ACK to agent which sends to beckend
-7) as soon as ACK is sent, valve goes into deep sleep (ACK is last action taken before sleeping)
+http://bit.ly/1OjA8aN should link to googledoc explaining interactions
 */
 
 
-macAgentSide <- "";
+macAgentSide <- imp.configparams.deviceid;
 firebase <- "https://valvetest.firebaseio.com/";
 firebaseAuth <- "qxIFLzJKuewlDIGAUXaB3r0pkjO7Ua5LIrcZBPWg";
 globalDataStore <- []
+globalUnauthorizedActionsStore <- []
 defaultSleepTime <- 20.0 //miutes
+pathForValveState <- "valveState.json"
 
 function sendDataFromDevice(data) {
     local readingsURL = firebase + "readings.json";
@@ -25,7 +21,7 @@ function sendDataFromDevice(data) {
     local jsonData = http.jsonencode(data);
     //Going to use camelcase where acronyms count as one word, but each letter is treated as the first letter of the acronym:
     //urlReadings is valid, readingsURL is valid, readingsUrl is not.
-    local req = http.post(readingsURL , headers , jsonData);
+    local req = http.post(readingsURL, headers, jsonData);
     local res = req.sendsync();
     if (res.statuscode != 200) {
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
@@ -36,15 +32,11 @@ function sendDataFromDevice(data) {
     }
 }
 function sendDataHandling(data){
-   //the next few lines add the device mac address to agent memory
-    //surprisingly, there isn't an agent side command to do this.
+
     //TODO: add auth stuff
     server.log("Received readings data from device");
     try {
-        if(macAgentSide == ""){
-            server.log("Registering mac address");
-            macAgentSide = data.macId;
-        }
+
 
         //send to server
         //"Do we want to try this if 'senddatafromdevice()'failed?"
@@ -58,20 +50,25 @@ function sendDataHandling(data){
             //toDo: make sure we don't store too much here if this fails repeatedly
             globalDataStore.append(data);
             //default sleep in this mode of failure is 20 minutes, we can change whenver.
-            instructions={"open" : false , "nextCheckIn" : date.time() + defaultSleepTime};
-            device.send("receiveInstructions" , instructions);
+            //skipping the get instructions step because we already have a backend failure
+            server.log("Problem sending data to the backend!!")
+            instructions={"open" : false, "nextCheckIn" : defaultSleepTime};
+            device.send("receiveInstructions", instructions);
         }
-        //if fetching instructions succeeds
-        else
-        {
+        //if sending data to server succeeds
+        else{
             local instructions = getSuggestedValveState();
+            //if fetching instructions fails
             if(!instructions){
                 server.log("could not fetch instructions");
+                //Adding a default case for in case it could not fetch instructions from backend
+                device.send("receiveInstructions", {"open" : false, "nextCheckIn" : defaultSleepTime});
                 return 0
+            //if fetching instructions succeeds
             }
             else{
                 server.log("sending instructions to device");
-                device.send("receiveInstructions" , instructions);
+                device.send("receiveInstructions", instructions);
                 return 1
             }
         }
@@ -83,11 +80,11 @@ function sendDataHandling(data){
 }
 
 
-device.on("sendData" , sendDataHandling(data));
+device.on("sendData", sendDataHandling);
 
 
 function valveStateChangeHandling(data){
-    local valveStateURL = firebase + "valveState.json";
+    local valveStateURL = firebase + pathForValveState;
     local headers = {
         "Content-Type":"application/json", 
         "User-Agent":"Imp", 
@@ -96,18 +93,18 @@ function valveStateChangeHandling(data){
     local jsonData = http.jsonencode(data);
     //Going to use camelcase where acronyms count as one word, but each letter is treated as the first letter of the acronym:
     //urlReadings is valid, readingsURL is valid, readingsUrl is not.
-    local req = http.post(valveStateURL , headers , jsonData);
+    local req = http.post(valveStateURL, headers, jsonData);
     local res = req.sendsync();
     if (res.statuscode != 200) {
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return 0
     } else {
-        server.log("Readings send successfully to backend.");
+        server.log("Valve state change acknowledgement send successfully to backend.");
         return 1
     }
 }
 
-device.on("valveStateChange", valveStateChangeHandling(data));
+device.on("valveStateChange", valveStateChangeHandling);
 
 
 function getSuggestedValveState(){
@@ -137,3 +134,5 @@ function getSuggestedValveState(){
 device.onconnect(function() { 
     server.log("Device connected to agent");
 });
+
+
