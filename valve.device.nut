@@ -1,7 +1,8 @@
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 unitTesting <- false;
-
+const valveOpenMaxTime = 1.0; //minutes
+const valveCloseMaxTime = 20.0;
 
 /**************
 Valve Functions
@@ -166,7 +167,28 @@ function receiveInstructions(instructions){
         server.log("ERROR IN VALVE STATE CHANGE! closing just in case. error is " + error);
     }
     if(!unitTesting){
-        deepSleepForTime(instructions.nextCheckIn * 60.0);
+        if(nv.valveState == true){
+            //do not allow the valve to accept times greater than defaults:
+            if(instructions.nextCheckIn > valveOpenMaxTime){
+                deepSleepForTime(valveOpenMaxTime * 60.0); 
+            }
+            else{
+                deepSleepForTime(instructions.nextCheckIn * 60.0); 
+            }
+        }
+        else if(nv.valveState == false){
+            if(instructions.nextCheckIn > valveCloseMaxTime){
+                deepSleepForTime(valveOpenMaxTime * 60.0); 
+            }
+            else{
+                deepSleepForTime(instructions.nextCheckIn * 60.0); 
+            }
+        }
+        //this else should NEVER occur, but is here for safety's sake
+        else{
+            deepSleepForTime(20.0 * 60.0);
+        }
+
     }
 }
 
