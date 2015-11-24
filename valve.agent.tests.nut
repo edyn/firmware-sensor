@@ -1,34 +1,44 @@
 
 firebaseAuthTemp <-"";
 firebaseAuthTemp = firebaseAuth;
+testsPassed <- [];
+testsFailed <-[];
 
 function sendDataFromDeviceTests(){
-	local testPasses=[];
+
 	//test 1: regular operation with dummy data inputs should succeed
 	try{
 		local result = sendDataFromDevice({dummyData : "Random Inputs Should Succeed"});
 		if(result){
-			testPasses.append(true);
+			server.log("sendDataFromDevice (random inputs) succeeded");
+			testsPassed.append("sendDataFromDevice (random inputs) succeeded");
 		}
 		else{
-			testPasses.append(false);
+			server.log("sendDataFromDevice (random inputs) failed");
+			testsFailed.append("sendDataFromDevice (random inputs) failed")};
 		}
 	}
 	catch(error){
-		testPasses.append(false);
+		server.log("sendDataFromDevice (random inputs) failed");
+		testsFailed.append("sendDataFromDevice (random inputs) failed (throws error)")};
 	}
 	//test 2: trying to send with invalid authorization should fail
 	firebaseAuth <- "IncorrectAuth";
 	try{
 		local result = sendDataFromDevice({dummyData : "Random Inputs Should Succeed"});
-		//anything should work, so we're expecting 200, but if we tighten the rules in the future we might have to change this test
+		//(opposite of previous comment) Anything we send shoudl fail in this test because we are inputting a bad API key
 		if(result != 200){
-			testPasses.append(false);
-			server.log("Test Failed")
+			server.log("Send Data From Device (bad API key) success");
+			testsPassed.append("Send Data From Device (bad API key) success");
 		}
 		else{
-			testPasses.append(true);
+			server.log("Send Data From Device (bad API key) failed, backend accepted bad authorization");
+			testsFailed.append("Send Data From Device (bad API key) failed, backend accepted bad authorization");
 		}
+	}
+	catch(error){
+		server.log("Send Data From Device (bad API key) failed (throws error)");
+		testsFailed.append("Send Data From Device (bad API key) failed (throws error)");
 	}
 	//same as last test but with regular data
 	try{
@@ -44,17 +54,19 @@ function sendDataFromDeviceTests(){
         });
 		//anything should work when new rules are implemented.
 		if(result != 200){
-			testPasses.append(false);
-			server.log("Test Failed")
+			server.log("Send Data From Device (Real Data) failed");
+			testsFailed.append("Send Data From Device (Real Data) failed");
 		}
 		else{
-			testPasses.append(true);
+			server.log("Send Data From Device (Real Data) Success");
+			testsPassed.append("Send Data From Device (Real Data) Success");
 		}
 	}
 
 	//still shouldn't throw an error, so this should be considered a failure in either case
 	catch(error){
-		testPasses.append(false);
+		server.log("Send Data From Device (Real Data) failed (throws error)");
+		testsFailed.append("Send Data From Device (Real Data) failed (throws error)");
 	}	
 	firebaseAuth <- firebaseAuthTemp;
 }
