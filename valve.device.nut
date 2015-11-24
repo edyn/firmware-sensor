@@ -117,10 +117,8 @@ device-side API functions
 //function to simplify our deep sleep calls
 function deepSleepForTime(inputTime){
     //TODO: add some robust error handling to this function in particular
-    imp.wakeup(0.5,function() {
-        imp.onidle(function() {
-            server.sleepfor(inputTime);
-        });
+    imp.onidle(function() {
+        server.sleepfor(inputTime);
     });
 }
 
@@ -170,25 +168,26 @@ function receiveInstructions(instructions){
         if(nv.valveState == true){
             //do not allow the valve to accept times greater than defaults:
             if(instructions.nextCheckIn > valveOpenMaxTime){
-                deepSleepForTime(valveOpenMaxTime * 60.0); 
+                deepSleepForTime(valveOpenMaxTime * 60.0);
+                return 
             }
             else{
-                deepSleepForTime(instructions.nextCheckIn * 60.0); 
+                deepSleepForTime(instructions.nextCheckIn * 60.0);
+                return 
             }
         }
         else if(nv.valveState == false){
             if(instructions.nextCheckIn > valveCloseMaxTime){
-                deepSleepForTime(valveOpenMaxTime * 60.0); 
+                deepSleepForTime(valveOpenMaxTime * 60.0);
+                return 
             }
             else{
-                deepSleepForTime(instructions.nextCheckIn * 60.0); 
+                deepSleepForTime(instructions.nextCheckIn * 60.0);
+                return 
             }
         }
-        //this else should NEVER occur, but is here for safety's sake
-        else{
-            deepSleepForTime(20.0 * 60.0);
-        }
-
+        //this should NEVER occur, but is here for safety's sake
+        deepSleepForTime(valveOpenMaxTime * 60.0);
     }
 }
 
