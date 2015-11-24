@@ -192,7 +192,7 @@ function receiveInstructions(instructions){
     }
 }
 
-agent.on("receiveInstructions", receiveInstructions());
+agent.on("receiveInstructions", receiveInstructions);
 
 function onConnectedCallback(state) {
     // If we're connected...
@@ -229,3 +229,4 @@ function main(){
 if(!unitTesting){
     main();
 }
+

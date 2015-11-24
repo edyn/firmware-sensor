@@ -9,7 +9,7 @@ function receiveInstructionsTests(){
 	//should succeed
 	try{
 		//open the valve, should be valid
-		receiveInstructions(instructions={open : true , nextCheckIn = 0.1})
+		receiveInstructions({open = true , nextCheckIn = 0.1})
 		//if the valve thinks it's valvestate is true, it passes
 		if(nv.valveState){
 			server.log("Valve Open Test Passed");
@@ -23,19 +23,19 @@ function receiveInstructionsTests(){
 	}
 	//if there's an issue in the above test, it failed
 	catch(error){
-		server.log("Valve Open Test Failed");
-		testsFailed.append("Valve Open Test Failed (throws error)");
+		server.log("Valve Open Test Failed (throws error) " + error);
+		testsFailed.append("Valve Open Test Failed (throws error)" + error);
 	}
 	//Test 2
 	//testing closure of the valve, should be reflected in nv.valvestate
 	//should succeed
 	try{
 		//close the valve, should be valid
-		receiveInstructions(instructions={open : false , nextCheckIn = 0.1})
+		receiveInstructions({open = false , nextCheckIn = 0.1})
 		//if the valve thinks it's valvestate is false, it passes
 		if(!nv.valveState){
 			server.log("Valve Close Test Passed");
-			testsPassed.append("Valve Closure Test Passed");
+			testsPassed.append("Valve Close Test Passed");
 		}
 		//if it still thinks it's open, the test fails
 		else{
@@ -45,37 +45,37 @@ function receiveInstructionsTests(){
 	}
 	//if there's an issue in the above test, it failed
 	catch(error){
-		server.log("Valve Close Test Failed");
-		testsFailed.append("Valve Close Test Failed (throws error)");
+		server.log("Valve Close Test Failed (throws error) " + error);
+		testsFailed.append("Valve Close Test Failed (throws error) " + error);
 	}
 	//Test 3
 	//trying receiveInstructions without an open value
 	//should fail
 	try{
-		receiveInstructions(instructions={nextCheckIn = 0.1})
+		receiveInstructions({nextCheckIn = 0.1})
 		//if receiveInstructions passes without error, the test fails
 		server.log("Receive Instructions (not enough parameters, missing valveState) Test Failed");
 		testsFailed.append("Receive Instructions (not enough parameters, missing valveState) Test Failed");
 	}
 	//if there isn't an issue in the above test, it failed
 	catch(error){
-		server.log("Receive Instructions (not enough parameters, missing valveState) Test Success (throws error)");
-		testsPassed.append("Receive Instructions (not enough parameters, missing ValveState) Test Success (throws error)");
+		server.log("Receive Instructions (not enough parameters, missing valveState) Test Success (throws error intentionally) " + error);
+		testsPassed.append("Receive Instructions (not enough parameters, missing ValveState) Test Success (throws error intentionally) " + error);
 	}
 	//Test 4
 	//trying receiveInstructions without a nextCheckIn value
 	//should fail
 	try{
-		receiveInstructions(instructions={open : true})
+		receiveInstructions({open = true})
 		//if receiveInstructions passes without error, the test fails
-		server.log("Receive Instructions (not enough parameters, missing nextCheckIn) Test Success (throws error)");
-		testsFailed.append("Receive Instructions (not enough parameters, missing nextChecIn) Test Success (throws error)");
+		server.log("Receive Instructions (not enough parameters, missing nextCheckIn) Test Success");
+		testsFailed.append("Receive Instructions (not enough parameters, missing nextChecIn) Test Success");
 	
 	}
 	//if there isn't issue in the above test, it failed
 	catch(error){
-		server.log("Receive Instructions (not enough parameters, missing nextCheckIn) Test Failed (throws error)");
-		testsPassed.append("Receive Instructions (not enough parameters, missing nextCheckIn) Test Success (throws error)");
+		server.log("Receive Instructions (not enough parameters, missing nextCheckIn) Test Success (throws error intentionally) " + error);
+		testsPassed.append("Receive Instructions (not enough parameters, missing nextCheckIn) Test Success (throws error intentionally) " + error);
 	}
 }
 
@@ -92,8 +92,8 @@ function testLEDs(){
 		testsPassed.append("Red LED tests Passed");
 	}
 	catch(error){
-		server.log("Red LED tests Failed (Throws Error)");
-		testsFailed.append("red LED tests failed (Throws Error)");
+		server.log("Red LED tests Failed (Throws Error) " + error);
+		testsFailed.append("red LED tests failed (Throws Error) " + error);
 	}
 	//test 2
 	//configuring blue LED, turning it on and off
@@ -106,8 +106,8 @@ function testLEDs(){
 		testsPassed.append("blue LED tests Passed");
 	}
 	catch(error){
-		server.log("blue LED tests Failed (Throws Error)");
-		testsFailed.append("blue LED tests failed (Throws Error)");
+		server.log("blue LED tests Failed (Throws Error) " + error);
+		testsFailed.append("blue LED tests failed (Throws Error) " + error);
 	}
 	//test 3
 	//configuring green LED, turning it on and off
@@ -120,14 +120,13 @@ function testLEDs(){
 		testsPassed.append("green LED tests Passed");
 	}
 	catch(error){
-		server.log("green LED tests Failed (throws error)");
-		testsFailed.append("green LED tests Failed (throws error)");
+		server.log("green LED tests Failed (throws error) " + error);
+		testsFailed.append("green LED tests Failed (throws error) " + error);
 	}
 }
 
 //Testing the valve related functions
 function testValve(){
-	testPasses=[]
 	//test 1:
 	//try the valvePinInit function
 	//should pass
@@ -167,8 +166,8 @@ function testValve(){
 		}
 	}
 	catch(error){
-			server.log("Valve Open Function Failed (throws error)");
-			testsFailed.append("Valve Open Function Failed (throws error)");
+			server.log("Valve Open Function Failed (throws error) " + error);
+			testsFailed.append("Valve Open Function Failed (throws error) " + error);
 	}
 	//test 4:
 	//try the close function, check the NV table
@@ -185,13 +184,23 @@ function testValve(){
 		}
 	}
 	catch(error){
-		server.log("Valve Close Function Failed");
-		testsPassed.append("Valve Close Function Failed (throws error)");
+		server.log("Valve Close Function Failed (throws error " + error);
+		testsPassed.append("Valve Close Function Failed (throws error) " + error);
 	}
 }
 
-
-
+receiveInstructionsTests();
+testLEDs();
+testValve();
+server.log("\nDevice Tests Failed:")
+server.log(testsFailed.len())
+if(testsFailed.len()>0){
+    server.log("\nSpecifically these tests:")
+    for (local x = 0; x < testsFailed.len(); x++){
+        server.log(testsFailed[x]);
+    }
+}
+server.log("\n")
 
 
 

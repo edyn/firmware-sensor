@@ -9,7 +9,7 @@ deviceTests=mypath+"/valve.device.tests.nut"
 deviceConcat=mypath+"/valve.device.unit.nut"
 with open(agentFile, 'r') as fin:
     agentText=fin.read()
-with open(agentFile, 'r') as fin:
+with open(agentTests, 'r') as fin:
     agentTests=fin.read()
 #with open(agentConcat, 'w+') as fin:
 #    agentTestsText=fin.read()

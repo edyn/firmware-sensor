@@ -25,10 +25,10 @@ function sendDataFromDevice(data) {
     local res = req.sendsync();
     if (res.statuscode != 200) {
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
-        return 0
+        return res.statuscode
     } else {
         server.log("Readings send successfully to backend.");
-        return 1
+        return res.statuscode
     }
 }
 function sendDataHandling(data){
@@ -97,10 +97,10 @@ function valveStateChangeHandling(data){
     local res = req.sendsync();
     if (res.statuscode != 200) {
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
-        return 0
+        return res.statuscode
     } else {
         server.log("Valve state change acknowledgement send successfully to backend.");
-        return 1
+        return res.statuscode
     }
 }
 
