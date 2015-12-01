@@ -168,6 +168,7 @@ function receiveInstructions(instructions){
         server.log("ERROR IN VALVE STATE CHANGE! closing just in case. error is " + error);
     }
     if(change == true){
+        //TODO: change this to just take a second reading and send it instead
         agent.send("valveStateChange" , {valveOpen = nv.valveState});
     }
     if(!unitTesting){
