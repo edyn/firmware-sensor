@@ -143,6 +143,7 @@ function receiveInstructions(instructions){
     local sleepUntil = 0;
     server.log(instructions.open);
     server.log(instructions.nextCheckIn);
+    local change = false;
     //if neither of the below statements 
     //TODO: battery check before opening
     try{
@@ -151,18 +152,23 @@ function receiveInstructions(instructions){
             imp.sleep(0.5);
             agent.send("valveStateChange" , {valveOpen = true});
             open();
+            change = true;
             server.log("opening Valve");
         }
         else if (instructions.open == false && nv.valveState == true){
             imp.sleep(0.5);
             agent.send("valveStateChange" , {valveOpen = false});
             close();
+            change = true;
             server.log("closing valve");
         }
     }
     catch(error){
         close();
         server.log("ERROR IN VALVE STATE CHANGE! closing just in case. error is " + error);
+    }
+    if(change == true){
+        agent.send("valveStateChange" , {valveOpen = nv.valveState});
     }
     if(!unitTesting){
         if(nv.valveState == true){
