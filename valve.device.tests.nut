@@ -1,22 +1,24 @@
 testsPassed <- [];
 testsFailed <- [];
 
+//TODO: add a test where timer is greater than time it should sleep.
+
 function logTest(inputStr = "", passFail = false, inputError = false){
-	if(passFail){
-		if(inputError){
-			server.log(inputStr + " Success with intentional error " + inputError);
-		}else{
-			server.log(inputStr + " Success");
-		}
-		testsPassed.append(inputStr);
-	}else{
-		if(inputError){
-			server.log(inputStr + "Failure with error " + inputError);
-		}else{
-			server.log(inputStr + "Failure");
-		}
-		testsFailed.append(inputStr);
-	}
+    if(passFail){
+        if(inputError){
+            server.log(inputStr + " Success with intentional error " + inputError);
+        }else{
+            server.log(inputStr + " Success");
+        }
+        testsPassed.append(inputStr);
+    }else{
+        if(inputError){
+            server.log(inputStr + "Failure with error " + inputError);
+        }else{
+            server.log(inputStr + "Failure");
+        }
+        testsFailed.append(inputStr);
+    }
 }
 
 function logPass(inputStr = "", inputError = false){
@@ -41,7 +43,7 @@ function receiveInstructionsTests(){
         }
         //if it still thinks it's closed, the test fails
         else{
-        	logFail("Valve Open");
+            logFail("Valve Open");
         }
     }
     //if there's an issue in the above test, it failed
@@ -161,10 +163,10 @@ function testValve(){
     try{
         open()
         if(nv.valveState==true){
-        	logPass("valve open");
+            logPass("valve open");
         }
         else{
-        	logFail("valve open");
+            logFail("valve open");
         }
     }
     catch(error){
@@ -176,10 +178,10 @@ function testValve(){
     try{
         close();
         if(nv.valveState==false){
-        	logPass("valve close");
+            logPass("valve close");
         }
         else{
-        	logFail("valve close");
+            logFail("valve close");
         }
     }
     catch(error){

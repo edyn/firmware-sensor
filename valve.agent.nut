@@ -1,7 +1,9 @@
-/*Interactions Outline
-http://bit.ly/1OjA8aN should link to googledoc explaining interactions
-*/
+//Interactions Outline
+//http://bit.ly/1OjA8aN should link to googledoc explaining interactions
 
+//GENERAL TODOs:
+//add function to send info to loggly
+//send all data from globalDataStore and globalUnauthorizedActionsStore
 
 macAgentSide <- imp.configparams.deviceid;
 firebase <- "https://valvetest.firebaseio.com/";
@@ -52,7 +54,8 @@ function sendDataHandling(data){
             //default sleep in this mode of failure is 20 minutes, we can change whenver.
             //skipping the get instructions step because we already have a backend failure
             server.log("Problem sending data to the backend!!")
-            instructions={"open" : false, "nextCheckIn" : defaultSleepTime};
+            instructions = {"open" : false, "nextCheckIn" : defaultSleepTime};
+            //TODO: add receive instructions error handling.
             device.send("receiveInstructions", instructions);
         }
         //if sending data to server succeeds
@@ -95,6 +98,7 @@ function valveStateChangeHandling(data){
     //urlReadings is valid, readingsURL is valid, readingsUrl is not.
     local req = http.post(valveStateURL, headers, jsonData);
     local res = req.sendsync();
+    //TODO: make generic handling function for HTTP requests
     if (res.statuscode != 200) {
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
@@ -115,6 +119,7 @@ function getSuggestedValveState(){
     local request = http.get(url);
     local response = request.sendsync();
     local statusCode = response.statuscode;
+    //TODO: make generic handling function for HTTP requests
     if(statusCode != 200){
         server.log("Failed to fetch next command");
         //anything that is not false or 0 in squirrel evaluates as True
@@ -124,8 +129,8 @@ function getSuggestedValveState(){
         local resBod = response.body;
         resBod = http.jsondecode(resBod);
         //resBod has two pairs:
-        //resBod.open is the 'next suggested valve state'
-        //resBod.nextCheckIn is how long the device should sleep for
+        //resBod.open is the 'next suggested valve state' - boolean
+        //resBod.nextCheckIn is how long the device should sleep for - float minutes from now
         return resBod;
     }
 }    

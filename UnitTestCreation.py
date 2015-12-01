@@ -38,4 +38,4 @@ with open(deviceConcat, 'w+') as fin:
 with open(agentConcat, 'w+') as fin:
     fin.write(agentText+agentTests)
 
-    
+
