@@ -1,7 +1,7 @@
 testsPassed <- [];
 testsFailed <- [];
 
-function logTest(inputStr = "", passFail = 0, inputError = false){
+function logTest(inputStr = "", passFail = false, inputError = false){
 	if(passFail){
 		if(inputError){
 			server.log(inputStr + " Success with intentional error " + inputError);
@@ -19,6 +19,14 @@ function logTest(inputStr = "", passFail = 0, inputError = false){
 	}
 }
 
+function logPass(inputStr = "", inputError = false){
+    logTest(inputStr = inputStr, passFail = true, inputError = inputError);
+}
+
+function logFail(inputStr = "", inputError = false){
+    logTest(inputStr = inputStr, passFail = false, inputError = inputError);
+}
+
 //testing various inputs to the receiveInstructions() function
 function receiveInstructionsTests(){
     //Test 1
@@ -29,16 +37,16 @@ function receiveInstructionsTests(){
         receiveInstructions({open = true , nextCheckIn = 0.1});
         //if the valve thinks it's valvestate is true, it passes
         if(nv.valveState){
-            logTest("Valve Open", 1);
+            logPass("Valve Open");
         }
         //if it still thinks it's closed, the test fails
         else{
-        	logTest("Valve Open", 0);
+        	logFail("Valve Open");
         }
     }
     //if there's an issue in the above test, it failed
     catch(error){
-        logTest("Valve Open", 0, error);
+        logFail("Valve Open", error);
     }
     //Test 2
     //testing closure of the valve, should be reflected in nv.valvestate
@@ -48,16 +56,16 @@ function receiveInstructionsTests(){
         receiveInstructions({open = false , nextCheckIn = 0.1});
         //if the valve thinks it's valvestate is false, it passes
         if(!nv.valveState){
-            logTest("Valve Close", 1);
+            logPass("Valve Close");
         }
         //if it still thinks it's open, the test fails
         else{
-            logTest("Valve Close", 0);
+            logFail("Valve Close");
         }
     }
     //if there's an issue in the above test, it failed
     catch(error){
-        logTest("Valve Close", 0, error);
+        logFail("Valve Close", error);
     }
     //Test 3
     //trying receiveInstructions without an open value
@@ -65,11 +73,11 @@ function receiveInstructionsTests(){
     try{
         receiveInstructions({nextCheckIn = 0.1});
         //if receiveInstructions passes without error, the test fails
-        logTest("receiveInstructions (not enough params, missing 'open')", 0);
+        logFail("receiveInstructions (not enough params, missing 'open')");
     }
     //if there isn't an issue in the above test, it failed
     catch(error){
-        logTest("receiveInstructions (not enough params, missing 'open')", 1, error);
+        logPass("receiveInstructions (not enough params, missing 'open')", error);
     }
     //Test 4
     //trying receiveInstructions without a nextCheckIn value
@@ -77,11 +85,11 @@ function receiveInstructionsTests(){
     try{
         receiveInstructions({open = true});
         //if receiveInstructions passes without error, the test fails
-        logTest("receiveInstructions (not enough params, missing 'nextCheckIn')", 0);
+        logFail("receiveInstructions (not enough params, missing 'nextCheckIn')");
     }
     //if there isn't issue in the above test, it failed
     catch(error){
-        logTest("receiveInstructions (not enough params, missing 'open')", 1, error);
+        logPass("receiveInstructions (not enough params, missing 'open')", error);
     }
 }
 
@@ -94,10 +102,10 @@ function testLEDs(){
         redConfigure();
         redOn();
         redOff();
-        logTest("red LED tests", 1);
+        logPass("red LED tests");
     }
     catch(error){
-        logTest("red LED tests", 0, error);
+        logFail("red LED tests", error);
     }
     //test 2
     //configuring blue LED, turning it on and off
@@ -106,10 +114,10 @@ function testLEDs(){
         blueConfigure();
         blueOn();
         blueOff();
-        logTest("blue LED tests", 1);
+        logPass("blue LED tests");
     }
     catch(error){
-        logTest("blue LED tests", 0, error);
+        logFail("blue LED tests", error);
     }
     //test 3
     //configuring green LED, turning it on and off
@@ -118,10 +126,10 @@ function testLEDs(){
         greenConfigure();
         greenOn();
         greenOff();
-        logTest("green LED tests", 1);
+        logPass("green LED tests");
     }
     catch(error){
-        logTest("green LED tests", 0, error);
+        logFail("green LED tests", error);
     }
 }
 
@@ -132,20 +140,20 @@ function testValve(){
     //should pass
     try{
         valvePinInit();
-        logTest("valve Pin Init", 1);
+        logPass("valve Pin Init");
     }
     catch(error){
-        logTest("valve Pin Init", 0, error);
+        logFail("valve Pin Init", error);
     }
     //test 2:
     //try the valveConfigure function
     //should fail
     try{
         valveConfigure();
-        logTest("valve configure", 1);
+        logPass("valve configure");
     }
     catch(error){
-        logTest("valve Pin Init", 0, error);
+        logFail("valve Pin Init", error);
     }
     //test 3:
     //try the open function, check the NV table
@@ -153,14 +161,14 @@ function testValve(){
     try{
         open()
         if(nv.valveState==true){
-        	logTest("valve open", 1);
+        	logPass("valve open");
         }
         else{
-        	logTest("valve open", 0);
+        	logFail("valve open");
         }
     }
     catch(error){
-        logTest("valve Pin Init", 0, error);
+        logFail("valve Pin Init", error);
     }
     //test 4:
     //try the close function, check the NV table
@@ -168,14 +176,14 @@ function testValve(){
     try{
         close();
         if(nv.valveState==false){
-        	logTest("valve close", 1);
+        	logPass("valve close");
         }
         else{
-        	logTest("valve close", 0);
+        	logFail("valve close");
         }
     }
     catch(error){
-        logTest("valve close", 0, error);
+        logFail("valve close", error);
     }
 }
 

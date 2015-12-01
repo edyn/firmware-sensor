@@ -4,7 +4,19 @@ firebaseAuthTemp = firebaseAuth;
 testsPassed <- [];
 testsFailed <-[];
 
-function logTest(inputStr = "", passFail = 0, inputError = false){
+realDataTable <- {
+    macId = "20000c2a690a2e2b",
+    wakereason = 1,
+    batteryLevel = 3.3,
+    solarLevel = 4.3,
+    valveOpen = true,
+    timestamp = date().time,
+    rssi = -60,
+    firmwareVersion = imp.getsoftwareversion(),
+    hardwareVersion = "0.0.1"
+}
+
+function logTest(inputStr = "", passFail = false, inputError = false){
 	if(passFail){
 		if(inputError){
 			server.log(inputStr + " Success with intentional error " + inputError);
@@ -22,61 +34,62 @@ function logTest(inputStr = "", passFail = 0, inputError = false){
 	}
 }
 
+function logPass(inputStr = "", inputError = false){
+    logTest(inputStr = inputStr, passFail = true, inputError = inputError);
+}
+
+function logFail(inputStr = "", inputError = false){
+    logTest(inputStr = inputStr, passFail = false, inputError = inputError);
+}
+
 function sendDataFromDeviceTests(){
 
     //test 1: regular operation with dummy data inputs should succeed
     try{
         local result = sendDataFromDevice({dummyData = "Random Inputs Should Succeed"});
         if(result){
-            logTest("sendDataFromDevice (random inputs)", 1);
+            logPass("sendDataFromDevice (random inputs)");
         }
         else{
-            logTest("sendDataFromDevice (random inputs)", 0)
+            logFail("sendDataFromDevice (random inputs)");
         }
     }
     catch(error){
-        logTest("sendDataFromDevice (random inputs)", 0, error)
+        logFail("sendDataFromDevice (random inputs)", error)
     }
     //test 2: trying to send with invalid authorization should fail
     firebaseAuth <- "IncorrectAuth";
     try{
-        local result = sendDataFromDevice({dummyData = "Random Inputs Should Succeed"});
+        local statusCode = sendDataFromDevice({dummyData = "Random Inputs Should Succeed"});
         //(opposite of previous comment) Anything we send shoudl fail in this test because we are inputting a bad API key
-        if(result != 200){
-            logTest("sendDataFromDevice (bad auth)", 1);
+        //TODO: handle 4xx and 5xx differently from one another.
+        if(statusCode != 200){
+            logPass("sendDataFromDevice (bad auth)");
         }
         else{
-        	logTest("sendDataFromDevice (bad auth)", 0);    
+        	logFail("sendDataFromDevice (bad auth)");    
         }
     }
     catch(error){
-        logTest("sendDataFromDevice (bad auth)", 0, error);
+        logFail("sendDataFromDevice (bad auth)", error);
     }
     firebaseAuth <- firebaseAuthTemp;
     //same as last test but with regular data
     try{
-        local result = sendDataFromDevice({
-        macId = "20000c2a690a2e2b",
-        wakereason = 1,
-        batteryLevel = 3.3,
-        solarLevel = 4.3,
-        valveOpen = true,
-        timestamp = date().time,
-        rssi = -60,
-        firmwareVersion = 0.1
-        });
+        local statusCode = sendDataFromDevice(realDataTable);
         //anything should work when new rules are implemented.
-        if(result != 200){
-            logTest("sendDataFromDevice (real data)", 0)
+        //TODO: handle 4xx and 5xx differently from one another.
+        if(statusCode != 200){
+            logFail("sendDataFromDevice (real data)")
         }
         else{
-            logTest("sendDataFromDevice (real data)", 1)
+            logPass("sendDataFromDevice (real data)")
         }
     }
 
     //still shouldn't throw an error, so this should be considered a failure in either case
     catch(error){
-    		logTest("sendDataFromDevice (real data)", 0, error)
+    		logFail("sendDataFromDevice (real data)",error)
     }    
 }
 
