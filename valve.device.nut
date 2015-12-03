@@ -99,11 +99,14 @@ function getBatteryVoltage(){
     local batterySum = 0.0;
     local tempReading = 0;
     local batteryReadingAverage = 0.0;
+    //There is a small delay within the loop. 
+    //Time to execute a battery reading scales significantly and linearly with # of readings averaged
     for (local x=0;x<batteryAveraging;x++){
         tempReading = hardware.pinB.read();
         tempReading = convertToVoltage(tempReading);
         tempReading = tempReading * 2.0;
-        batterySum += tempReading
+        batterySum += tempReading;
+        imp.sleep(0.02);
     }
     batteryReadingAverage = batterySum / batteryAveraging;
     return batteryReadingAverage
