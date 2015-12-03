@@ -86,7 +86,7 @@ function chargingConfigure(){
     hardware.pin7.configure(ANALOG_IN);
     //nBatCharge
     //Not really sure why this is useful...
-    hardare.pin6.configure(DIGITAL_IN);
+    hardware.pin6.configure(DIGITAL_IN);
     //Charge Current
     //Need to figure out conversion of voltage to current
     hardware.pin5.configure(ANALOG_IN);
@@ -121,7 +121,7 @@ function getChargeCurrent(){
 
 function getSolarVoltage(){
     local solarReading = hardware.pin7.read();
-    solarReading = converToVoltage(solarReading);
+    solarReading = convertToVoltage(solarReading);
     solarReading = solarReading * 3.0;
     return solarReading
 }
@@ -240,7 +240,7 @@ function receiveInstructions(instructions){
             }
         }
         else if(nv.valveState == false){
-            if(instructions.nextCheckIn > valveCloseSleepMaxTime){
+            if(instructions.nextCheckIn > valveCloseMaxSleepTime){
                 deepSleepForTime(valveCloseMaxSleepTime * 60.0);
                 return 
             }
