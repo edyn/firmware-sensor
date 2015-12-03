@@ -3,6 +3,7 @@ server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 unitTesting <- false;
 const valveOpenMaxSleepTime = 1.0; //minutes
 const valveCloseMaxSleepTime = 20.0;
+const batteryAveraging = 15.0;
 
 /**************
 Valve Functions
@@ -95,10 +96,17 @@ function chargingConfigure(){
 }
 
 function getBatteryVoltage(){
-    local batteryReading = hardware.pinB.read();
-    batteryReading = convertToVoltage(batteryReading);
-    batteryReading = batteryReading * 2.0;
-    return batteryReading
+    local batterySum = 0.0;
+    local tempReading = 0;
+    local batteryReadingAverage = 0.0;
+    for (local x=0;x<batteryAveraging;x++){
+        tempReading = hardware.pinB.read();
+        tempReading = convertToVoltage(tempReading);
+        tempReading = tempReading * 2.0;
+        batterySum += tempReading
+    }
+    batteryReadingAverage = batterySum / batteryAveraging;
+    return batteryReadingAverage
 }
 
 function getChargeCurrent(){
@@ -111,7 +119,7 @@ function getChargeCurrent(){
 function getSolarVoltage(){
     local solarReading = hardware.pin7.read();
     solarReading = converToVoltage(solarReading);
-    solarReading = solarReading * 2.0;
+    solarReading = solarReading * 3.0;
     return solarReading
 }
 
