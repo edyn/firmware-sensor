@@ -71,6 +71,50 @@ if ( ! ("nv" in getroottable() && "valveState" in nv)) {
     close();
 }
 
+function convertToVoltage(inputVoltage){
+    local sysVol = hardware.voltage();
+    local conversion = sysVol / 65535.0;
+    local outputVoltage = inputVoltage * conversion;
+    return outputVoltage
+}
+
+function chargingConfigure(){
+    //Battery
+    hardware.pinB.configure(ANALOG_IN);
+    //Solar
+    hardware.pin7.configure(ANALOG_IN);
+    //nBatCharge
+    //Not really sure why this is useful...
+    hardare.pin6.configure(DIGITAL_IN);
+    //Charge Current
+    //Need to figure out conversion of voltage to current
+    hardware.pin5.configure(ANALOG_IN);
+    //Charging Sign Pin
+    //tells us if the battery is net charging or discharging
+    hardware.pinA.configure(DIGITAL_IN);
+}
+
+function getBatteryVoltage(){
+    local batteryReading = hardware.pinB.read();
+    batteryReading = convertToVoltage(batteryReading);
+    batteryReading = batteryReading * 2.0;
+    return batteryReading
+}
+
+function getChargeCurrent(){
+    //using "ampreading" instead of "currentReading" because of confusing homonym
+    local ampReading = hardware.pin5.read();
+    ampReading = convertToVoltage(ampReading);
+    return ampReading
+}
+
+function getSolarVoltage(){
+    local solarReading = hardware.pin7.read();
+    solarReading = converToVoltage(solarReading);
+    solarReading = solarReading * 2.0;
+    return solarReading
+}
+
 //Red Led Functions
 function redConfigure(){
     hardware.pin2.configure(DIGITAL_OUT);
@@ -129,13 +173,14 @@ function sendData(){
     agent.send("sendData", {
         macId = imp.getmacaddress(),
         wakereason = hardware.wakereason(),
-        batteryLevel = 3.3,
-        solarLevel = 4.3,
+        batteryLevel = getBatteryVoltage(),
+        solarLevel = getSolarVoltage(),
+        amperage = getChargeCurrent(),
         valveOpen = nv.valveState,
         timestamp = date().time,
         rssi = imp.rssi(),
-        firmwareVersion=imp.getsoftwareversion(),
-        hardwareVersion=0.1 //this SHOULD be hardcoded, right?
+        firmwareVersion = imp.getsoftwareversion(),
+        hardwareVersion = "0.0.1" //this SHOULD be hardcoded, right?
     });
 }
 function receiveInstructions(instructions){
@@ -225,6 +270,7 @@ function connect(callback, timeout) {
 }
 
 function main(){
+    chargingConfigure();
     blueConfigure();
     redConfigure();
     greenConfigure();
