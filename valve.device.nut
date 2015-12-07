@@ -3,7 +3,10 @@ server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 unitTesting <- false;
 const valveOpenMaxSleepTime = 1.0; //minutes
 const valveCloseMaxSleepTime = 20.0;
-const batteryAveraging = 15.0;
+const chargingPollAveraging = 15.0;
+const hardwareVersion = "0.0.1";
+const firmwareVersion = "0.0.1";
+
 
 /**************
 Valve Functions
@@ -96,26 +99,30 @@ function chargingConfigure(){
 }
 
 function getBatteryVoltage(){
-    local batterySum = 0.0;
-    local tempReading = 0;
-    local batteryReadingAverage = 0.0;
-    //There is a small delay within the loop. 
-    //Time to execute a battery reading scales significantly and linearly with # of readings averaged
-    for (local x=0;x<batteryAveraging;x++){
-        tempReading = hardware.pinB.read();
-        tempReading = convertToVoltage(tempReading);
-        tempReading = tempReading * 2.0;
-        batterySum += tempReading;
-        imp.sleep(0.02);
+    local batReading = 0.0;
+    batReading = hardware.pinB.read();
+    batReading = convertToVoltage(batReading);
+    batReading = batReading * 2.0;
+    return batReading
+}
+
+function getChargeSign(){
+    local chargeSignReading = 0;
+    chargeSignReading = hardware.pinA.read();
+    if(chargeSignReading == 0){
+        return -1.0
+    } else {
+        return 1.0
     }
-    batteryReadingAverage = batterySum / batteryAveraging;
-    return batteryReadingAverage
 }
 
 function getChargeCurrent(){
     //using "ampreading" instead of "currentReading" because of confusing homonym
     local ampReading = hardware.pin5.read();
+    local chargeSign = getChargeSign();
     ampReading = convertToVoltage(ampReading);
+    //conversion is ~ 1 volt = 0.48 amps, the readings on this pin tend towards 0.08 volts MAXIMUM
+    ampReading = ampReading * chargeSign * 0.48;
     return ampReading
 }
 
@@ -125,6 +132,29 @@ function getSolarVoltage(){
     solarReading = solarReading * 3.0;
     return solarReading
 }
+
+function getChargingStatus(){
+    local batterySum = 0.0;
+    local solarSum = 0.0;
+    local chargeCurrentSum = 0.0;
+    local batteryReadingAverage = 0.0;
+    local solarReadingAverage = 0.0;
+    local chargeCurrentAverage = 0.0;
+    //There is a small delay within the loop. 
+    //Time to execute a battery reading scales significantly and linearly with # of readings averaged
+    for (local x=0;x<chargingPollAveraging;x++){
+        batterySum += getBatteryVoltage();
+        solarSum += getSolarVoltage();
+        chargeCurrentSum += getChargeCurrent();
+        imp.sleep(0.02);
+    }
+    batteryReadingAverage = batterySum / chargingPollAveraging;
+    solarReadingAverage = solarSum / chargingPollAveraging;
+    chargeCurrentAverage = chargeCurrentSum / chargingPollAveraging;
+    return {battery = batteryReadingAverage, solar = solarReadingAverage, amperage = chargeCurrentAverage}
+}
+
+
 
 //Red Led Functions
 function redConfigure(){
@@ -177,23 +207,28 @@ function deepSleepForTime(inputTime){
     });
 }
 
-//Send data to agent
-//dummy values currently in use
-//these lines intentionally don't have semicolons
-function sendData(){
-    agent.send("sendData", {
-        macId = imp.getmacaddress(),
-        wakereason = hardware.wakereason(),
-        batteryLevel = getBatteryVoltage(),
-        solarLevel = getSolarVoltage(),
-        amperage = getChargeCurrent(),
-        valveOpen = nv.valveState,
-        timestamp = date().time,
-        rssi = imp.rssi(),
-        firmwareVersion = imp.getsoftwareversion(),
-        hardwareVersion = "0.0.1" //this SHOULD be hardcoded, right?
-    });
+function collectData(){
+    local dataTable = {};
+    local chargingTable = getChargingStatus();
+    dataTable.wakeReason <- hardware.wakereason();
+    dataTable.batteryVoltage <- chargingTable.battery;
+    dataTable.solarVoltage <- chargingTable.solar;
+    dataTable.amperage <- chargingTable.amperage;
+    dataTable.valveState <- nv.valveState;
+    dataTable.timestamp <- date().time;
+    dataTable.rssi <- imp.rssi();
+    dataTable.OSVersion <- imp.getsoftwareversion();
+    dataTable.hardwareVersion <-hardwareVersion;
+    dataTable.firmwareVersion <- firmwareVersion;
+    return dataTable
 }
+
+//Send data to agent
+function sendData(){
+    local dataToSend = collectData();
+    agent.send("sendData", dataToSend);
+}
+
 function receiveInstructions(instructions){
     server.log("received New Instructions");
     local sleepUntil = 0;
@@ -259,6 +294,7 @@ agent.on("receiveInstructions", receiveInstructions);
 function onConnectedCallback(state) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
+        server.log("sendingData")
         sendData();
     } 
     else {
@@ -281,6 +317,7 @@ function connect(callback, timeout) {
 }
 
 function main(){
+    server.log("main")
     chargingConfigure();
     blueConfigure();
     redConfigure();

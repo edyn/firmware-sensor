@@ -77,7 +77,8 @@ function sendDataHandling(data){
         }
 
     } catch(error) {
-        server.log("Error from device.on(senddata)");
+        server.log("Error from device.on(senddata), sending default instructions");
+        device.send("receiveInstructions", {"open" : false, "nextCheckIn" : defaultSleepTime});
         server.log(error);
     }
 }
@@ -119,6 +120,8 @@ function getSuggestedValveState(){
     local request = http.get(url);
     local response = request.sendsync();
     local statusCode = response.statuscode;
+    local resBod = response.body;
+    resBod = http.jsondecode(resBod);
     //TODO: make generic handling function for HTTP requests
     if(statusCode != 200){
         server.log("Failed to fetch next command");
