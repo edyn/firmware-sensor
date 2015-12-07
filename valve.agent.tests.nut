@@ -35,10 +35,12 @@ function logTest(inputStr = "", passFail = false, inputError = false){
 }
 
 function logPass(inputStr = "", inputError = false){
+    local passFail = true;
     logTest(inputStr = inputStr, passFail = true, inputError = inputError);
 }
 
 function logFail(inputStr = "", inputError = false){
+    local passFail = false;
     logTest(inputStr = inputStr, passFail = false, inputError = inputError);
 }
 
@@ -96,7 +98,7 @@ function sendDataFromDeviceTests(){
 sendDataFromDeviceTests();
 imp.sleep(2);
 server.log("\nAgent Tests Failed:");
-server.log(testsFailed.len());
+server.log(testsFailed.len() + " out of " + (testsPassed.len()+testsFailed.len()) + " tests total");
 if(testsFailed.len()>0){
     server.log("\nSpecifically these tests:");
     for (local x = 0; x < testsFailed.len(); x++){
