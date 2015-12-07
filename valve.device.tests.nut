@@ -189,9 +189,94 @@ function testValve(){
     }
 }
 
+function testCharger(){
+    try{
+        chargingConfigure();
+        logPass("charging configure");
+    }
+    catch(error){
+        logFail("chariging failure", error);
+    }
+    try{
+        local reading = getBatteryVoltage();
+        //battery voltage should always evaluate true (should be greater than 0)
+        if(reading){
+             logPass("get battery voltage");
+        }
+        else{
+            logFail("battery voltage returns 0, false or nothing");
+        }
+    }
+    catch(error){
+        logFail("get battery voltage", error);
+    }
+    try{
+        local reading = getChargeSign();
+        if(reading == 1.0 or reading == -1.0){
+            logPass("get charge sign");
+        }
+        else{
+            logFail("get charge sign returns invalid value");
+        }
+    }
+    catch(error){
+        logFail("get charge sign", error);
+    }
+    try{
+        local reading = getSolarVoltage();
+        if(reading >= 0.0){
+            logPass("get solar voltage");
+        }
+        else{
+            logFail("get solar voltage");
+        }
+    }
+    catch(error){
+        logFail("get solar voltage", error);
+    }
+    try{
+        //this function can return positive, negative or 0
+        local reading = getChargeCurrent();
+        logPass("get charge current");
+    }
+    catch(error){
+        logFail("get charge current");
+    }
+    try{
+        local chargingTable=getChargingStatus();
+        if(battery in chargingTable && solar in chargingTable && amperage in chargingTable){
+            logPass("get charging status");
+        }
+        else{
+            logFail("get charging status");
+        }
+    }
+    catch(error){
+        logFail("get charging status", error);
+    }
+}
+
+testCollectData(){
+    try{
+        local testTable = collectData();
+        if(wakeReason in testTable && batteryVoltage in testTable && solarVoltage in testTable && amperage in testTable && valveState in testTable && timestamp in testTable && rssi in testTable && OSVersion in testTable && hardwareVersion in testTable && firmwareVersion in testTable){
+            logPass("collect data");
+        }
+        else{
+            logFail("collect data");
+        }    
+    }
+    catch(error){
+        logFail("collect data", error);
+    }
+}
+
+
 receiveInstructionsTests();
 testLEDs();
 testValve();
+testCharger();
+testCollectData();
 imp.sleep(3);
 server.log("\nDevice Tests Failed:");
 server.log(testsFailed.len());
