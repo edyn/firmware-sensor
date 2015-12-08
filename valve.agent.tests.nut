@@ -35,13 +35,11 @@ function logTest(inputStr = "", passFail = false, inputError = false){
 }
 
 function logPass(inputStr = "", inputError = false){
-    local passFail = true;
-    logTest(inputStr = inputStr, passFail = true, inputError = inputError);
+    logTest(inputStr, true, inputError);
 }
 
 function logFail(inputStr = "", inputError = false){
-    local passFail = false;
-    logTest(inputStr = inputStr, passFail = false, inputError = inputError);
+    logTest(inputStr, false, inputError);
 }
 
 function sendDataFromDeviceTests(){
