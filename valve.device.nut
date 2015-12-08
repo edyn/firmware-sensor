@@ -88,7 +88,7 @@ function chargingConfigure(){
     //Solar
     hardware.pin7.configure(ANALOG_IN);
     //nBatCharge
-    //Not really sure why this is useful...
+    //TODO: figure out what nBAT is for
     hardware.pin6.configure(DIGITAL_IN);
     //Charge Current
     //Need to figure out conversion of voltage to current

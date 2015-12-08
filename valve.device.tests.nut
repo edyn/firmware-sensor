@@ -22,10 +22,12 @@ function logTest(inputStr = "", passFail = false, inputError = false){
 }
 
 function logPass(inputStr = "", inputError = false){
+    local passFail = true;
     logTest(inputStr = inputStr, passFail = true, inputError = inputError);
 }
 
 function logFail(inputStr = "", inputError = false){
+    local passFail = false;
     logTest(inputStr = inputStr, passFail = false, inputError = inputError);
 }
 
@@ -195,7 +197,7 @@ function testCharger(){
         logPass("charging configure");
     }
     catch(error){
-        logFail("chariging failure", error);
+        logFail("charging failure", error);
     }
     try{
         local reading = getBatteryVoltage();
@@ -212,7 +214,7 @@ function testCharger(){
     }
     try{
         local reading = getChargeSign();
-        if(reading == 1.0 or reading == -1.0){
+        if(reading == 1.0 || reading == -1.0){
             logPass("get charge sign");
         }
         else{
@@ -224,7 +226,7 @@ function testCharger(){
     }
     try{
         local reading = getSolarVoltage();
-        if(reading >= 0.0){
+        if(reading >= 0.0 && reading < 6.0){
             logPass("get solar voltage");
         }
         else{
@@ -244,7 +246,7 @@ function testCharger(){
     }
     try{
         local chargingTable=getChargingStatus();
-        if(battery in chargingTable && solar in chargingTable && amperage in chargingTable){
+        if("battery" in chargingTable && "solar" in chargingTable && "amperage" in chargingTable){
             logPass("get charging status");
         }
         else{
@@ -256,10 +258,14 @@ function testCharger(){
     }
 }
 
-testCollectData(){
+function testCollectData(){
     try{
         local testTable = collectData();
-        if(wakeReason in testTable && batteryVoltage in testTable && solarVoltage in testTable && amperage in testTable && valveState in testTable && timestamp in testTable && rssi in testTable && OSVersion in testTable && hardwareVersion in testTable && firmwareVersion in testTable){
+        if("wakeReason" in testTable && "batteryVoltage" in testTable 
+            && "solarVoltage" in testTable && "amperage" in testTable 
+            && "valveState" in testTable && "timestamp" in testTable 
+            && "rssi" in testTable && "OSVersion" in testTable 
+            && "hardwareVersion" in testTable && "firmwareVersion" in testTable){
             logPass("collect data");
         }
         else{
@@ -279,7 +285,7 @@ testCharger();
 testCollectData();
 imp.sleep(3);
 server.log("\nDevice Tests Failed:");
-server.log(testsFailed.len());
+server.log(testsFailed.len() + " tests failed out of " + (testsPassed.len() + testsFailed.len()) + " tests total");
 if(testsFailed.len()>0){
     server.log("\nSpecifically these tests:");
     for (local x = 0; x < testsFailed.len(); x++){
