@@ -142,7 +142,7 @@ function getChargingStatus(){
     local chargeCurrentAverage = 0.0;
     //There is a small delay within the loop. 
     //Time to execute a battery reading scales significantly and linearly with # of readings averaged
-    for (local x=0;x<chargingPollAveraging;x++){
+    for (local x=0; x<chargingPollAveraging; x++){
         batterySum += getBatteryVoltage();
         solarSum += getSolarVoltage();
         chargeCurrentSum += getChargeCurrent();
@@ -208,6 +208,7 @@ function deepSleepForTime(inputTime){
 }
 
 function collectData(){
+    //TODO: add directly to chargingtable instead of having two tables combine
     local dataTable = {};
     local chargingTable = getChargingStatus();
     dataTable.wakeReason <- hardware.wakereason();
@@ -294,7 +295,7 @@ agent.on("receiveInstructions", receiveInstructions);
 function onConnectedCallback(state) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
-        server.log("sendingData")
+        server.log("sendingData");
         sendData();
     } 
     else {
@@ -317,7 +318,6 @@ function connect(callback, timeout) {
 }
 
 function main(){
-    server.log("main")
     chargingConfigure();
     blueConfigure();
     redConfigure();
