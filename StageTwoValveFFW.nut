@@ -1,0 +1,408 @@
+//LEDs will ONLY show up in this order:
+//Solid white: waiting for imp status LEDs to deactivate
+//Solid red: waiting for all charging systems to pass first check
+//Solid yellow: waiting for battery to be charged enough to be blessed/shipped
+//Solid blue: having difficulty connecting after charge is high enough to be blessed
+//Solid green: ready to be turned off and shipped
+//Blinking white: failed blessing, must be turned off and retested
+
+
+devMac <- imp.getmacaddress();
+edynDevs <- ["0c2a690ae569"];
+factoryDevs <- ["0c2a690ae569"];
+devType <- "None"
+
+const ssid="Edyn Front"
+const pw="edyn1234"
+
+chargingPollAveraging <- 15.0;
+
+//TODO: populate these values
+
+//first check Readings
+firstBatVol <- 0.0;
+firstSolarVol <- 0.0;
+firstChargeCur <- 0.0;
+firstRSSIValue <- 0;
+
+//first check minimums
+firstBatMin <- 3.1;
+firstSolarMin <- 4.5;
+firstChargeMin <- (-1.0);
+//Need to figure out a good value for RSSI once we start production:
+firstRSSIMin <- (-60);
+
+//first check maximums
+firstBatMax <- 4.0;
+firstSolarMax <- 6.0;
+firstChargeMax <- 1.0;
+
+//first check passbools
+firstBatPass <- false;
+firstSolarPass <- false;
+firstChargePass <- false;
+firstRSSIPass <- false;
+
+//second check minimum battery reading
+secondBatMin <- 3.25;
+
+//second check battery reading
+secondBatVol <- 0.0;
+
+
+//DL=debug loop, meant for debugging when no console is available
+//should NEVER be called in final production code
+function DL(){
+    hardware.pin5.configure(DIGITAL_OUT)
+    while(1){
+        hardware.pin5.write(1)
+        imp.sleep(1)
+        hardware.pin5.write(0)
+        imp.sleep(1)
+    }
+}
+
+function blinkupRoutine(){
+    server.factoryblinkup(ssid, pw, hardware.pin5, BLINKUP_FAST);
+    imp.wakeup(5.0,blinkupRoutine)
+}
+
+function configureDev(){
+    for (local x=0; x<factoryDevs.len(); x++){
+        if(devMac==edynDevs[x]){
+            hardware.pin5.configure(DIGITAL_OUT)
+            devType = "Edyn"
+            blinkupRoutine()
+            return
+        }
+    }
+    devType="Prod"
+}
+
+
+configureDev()
+
+
+if(devType == "Prod"){
+    try{
+        function valvePinInit(){
+            //Sets the pins to readable global variables
+            //ToDo:
+            //Function is done? Roll into valve configure function?
+            controlPin <- hardware.pinE;
+            forwardPin <- hardware.pin8;
+            reversePin <- hardware.pin9;
+        }
+        
+        function valveConfigure() {
+            //configure valve pins and set initial state
+            //ToDo:
+            //Might add a close valve inside this function
+            //Function is done?
+        
+            controlPin.configure(DIGITAL_OUT);
+            forwardPin.configure(DIGITAL_OUT);
+            reversePin.configure(DIGITAL_OUT);
+            controlPin.write(0);
+            forwardPin.write(0);
+            reversePin.write(0);
+        }
+            
+        function open() {
+            //Opens the valve
+            //ToDo:
+            //add valve NV status update
+        
+            forwardPin.write(1);
+            controlPin.write(1);
+            imp.sleep(0.002); // 2ms
+            forwardPin.write(1);
+            imp.sleep(0.050); // 50ms
+            forwardPin.write(0);
+            controlPin.write(0);
+            nv.valveState=true;
+        }
+        
+        function close() {
+            //Closes the valve
+            //ToDo:
+            //add valve NV status update
+        
+            reversePin.write(1);
+            controlPin.write(1);
+            imp.sleep(0.002); // 2ms
+            reversePin.write(1);
+            imp.sleep(0.050); // 50ms
+            reversePin.write(0);
+            controlPin.write(0);
+            nv.valveState=false;
+        }
+        
+        //This is run BEFORE main loop, right after declaring the close function for safety.
+        //we want to try to close the valve on any cold boot.
+        if ( ! ("nv" in getroottable() && "valveState" in nv)) {
+            nv <- {valveState = false}; 
+            valvePinInit();
+            valveConfigure();
+            close();
+        }
+        
+        function convertToVoltage(inputVoltage){
+            local sysVol = hardware.voltage();
+            local conversion = sysVol / 65535.0;
+            local outputVoltage = inputVoltage * conversion;
+            return outputVoltage
+        }
+        
+        function chargingConfigure(){
+            //Battery
+            hardware.pinB.configure(ANALOG_IN);
+            //Solar
+            hardware.pin7.configure(ANALOG_IN);
+            //nBatCharge
+            //Not really sure why this is useful...
+            hardware.pin6.configure(DIGITAL_IN);
+            //Charge Current
+            //Need to figure out conversion of voltage to current
+            hardware.pin5.configure(ANALOG_IN);
+            //Charging Sign Pin
+            //tells us if the battery is net charging or discharging
+            hardware.pinA.configure(DIGITAL_IN);
+        }
+        
+        function getBatteryVoltage(){
+            local batReading = 0.0;
+            batReading = hardware.pinB.read();
+            batReading = convertToVoltage(batReading);
+            batReading = batReading * 2.0;
+            return batReading
+        }
+        
+        function getChargeSign(){
+            local chargeSignReading = 0;
+            chargeSignReading = hardware.pinA.read();
+            if(chargeSignReading == 0){
+                return -1.0
+            } else {
+                return 1.0
+            }
+        }
+        
+        function getChargeCurrent(){
+            //using "ampreading" instead of "currentReading" because of confusing homonym
+            local ampReading = hardware.pin5.read();
+            local chargeSign = getChargeSign();
+            ampReading = convertToVoltage(ampReading);
+            //conversion is ~ 1 volt = 0.48 amps, the readings on this pin tend towards 0.08 volts MAXIMUM
+            ampReading = ampReading * chargeSign * 0.48;
+            return ampReading
+        }
+        
+        function getSolarVoltage(){
+            local solarReading = hardware.pin7.read();
+            solarReading = convertToVoltage(solarReading);
+            solarReading = solarReading * 3.0;
+            return solarReading
+        }
+
+        function getChargingStatus(){
+            local batterySum = 0.0;
+            local solarSum = 0.0;
+            local chargeCurrentSum = 0.0;
+            local batteryReadingAverage = 0.0;
+            local solarReadingAverage = 0.0;
+            local chargeCurrentAverage = 0.0;
+            //There is a small delay within the loop. 
+            //Time to execute a battery reading scales significantly and linearly with # of readings averaged
+            for (local x=0;x<chargingPollAveraging;x++){
+                batterySum += getBatteryVoltage();
+                solarSum += getSolarVoltage();
+                chargeCurrentSum += getChargeCurrent();
+                imp.sleep(0.02);
+            }
+            batteryReadingAverage = batterySum / chargingPollAveraging;
+            solarReadingAverage = solarSum / chargingPollAveraging;
+            chargeCurrentAverage = chargeCurrentSum / chargingPollAveraging;
+            return {battery = batteryReadingAverage, solar = solarReadingAverage, amperage = chargeCurrentAverage}
+        }
+        
+        
+        
+        //Red Led Functions
+        function redConfigure(){
+            hardware.pin2.configure(DIGITAL_OUT);
+        }
+        
+        function redOn(){
+            hardware.pin2.write(0);
+        }
+        
+        function redOff(){
+            hardware.pin2.write(1);
+        }
+        
+        //Blue Led Functions
+        function blueConfigure(){
+            hardware.pinC.configure(DIGITAL_OUT);
+        }
+        
+        function blueOn(){
+            hardware.pinC.write(0);
+        }
+        
+        function blueOff(){
+            hardware.pinC.write(1);
+        }
+        
+        //Green Led Functions
+        function greenConfigure(){
+            hardware.pinD.configure(DIGITAL_OUT);
+        }
+        
+        function greenOn(){
+            hardware.pinD.write(0);
+        }
+        
+        function greenOff(){
+            hardware.pinD.write(1);
+        }
+        
+        //checks all charging related systems and wifi strength
+        //valve is checked before any of this is run.
+        function checkSystems(){
+            local readings = {};
+            local rssiTemp = 0;
+            while(1){
+                server.log("here")
+                readings=getChargingStatus();
+                rssiTemp=imp.rssi();
+                if(readings.battery > firstBatMin && readings.battery < firstBatMax && !firstBatPass){
+                    firstBatPass = true;
+                    firstBatVol = readings.battery;
+                    server.log("batteryPassed")
+                }
+                else if(!firstBatPass){
+                    server.log("battery failed" + readings.battery)
+                }
+                if(readings.solar > firstSolarMin && readings.solar < firstSolarMax && !firstSolarPass){
+                    firstSolarPass = true;
+                    firstSolarVol = readings.solar;
+                    server.log("solarPassed")
+                }
+                else if (!firstSolarPass){
+                    server.log("solar failed" + readings.solar)
+                }
+                if(readings.amperage > firstChargeMin && readings.amperage < firstChargeMax && !firstChargePass){
+                    firstChargePass = true;
+                    firstChargeCur = readings.amperage;
+                    server.log("amperagePassed")
+                }
+                else if (!firstChargePass){
+                    server.log("Amperage failed" + readings.amperage)
+                }
+                if(rssiTemp > firstRSSIMin && !firstRSSIPass){
+                    firstRSSIPass = true;
+                    firstRSSIValue=rssiTemp;
+                }
+                else if (!firstRSSIPass){
+                    server.log("rssi failed" + firstRSSIMin)
+                }
+                if(firstRSSIPass && firstChargePass && firstSolarPass && firstBatPass){
+                    server.log("all passed")
+                    return
+                }
+            }
+        }
+
+        //Using this to allow it to charge after testing other systems
+        function chargeBattery(){
+            local secondBatteryReading = getChargingStatus().battery;
+            if(secondBatteryReading < secondBatMin){
+                //impossible to have net positive charge while wifi connected
+                server.disconnect();
+                while(secondBatteryReading < secondBatMin){
+                    imp.sleep(10.0);
+                    secondBatteryReading = getChargingStatus().battery;
+                }
+            }
+            secondBatVol = secondBatteryReading;
+            server.connect();
+            return
+        }
+
+        //constructs the results table that is saved upon blessing
+        function constructResultTable(bless_success){
+            local returnTable = {};
+            returnTable.macAddress <- devMac;
+            returnTable.timestamp <- date().time;
+            returnTable.blessSuccess <- bless_success;
+            returnTable.firstBatteryVoltage <- firstBatVol;
+            returnTable.firstSolarVoltage <- firstSolarVol;
+            returnTable.firstChargeCurrent <- firstChargeCur;
+            returnTable.firstRSSIValue <- firstRSSIValue;
+            returnTable.secondBatteryVoltage <- secondBatVol;
+            return returnTable
+        }
+
+        function blessDevice(){
+            while(!server.isconnected()){
+                blueOn();
+                redOff();
+                greenOff();
+                imp.sleep(10);
+                server.connect();
+            }
+            server.bless(true, function(bless_success) { 
+                if (bless_success) {
+                    imp.clearconfiguration();
+                }
+                local testResultsTable = constructResultTable(bless_success);
+                server.log("I'm being Blessed -> " + devMac);
+                server.log("Blessing " + (bless_success ? "PASSED" : "FAILED"));
+                agent.send("testresult", testResultsTable)
+                while(bless_success) {
+                    greenOn();
+                    redOff();
+                    blueOff();
+                    imp.sleep(100);
+                }
+                while(!bless_success) {
+                    blueOn();
+                    redOn();
+                    greenOn();
+                    imp.sleep(0.5);
+                    blueOff();
+                    greenOff();
+                    redOff();
+                    imp.sleep(0.5);
+                }
+            });
+        }
+        
+        
+        function main(){
+            blueConfigure();
+            redConfigure();
+            greenConfigure();
+            valvePinInit();
+            valveConfigure();
+            chargingConfigure();
+            
+            if(devType == "Prod"){
+                blueOff();
+                redOn();
+                greenOff();
+                server.log("checkSystemsBegin")
+                checkSystems();
+                server.log("Check Systems Complete")
+                greenOn();
+                redOn();
+                chargeBattery();
+                server.log("charge battery complete")
+                blessDevice();
+            }    
+        }
+        main();  
+    }
+    catch(error){}
+}
