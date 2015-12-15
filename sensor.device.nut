@@ -1322,7 +1322,7 @@ function regularOperation()
         powerManager.suspendCharging();
         local batvol = source.voltage();
         //uncomment this sleep to get the light reading value change:
-        //imp.sleep(0.1);
+        imp.sleep(0.1);
         if(runTest)
         {
             nv.data.push({
