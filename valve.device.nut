@@ -3,6 +3,10 @@ server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 unitTesting <- false;
 const valveOpenMaxSleepTime = 1.0; //minutes
 const valveCloseMaxSleepTime = 20.0;
+const chargingPollAveraging = 15.0;
+const hardwareVersion = "0.0.1";
+const firmwareVersion = "0.0.1";
+
 
 /**************
 Valve Functions
@@ -71,6 +75,87 @@ if ( ! ("nv" in getroottable() && "valveState" in nv)) {
     close();
 }
 
+function convertToVoltage(inputVoltage){
+    local sysVol = hardware.voltage();
+    local conversion = sysVol / 65535.0;
+    local outputVoltage = inputVoltage * conversion;
+    return outputVoltage
+}
+
+function chargingConfigure(){
+    //Battery
+    hardware.pinB.configure(ANALOG_IN);
+    //Solar
+    hardware.pin7.configure(ANALOG_IN);
+    //nBatCharge
+    //TODO: figure out what nBAT is for
+    hardware.pin6.configure(DIGITAL_IN);
+    //Charge Current
+    //Need to figure out conversion of voltage to current
+    hardware.pin5.configure(ANALOG_IN);
+    //Charging Sign Pin
+    //tells us if the battery is net charging or discharging
+    hardware.pinA.configure(DIGITAL_IN);
+}
+
+function getBatteryVoltage(){
+    local batReading = 0.0;
+    batReading = hardware.pinB.read();
+    batReading = convertToVoltage(batReading);
+    batReading = batReading * 2.0;
+    return batReading
+}
+
+function getChargeSign(){
+    local chargeSignReading = 0;
+    chargeSignReading = hardware.pinA.read();
+    if(chargeSignReading == 0){
+        return -1.0
+    } else {
+        return 1.0
+    }
+}
+
+function getChargeCurrent(){
+    //using "ampreading" instead of "currentReading" because of confusing homonym
+    local ampReading = hardware.pin5.read();
+    local chargeSign = getChargeSign();
+    ampReading = convertToVoltage(ampReading);
+    //conversion is ~ 1 volt = 0.48 amps, the readings on this pin tend towards 0.08 volts MAXIMUM
+    ampReading = ampReading * chargeSign * 0.48;
+    return ampReading
+}
+
+function getSolarVoltage(){
+    local solarReading = hardware.pin7.read();
+    solarReading = convertToVoltage(solarReading);
+    solarReading = solarReading * 3.0;
+    return solarReading
+}
+
+function getChargingStatus(){
+    local batterySum = 0.0;
+    local solarSum = 0.0;
+    local chargeCurrentSum = 0.0;
+    local batteryReadingAverage = 0.0;
+    local solarReadingAverage = 0.0;
+    local chargeCurrentAverage = 0.0;
+    //There is a small delay within the loop. 
+    //Time to execute a battery reading scales significantly and linearly with # of readings averaged
+    for (local x=0; x<chargingPollAveraging; x++){
+        batterySum += getBatteryVoltage();
+        solarSum += getSolarVoltage();
+        chargeCurrentSum += getChargeCurrent();
+        imp.sleep(0.02);
+    }
+    batteryReadingAverage = batterySum / chargingPollAveraging;
+    solarReadingAverage = solarSum / chargingPollAveraging;
+    chargeCurrentAverage = chargeCurrentSum / chargingPollAveraging;
+    return {battery = batteryReadingAverage, solar = solarReadingAverage, amperage = chargeCurrentAverage}
+}
+
+
+
 //Red Led Functions
 function redConfigure(){
     hardware.pin2.configure(DIGITAL_OUT);
@@ -122,22 +207,29 @@ function deepSleepForTime(inputTime){
     });
 }
 
-//Send data to agent
-//dummy values currently in use
-//these lines intentionally don't have semicolons
-function sendData(){
-    agent.send("sendData", {
-        macId = imp.getmacaddress(),
-        wakereason = hardware.wakereason(),
-        batteryLevel = 3.3,
-        solarLevel = 4.3,
-        valveOpen = nv.valveState,
-        timestamp = date().time,
-        rssi = imp.rssi(),
-        firmwareVersion=imp.getsoftwareversion(),
-        hardwareVersion=0.1 //this SHOULD be hardcoded, right?
-    });
+function collectData(){
+    //TODO: add directly to chargingtable instead of having two tables combine
+    local dataTable = {};
+    local chargingTable = getChargingStatus();
+    dataTable.wakeReason <- hardware.wakereason();
+    dataTable.batteryVoltage <- chargingTable.battery;
+    dataTable.solarVoltage <- chargingTable.solar;
+    dataTable.amperage <- chargingTable.amperage;
+    dataTable.valveState <- nv.valveState;
+    dataTable.timestamp <- date().time;
+    dataTable.rssi <- imp.rssi();
+    dataTable.OSVersion <- imp.getsoftwareversion();
+    dataTable.hardwareVersion <-hardwareVersion;
+    dataTable.firmwareVersion <- firmwareVersion;
+    return dataTable
 }
+
+//Send data to agent
+function sendData(){
+    local dataToSend = collectData();
+    agent.send("sendData", dataToSend);
+}
+
 function receiveInstructions(instructions){
     server.log("received New Instructions");
     local sleepUntil = 0;
@@ -184,7 +276,7 @@ function receiveInstructions(instructions){
             }
         }
         else if(nv.valveState == false){
-            if(instructions.nextCheckIn > valveCloseSleepMaxTime){
+            if(instructions.nextCheckIn > valveCloseMaxSleepTime){
                 deepSleepForTime(valveCloseMaxSleepTime * 60.0);
                 return 
             }
@@ -203,6 +295,7 @@ agent.on("receiveInstructions", receiveInstructions);
 function onConnectedCallback(state) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
+        server.log("sendingData");
         sendData();
     } 
     else {
@@ -225,6 +318,7 @@ function connect(callback, timeout) {
 }
 
 function main(){
+    chargingConfigure();
     blueConfigure();
     redConfigure();
     greenConfigure();
