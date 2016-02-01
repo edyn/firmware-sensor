@@ -5,7 +5,7 @@
 //Solid red: waiting for all charging systems to pass first check
 //Solid yellow: testing valve on/off and charger stats
 //Solid white: battery too low to ship 
-//Solid green: ready to be turned off and shipped
+//Blinking Green/yellow rapid: ready to be turned off and pass to the next stage of the line
 //Blinking white: failed blessing, must be turned off and retested
 
 
