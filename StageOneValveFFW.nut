@@ -1,12 +1,14 @@
-//Stage 2 is the stage that tests all subsystems but the valve
-//Stage 2 will result in the unit being blessed
+//Stage 1 will result in the unit NOT being blessed
 //LEDs will ONLY show up in this order:
-//Solid white: waiting for imp status LEDs to deactivate
+//EIMP lights will display regularly if not connected
+//Solid blue+green: connected but RSSI too low to pass
 //Solid red: waiting for all charging systems to pass first check
-//Solid yellow: waiting for battery to be charged enough to be blessed/shipped
-//Solid blue: having difficulty connecting after charge is high enough to be blessed
+//Solid yellow: testing valve on/off and charger stats
+//Solid white: battery too low to ship 
 //Solid green: ready to be turned off and shipped
 //Blinking white: failed blessing, must be turned off and retested
+
+
 //"NO LOCK PRODUCTION CODE"
 
 devMac <- imp.getmacaddress();
