@@ -19,6 +19,13 @@ debug <- true;
 
 const ssid = "Ellsworth AP"
 const pw = "ellsworth1"
+//This is required to get the "yellow blinking" behavior once the customer receives the device.
+if(imp.getssid() == ""){
+    while(1){}
+}
+
+const ssid = "Ellsworth AP"
+const pw = "ellsworth1"
 
 chargingPollAveraging <- 15.0;
 
@@ -31,14 +38,14 @@ firstChargeCur <- 0.0;
 firstRSSIValue <- 0;
 
 //first check minimums
-firstBatMin <- 2.7;
-firstSolarMin <- 4.5;
-firstChargeMin <- (-1.0);
+firstBatMin <- 3.28;//~25-30% SOC on the battery, we'll be increasing this later
+firstSolarMin <- 4.5;//calibrated in factory
+firstChargeMin <- (-0.03);//calibrated in factory ~= -0.04 when not charging
 //Need to figure out a good value for RSSI once we start production:
 firstRSSIMin <- (-60);
 
 //first check maximums
-firstBatMax <- 4.0;
+firstBatMax <- 3.9;//above this is DANGEROUS!!! (like start a fire dagerous)
 firstSolarMax <- 6.0;
 firstChargeMax <- 1.0;
 
@@ -53,7 +60,6 @@ secondBatMin <- 3.25;
 
 //second check battery reading
 secondBatVol <- 0.0;
-
 
 //DL=debug loop, meant for debugging when no console is available
 //should NEVER be called in final production code
