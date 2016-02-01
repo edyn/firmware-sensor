@@ -1,3 +1,5 @@
+//Stage 2 is identical to stage 1 but results in a blessing
+//Stage 2 will result in the unit being blessed
 //LEDs will ONLY show up in this order:
 //Solid white: waiting for imp status LEDs to deactivate
 //Solid red: waiting for all charging systems to pass first check
@@ -8,12 +10,18 @@
 
 
 devMac <- imp.getmacaddress();
-edynDevs <- ["0c2a690ae569"];
-factoryDevs <- ["0c2a690ae569"];
-devType <- "None"
+edynDevs <- ["0c2a690a2e2b","0c2a6908e8c1","0c2a6908feb4","0c2a6908ac62","0c2a690875f5","0c2a6908a99d","0c2a6908c2eb"];
+factoryDevs <- ["0c2a690a2e2b","0c2a6908e8c1","0c2a6908feb4","0c2a6908ac62","0c2a690875f5","0c2a6908a99d","0c2a6908c2eb"];
+devType <- "None";
+debug <- true;
 
-const ssid="Edyn Front"
-const pw="edyn1234"
+//This is required to get the "yellow blinking" behavior once the customer receives the device.
+if(imp.getssid() == ""){
+    while(1){}
+}
+
+const ssid = "Ellsworth AP"
+const pw = "ellsworth1"
 
 chargingPollAveraging <- 15.0;
 
@@ -26,14 +34,14 @@ firstChargeCur <- 0.0;
 firstRSSIValue <- 0;
 
 //first check minimums
-firstBatMin <- 3.1;
-firstSolarMin <- 4.5;
-firstChargeMin <- (-1.0);
+firstBatMin <- 3.28;//~25-30% SOC on the battery, we'll be increasing this later
+firstSolarMin <- 4.5;//calibrated in factory
+firstChargeMin <- (-0.03);//calibrated in factory ~= -0.04 when not charging
 //Need to figure out a good value for RSSI once we start production:
 firstRSSIMin <- (-60);
 
 //first check maximums
-firstBatMax <- 4.0;
+firstBatMax <- 3.9;//above this is DANGEROUS!!! (like start a fire dagerous)
 firstSolarMax <- 6.0;
 firstChargeMax <- 1.0;
 
@@ -55,28 +63,83 @@ secondBatVol <- 0.0;
 function DL(){
     hardware.pin5.configure(DIGITAL_OUT)
     while(1){
-        hardware.pin5.write(1)
+        hardware.pinC.write(1)
         imp.sleep(1)
-        hardware.pin5.write(0)
+        hardware.pinC.write(0)
         imp.sleep(1)
     }
 }
 
+try{
+            
+        
+        //Red Led Functions
+        function redConfigure(){
+            hardware.pin2.configure(DIGITAL_OUT);
+        }
+        
+        function redOn(){
+            hardware.pin2.write(0);
+        }
+        
+        function redOff(){
+            hardware.pin2.write(1);
+        }
+        
+        //Blue Led Functions
+        function blueConfigure(){
+            hardware.pinC.configure(DIGITAL_OUT);
+        }
+        
+        function blueOn(){
+            hardware.pinC.write(0);
+        }
+        
+        function blueOff(){
+            hardware.pinC.write(1);
+        }
+        
+        //Green Led Functions
+        function greenConfigure(){
+            hardware.pinD.configure(DIGITAL_OUT);
+        }
+        
+        function greenOn(){
+            hardware.pinD.write(0);
+        }
+        
+        function greenOff(){
+            hardware.pinD.write(1);
+        }
+        
+}
+catch(error){}
+
 function blinkupRoutine(){
-    server.factoryblinkup(ssid, pw, hardware.pin5, BLINKUP_FAST);
+    server.factoryblinkup(ssid, pw, hardware.pinC, BLINKUP_FAST);
     imp.wakeup(5.0,blinkupRoutine)
 }
 
 function configureDev(){
-    for (local x=0; x<factoryDevs.len(); x++){
-        if(devMac==edynDevs[x]){
-            hardware.pin5.configure(DIGITAL_OUT)
+    for (local x = 0; x<edynDevs.len(); x++){
+        if(devMac == edynDevs[x]){
+            server.log("edyn dev")
+            hardware.pinC.configure(DIGITAL_OUT);
+            redConfigure();
+            greenConfigure();
+            hardware.pinC.write(0)
+            greenOn();
+            redOn();
+            imp.sleep(90);
+            greenOff();
+            redOff();
+            hardware.pinC.write(1)
             devType = "Edyn"
             blinkupRoutine()
             return
         }
     }
-    devType="Prod"
+    devType = "Prod"
 }
 
 
@@ -214,7 +277,7 @@ if(devType == "Prod"){
             local chargeCurrentAverage = 0.0;
             //There is a small delay within the loop. 
             //Time to execute a battery reading scales significantly and linearly with # of readings averaged
-            for (local x=0;x<chargingPollAveraging;x++){
+            for (local x = 0;x<chargingPollAveraging;x++){
                 batterySum += getBatteryVoltage();
                 solarSum += getSolarVoltage();
                 chargeCurrentSum += getChargeCurrent();
@@ -272,47 +335,63 @@ if(devType == "Prod"){
         function checkSystems(){
             local readings = {};
             local rssiTemp = 0;
-            while(1){
-                server.log("here")
-                readings=getChargingStatus();
-                rssiTemp=imp.rssi();
+            
+            //RSSI test: blue + green
+            blueOn()
+            greenOn()
+            redOff()
+            while(!firstRSSIPass){
+                imp.sleep(1);
+                rssiTemp = imp.rssi();
+                if(rssiTemp > firstRSSIMin && !firstRSSIPass){
+                    firstRSSIPass = true;
+                    firstRSSIValue = rssiTemp;
+                }
+                else if (!firstRSSIPass){
+                    server.log("rssi failed" + firstRSSIMin)
+                }
+            }
+            
+            //Valve AND Charger: disconnect and yellow
+            server.disconnect();
+            redOn();
+            blueOff();
+            while(!firstSolarPass || !firstChargePass){
+                open()
+                imp.sleep(1)
+                readings = getChargingStatus();
+                if(readings.solar > firstSolarMin && readings.solar < firstSolarMax && !firstSolarPass){
+                    firstSolarPass = true;
+                    firstSolarVol = readings.solar;
+                }
+                if(readings.amperage > firstChargeMin && readings.amperage < firstChargeMax && !firstChargePass){
+                    firstChargePass = true;
+                    firstChargeCur = readings.amperage;
+                }
+                close()
+                imp.sleep(1)
+            }
+            server.connect()
+            redOn()
+            blueOn()
+            greenOn()
+            
+            while(!firstBatPass){
+                imp.sleep(1)
+                readings = getChargingStatus();
                 if(readings.battery > firstBatMin && readings.battery < firstBatMax && !firstBatPass){
                     firstBatPass = true;
                     firstBatVol = readings.battery;
                     server.log("batteryPassed")
                 }
-                else if(!firstBatPass){
-                    server.log("battery failed" + readings.battery)
-                }
-                if(readings.solar > firstSolarMin && readings.solar < firstSolarMax && !firstSolarPass){
-                    firstSolarPass = true;
-                    firstSolarVol = readings.solar;
-                    server.log("solarPassed")
-                }
-                else if (!firstSolarPass){
-                    server.log("solar failed" + readings.solar)
-                }
-                if(readings.amperage > firstChargeMin && readings.amperage < firstChargeMax && !firstChargePass){
-                    firstChargePass = true;
-                    firstChargeCur = readings.amperage;
-                    server.log("amperagePassed")
-                }
-                else if (!firstChargePass){
-                    server.log("Amperage failed" + readings.amperage)
-                }
-                if(rssiTemp > firstRSSIMin && !firstRSSIPass){
-                    firstRSSIPass = true;
-                    firstRSSIValue=rssiTemp;
-                }
-                else if (!firstRSSIPass){
-                    server.log("rssi failed" + firstRSSIMin)
-                }
-                if(firstRSSIPass && firstChargePass && firstSolarPass && firstBatPass){
-                    server.log("all passed")
-                    return
-                }
+            }
+
+            if(firstRSSIPass && firstChargePass && firstSolarPass && firstBatPass){
+                server.log("all passed")
+                return
             }
         }
+        
 
         //Using this to allow it to charge after testing other systems
         function chargeBattery(){
@@ -353,15 +432,16 @@ if(devType == "Prod"){
                 server.connect();
             }
             server.bless(true, function(bless_success) { 
-                if (bless_success) {
-                    imp.clearconfiguration();
-                }
+
                 local testResultsTable = constructResultTable(bless_success);
                 server.log("I'm being Blessed -> " + devMac);
                 server.log("Blessing " + (bless_success ? "PASSED" : "FAILED"));
                 agent.send("testresult", testResultsTable)
                 while(bless_success) {
-                    greenOn();
+                    if (bless_success) {
+                        imp.clearconfiguration();
+                    }
+                    greenOff();
                     redOff();
                     blueOff();
                     imp.sleep(100);
@@ -379,26 +459,42 @@ if(devType == "Prod"){
             });
         }
         
-        
         function main(){
+            
+
             blueConfigure();
             redConfigure();
             greenConfigure();
+            /*Uncomment to test blessing on a2dc2
+            if(devMac=="0c2a690a2dc2"){
+                blueOff()
+                redOff()
+                greenOff()
+                imp.sleep(5)
+                blessDevice()
+                return
+            }
+            */
             valvePinInit();
             valveConfigure();
             chargingConfigure();
             
             if(devType == "Prod"){
+                /*
+                blueOn();
+                redOn();
+                greenOn();
+                imp.sleep(90);
                 blueOff();
                 redOn();
                 greenOff();
+                */
+                blueOff();
+                redOn();
+                greenOn();                
                 server.log("checkSystemsBegin")
                 checkSystems();
                 server.log("Check Systems Complete")
-                greenOn();
-                redOn();
-                chargeBattery();
-                server.log("charge battery complete")
                 blessDevice();
             }    
         }
