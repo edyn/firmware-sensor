@@ -6,12 +6,13 @@
 //send all data from globalDataStore and globalUnauthorizedActionsStore
 
 macAgentSide <- imp.configparams.deviceid;
-firebase <- "https://valvetest.firebaseio.com/";
-firebaseAuth <- "qxIFLzJKuewlDIGAUXaB3r0pkjO7Ua5LIrcZBPWg";
+firebase <- "https://edynstaging.firebaseio.com/";
+firebaseAuth <- "15Ubz6zcpgvKYQfOUxUtbKYAfyAOHC4wuSKt9fdP";
 globalDataStore <- []
 globalUnauthorizedActionsStore <- []
 defaultSleepTime <- 20.0 //miutes
 pathForValveState <- "valveState.json"
+pathForValveNextAction <- "now.json"
 
 function sendDataFromDevice(data) {
     local readingsURL = firebase + "readings.json";
@@ -77,7 +78,8 @@ function sendDataHandling(data){
         }
 
     } catch(error) {
-        server.log("Error from device.on(senddata)");
+        server.log("Error from device.on(senddata), sending default instructions");
+        device.send("receiveInstructions", {"open" : false, "nextCheckIn" : defaultSleepTime});
         server.log(error);
     }
 }
@@ -112,10 +114,8 @@ device.on("valveStateChange", valveStateChangeHandling);
 
 
 function getSuggestedValveState(){
-    //a2e2b needs to be replaced by device specific mac address
-    //this url is only for early stage development
     //TODO: add auth stuff
-    local url = "https://valvetest.firebaseio.com/valve/20000c2a690a2e2b/now.json"
+    local url = firebase + "/" + macAgentSide + "/" + pathForValveNextAction;
     local request = http.get(url);
     local response = request.sendsync();
     local statusCode = response.statuscode;
