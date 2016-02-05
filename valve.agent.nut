@@ -34,13 +34,12 @@ function sendDataFromDevice(data) {
         return res.statuscode
     }
 }
+
 function sendDataHandling(data){
 
     //TODO: add auth stuff
     server.log("Received readings data from device");
     try {
-
-
         //send to server
         //"Do we want to try this if 'senddatafromdevice()'failed?"
         //Good question, I'm going to implement it right now as "tell the valve to sleep a default amount of time"
@@ -52,10 +51,11 @@ function sendDataHandling(data){
             //globalDataStore is the 'log' of actions that failed to send to backend
             //toDo: make sure we don't store too much here if this fails repeatedly
             globalDataStore.append(data);
+            //TODO: review if we actually want to skip trying to receive instructions, this might change in the future
             //default sleep in this mode of failure is 20 minutes, we can change whenver.
             //skipping the get instructions step because we already have a backend failure
             server.log("Problem sending data to the backend!!")
-            instructions = {"open" : false, "nextCheckIn" : defaultSleepTime};
+            instructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0};
             //TODO: add receive instructions error handling.
             device.send("receiveInstructions", instructions);
         }
@@ -66,7 +66,8 @@ function sendDataHandling(data){
             if(!instructions){
                 server.log("could not fetch instructions");
                 //Adding a default case for in case it could not fetch instructions from backend
-                device.send("receiveInstructions", {"open" : false, "nextCheckIn" : defaultSleepTime});
+                instructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0}
+                device.send("receiveInstructions", instructions);
                 return 0
             //if fetching instructions succeeds
             }
@@ -79,7 +80,7 @@ function sendDataHandling(data){
 
     } catch(error) {
         server.log("Error from device.on(senddata), sending default instructions");
-        device.send("receiveInstructions", {"open" : false, "nextCheckIn" : defaultSleepTime});
+        device.send("receiveInstructions", {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0});
         server.log(error);
     }
 }
@@ -87,7 +88,7 @@ function sendDataHandling(data){
 
 device.on("sendData", sendDataHandling);
 
-
+//TODO: we could add "reason" to the data passed to this function if we wanted, I.E. "unexpected"
 function valveStateChangeHandling(data){
     local valveStateURL = firebase + pathForValveState;
     local headers = {
@@ -111,7 +112,6 @@ function valveStateChangeHandling(data){
 }
 
 device.on("valveStateChange", valveStateChangeHandling);
-
 
 function getSuggestedValveState(){
     //TODO: add auth stuff
