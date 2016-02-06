@@ -295,11 +295,22 @@ agent.on("receiveInstructions", receiveInstructions);
 function onConnectedCallback(state) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
-        server.log("sendingData");
-        sendData();
+        if(!unitTesting){
+            server.log("sendingData");
+            sendData();
+        }
     } 
     else {
-        // Otherwise, do something else
+        //Valve fails to connect:
+        if(nv.valveState == true){
+            close();
+        }
+        if(!unitTesting){
+            deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+        }else{
+            server.log("Simulated Disconnect")
+            return false
+        }
     }
 }
 
