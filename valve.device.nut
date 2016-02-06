@@ -295,10 +295,8 @@ agent.on("receiveInstructions", receiveInstructions);
 function onConnectedCallback(state) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
-        if(!unitTesting){
-            server.log("sendingData");
-            sendData();
-        }
+        server.log("sendingData");
+        sendData();
     } 
     else {
         //Valve fails to connect:
