@@ -69,7 +69,7 @@ function close() {
 //This is run BEFORE main loop, right after declaring the close function for safety.
 //we want to try to close the valve on any cold boot.
 if ( ! ("nv" in getroottable() && "valveState" in nv)) {
-    nv <- {valveState = false}; 
+    nv <- {valveState = false, iteration = 0}; 
     valvePinInit();
     valveConfigure();
     close();
@@ -235,10 +235,36 @@ function receiveInstructions(instructions){
     local sleepUntil = 0;
     server.log(instructions.open);
     server.log(instructions.nextCheckIn);
+    server.log(instructions.iteration);
     local change = false;
     //if neither of the below statements 
     //TODO: battery check before opening
+
+    //check iterator vs instructions.iteration if instructions tell it to open but the iterator is frozen, don't open
     try{
+        if(instructions.open == true && nv.iteration >= instructions.iteration){
+            //This is embedded within the above if statement to prevent redundant close()s
+            if(nv.valveState == true){
+                agent.send("valveStateChange" , {valveOpen = false});
+                close();
+                server.log("Valve Closing Due to Iteration Failure");
+            }
+            server.log("Not opening due to iteration error.")
+            if(!unitTesting){
+                deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+            }
+            return
+        }
+    }
+    catch(error){
+        close();
+        server.log("ERROR IN VALVE ITERATION CHECK! closing just in case. error is " + error);
+    }
+    //Keep nv iteration current with what the backend thinks the iteration is:
+    nv.iteration = instructions.iteration;
+    //Valve State Changing
+    try{
+        //if valve is open and instructions say to close
         if(instructions.open == true && nv.valveState == false){
             //sleep to ensure we don't open/close valve too quickly
             imp.sleep(0.5);
@@ -247,6 +273,7 @@ function receiveInstructions(instructions){
             change = true;
             server.log("opening Valve");
         }
+        //or valve is closed and instructions say to open
         else if (instructions.open == false && nv.valveState == true){
             imp.sleep(0.5);
             agent.send("valveStateChange" , {valveOpen = false});
@@ -259,27 +286,36 @@ function receiveInstructions(instructions){
         close();
         server.log("ERROR IN VALVE STATE CHANGE! closing just in case. error is " + error);
     }
+    //If the valve changes state, let the backend know
     if(change == true){
         //TODO: change this to just take a second reading and send it instead
         agent.send("valveStateChange" , {valveOpen = nv.valveState});
     }
+    //Check for valid times
+    //TODO: check for type safety
+    //TODO: check for negative values
     if(!unitTesting){
+        //Open case:
         if(nv.valveState == true){
             //do not allow the valve to accept times greater than defaults:
             if(instructions.nextCheckIn > valveOpenMaxSleepTime){
                 deepSleepForTime(valveOpenMaxSleepTime * 60.0);
                 return 
             }
+            //The next check in time is valid:
             else{
                 deepSleepForTime(instructions.nextCheckIn * 60.0);
                 return 
             }
         }
+        //Closed Case:
         else if(nv.valveState == false){
+            //do not allow the valve to accept times greater than defaults:
             if(instructions.nextCheckIn > valveCloseMaxSleepTime){
                 deepSleepForTime(valveCloseMaxSleepTime * 60.0);
                 return 
             }
+            //The next check in time is valid:
             else{
                 deepSleepForTime(instructions.nextCheckIn * 60.0);
                 return 
