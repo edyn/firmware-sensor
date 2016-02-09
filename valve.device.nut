@@ -374,11 +374,6 @@ function connect(callback, timeout) {
 }
 
 function main(){
-    hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){
-        if(nv.valveState == true){
-            close();
-        }
-    });
     //This will only log if the imp is ALREADY connected:
     server.log("main")
     imp.enableblinkup(true)
@@ -391,6 +386,11 @@ function main(){
     chargingConfigure();
     valvePinInit();
     valveConfigure();
+    hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){
+        if(nv.valveState == true){
+            close();
+        }
+    });
     //If onWakeup() returns 0, go into 'blinkup phase' 
     if(!onWakeup()){
         close()
