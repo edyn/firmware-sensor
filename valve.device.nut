@@ -335,7 +335,16 @@ function onConnectedCallback(state) {
         sendData();
     } 
     else {
-        // Otherwise, do something else
+        //Valve fails to connect:
+        if(nv.valveState == true){
+            close();
+        }
+        if(!unitTesting){
+            deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+        }else{
+            server.log("Simulated Disconnect")
+            return false
+        }
     }
 }
 

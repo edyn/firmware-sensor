@@ -240,6 +240,21 @@ function testValve(){
     catch(error){
         logFail("valve close", error);
     }
+    //test 5:
+    //valve closes if it fails to connect:
+    open();
+    try{
+        onConnectedCallback(0);
+        if(nv.valveState == false){
+            logPass("Valve Disconnect");
+        }
+        else{
+            logFail("Valve Disconnect");
+        }
+    }
+    catch(error){
+        logFail("Valve Disconnect", error);
+    }
 }
 
 function testCharger(){
