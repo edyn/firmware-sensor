@@ -12,10 +12,11 @@ globalDataStore <- []
 globalUnauthorizedActionsStore <- []
 defaultSleepTime <- 20.0 //miutes
 pathForValveState <- "valveState.json"
-pathForValveNextAction <- "now.json"
+pathForValveNextAction <- "valves/v1/valves-now/" + macAgentSide + ".json"
+pathForValveData <- "http://api.valve.stag.edyn.com/readings?macAddress=" + macAgentSide;
 
 function sendDataFromDevice(data) {
-    local readingsURL = firebase + "readings.json";
+    local readingsURL = pathForValveData;
     local headers = {
         "Content-Type":"application/json", 
         "User-Agent":"Imp", 
