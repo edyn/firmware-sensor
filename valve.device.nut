@@ -9,8 +9,8 @@ const firmwareVersion = "0.0.1";
 const batteryLow = 3.2;
 const lowBatterySleepTime = 60 //minutes = 1 hour
 const batteryCritical = 2.9;
-const criticalBatterySleepTime = 6 * 60 //minutes = 6 hours
-const receiveInstructionsWaitTimer = 30 //seconds, it could probably be MUCH lower
+const criticalBatterySleepTime = 360; 
+const receiveInstructionsWaitTimer = 30; 
 wakeReason <- hardware.wakereason();
 mostRecentDeepSleepCall <- 0;
 
@@ -260,7 +260,7 @@ device-side API functions
 //function to simplify our deep sleep calls
 function deepSleepForTime(inputTime){
     //TODO: add some robust error handling to this function in particular
-    if(!unitTesting){}
+    if(!unitTesting){
         imp.onidle(function() {
             server.sleepfor(inputTime);
         });
