@@ -6,6 +6,11 @@ const valveCloseMaxSleepTime = 20.0;
 const chargingPollAveraging = 15.0;
 const hardwareVersion = "0.0.1";
 const firmwareVersion = "0.0.1";
+const batteryLow = 3.2;
+const lowBatterySleepTime = 60 //minutes = 1 hour
+const batteryCritical = 2.9;
+const criticalBatterySleepTime = 6 * 60 //minutes = 6 hours
+const receiveInstructionsWaitTimer = 30 //seconds, it could probably be MUCH lower
 wakeReason <- hardware.wakereason();
 
 /**************
@@ -396,7 +401,7 @@ function onConnectedCallback(state, dataToPass) {
         } else {
             //not sure if agent.on works inside functions, but it should?
             agent.on("receiveInstructions", receiveInstructions);
-            imp.wakeup(deepSleepForTime(valveCloseMaxSleepTime * 60.0), 30);
+            imp.wakeup(deepSleepForTime(valveCloseMaxSleepTime * 60.0), receiveInstructionsWaitTimer);
         }
     } 
     //if we're not connected...
