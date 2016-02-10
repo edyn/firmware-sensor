@@ -17,21 +17,21 @@ realDataTable <- {
 }
 
 function logTest(inputStr = "", passFail = false, inputError = false){
-	if(passFail){
-		if(inputError){
-			server.log(inputStr + " Success with intentional error " + inputError);
-		}else{
-			server.log(inputStr + " Success");
-		}
-		testsPassed.append(inputStr);
-	}else{
-		if(inputError){
-			server.log(inputStr + "Failure with error " + inputError);
-		}else{
-			server.log(inputStr + "Failure");
-		}
-		testsFailed.append(inputStr);
-	}
+    if(passFail){
+        if(inputError){
+            server.log(inputStr + " Success with intentional error " + inputError);
+        }else{
+            server.log(inputStr + " Success");
+        }
+        testsPassed.append(inputStr);
+    }else{
+        if(inputError){
+            server.log(inputStr + "Failure with error " + inputError);
+        }else{
+            server.log(inputStr + "Failure");
+        }
+        testsFailed.append(inputStr);
+    }
 }
 
 function logPass(inputStr = "", inputError = false){
@@ -67,7 +67,7 @@ function sendDataFromDeviceTests(){
             logPass("sendDataFromDevice (bad auth)");
         }
         else{
-        	logFail("sendDataFromDevice (bad auth)");    
+            logFail("sendDataFromDevice (bad auth)");    
         }
     }
     catch(error){
@@ -89,19 +89,19 @@ function sendDataFromDeviceTests(){
 
     //still shouldn't throw an error, so this should be considered a failure in either case
     catch(error){
-    		logFail("sendDataFromDevice (real data)",error)
+            logFail("sendDataFromDevice (real data)",error)
     }    
 }
 
 sendDataFromDeviceTests();
-imp.sleep(2);
-server.log("\nAgent Tests Failed:");
-server.log(testsFailed.len() + " out of " + (testsPassed.len()+testsFailed.len()) + " tests total");
-if(testsFailed.len()>0){
-    server.log("\nSpecifically these tests:");
-    for (local x = 0; x < testsFailed.len(); x++){
-        server.log(testsFailed[x]);
+imp.wakeup(10,function(){
+    server.log("\nAgent Tests Failed:");
+    server.log(testsFailed.len() + " out of " + (testsPassed.len()+testsFailed.len()) + " tests total");
+    if(testsFailed.len()>0){
+        server.log("\nSpecifically these tests:");
+        for (local x = 0; x < testsFailed.len(); x++){
+            server.log(testsFailed[x]);
+        }
     }
-}
-server.log("\n");
-
+    server.log("\n");
+})

@@ -36,7 +36,7 @@ function receiveInstructionsTests(){
     //should succeed
     try{
         //open the valve, should be valid
-        receiveInstructions({open = true , nextCheckIn = 0.1});
+        receiveInstructions({open = true , nextCheckIn = 0.1, iteration = 1});
         //if the valve thinks it's valvestate is true, it passes
         if(nv.valveState){
             logPass("Valve Open");
@@ -55,7 +55,7 @@ function receiveInstructionsTests(){
     //should succeed
     try{
         //close the valve, should be valid
-        receiveInstructions({open = false , nextCheckIn = 0.1});
+        receiveInstructions({open = false , nextCheckIn = 0.1, iteration = 0});
         //if the valve thinks it's valvestate is false, it passes
         if(!nv.valveState){
             logPass("Valve Close");
@@ -91,7 +91,60 @@ function receiveInstructionsTests(){
     }
     //if there isn't issue in the above test, it failed
     catch(error){
-        logPass("receiveInstructions (not enough params, missing 'open')", error);
+        logPass("receiveInstructions (not enough params, missing 'nextCheckIn')", error);
+    }
+
+    //test 5:
+    //test sending an open signal without iterating
+    //no failure
+    nv.iteration = 1;
+    open();
+    local instructions = {open = true, nextCheckIn = 1, iteration = 1};
+    try{
+        receiveInstructions(instructions);
+        if(nv.valveState == true){
+            logFail("receiveInstructions (failed iteration)");
+        }else{
+            logPass("receiveInstructions (failed iteration)")
+        }
+    }
+    //if there isn't issue in the above test, it failed
+    catch(error){
+        logFail("receiveInstructions (failed iteration)", error);
+    }
+    
+    //test 6:
+    //test sending an open signal with proper iterating
+    //no failure
+    nv.iteration = 0;
+    close();
+    local instructions = {open = true, nextCheckIn = 1, iteration = 1};
+    try{
+        receiveInstructions(instructions);
+        if(nv.valveState == false){
+            logFail("receiveInstructions (proper iteration)");
+        }else{
+            logPass("receiveInstructions (proper iteration)")
+        }
+    }
+    //if there isn't issue in the above test, it failed
+    catch(error){
+        logFail("receiveInstructions (proper iteration) caused error", error);
+    }
+    
+    //test 7:
+    //test sending a random input or missing iteration parameter
+    //should cause an error
+    nv.iteration = 0;
+    close();
+    local instructions = {open = true, nextCheckIn = 1};
+    try{
+        receiveInstructions(instructions);
+        logFail("receiveInstructions (missing iteration parameter)")
+    }
+    //if there isn't issue in the above test, it failed
+    catch(error){
+        logPass("receiveInstructions (missing iteration parameter)", error);
     }
 }
 
@@ -187,6 +240,21 @@ function testValve(){
     catch(error){
         logFail("valve close", error);
     }
+    //test 5:
+    //valve closes if it fails to connect:
+    open();
+    try{
+        onConnectedCallback(0);
+        if(nv.valveState == false){
+            logPass("Valve Disconnect");
+        }
+        else{
+            logFail("Valve Disconnect");
+        }
+    }
+    catch(error){
+        logFail("Valve Disconnect", error);
+    }
 }
 
 function testCharger(){
@@ -275,23 +343,22 @@ function testCollectData(){
     }
 }
 
-
 receiveInstructionsTests();
 testLEDs();
 testValve();
 testCharger();
 testCollectData();
-imp.sleep(3);
-server.log("\nDevice Tests Failed:");
-server.log(testsFailed.len() + " tests failed out of " + (testsPassed.len() + testsFailed.len()) + " tests total");
-if(testsFailed.len()>0){
-    server.log("\nSpecifically these tests:");
-    for (local x = 0; x < testsFailed.len(); x++){
-        server.log(testsFailed[x]);
+imp.wakeup(10,function(){
+    server.log("\nDevice Tests Failed:");
+    server.log(testsFailed.len() + " tests failed out of " + (testsPassed.len() + testsFailed.len()) + " tests total");
+    if(testsFailed.len()>0){
+        server.log("\nSpecifically these tests:");
+        for (local x = 0; x < testsFailed.len(); x++){
+            server.log(testsFailed[x]);
+        }
     }
-}
-server.log("\n");
-
+    server.log("\n");
+})
 
 
 
