@@ -12,6 +12,7 @@ const batteryCritical = 2.9;
 const criticalBatterySleepTime = 6 * 60 //minutes = 6 hours
 const receiveInstructionsWaitTimer = 30 //seconds, it could probably be MUCH lower
 wakeReason <- hardware.wakereason();
+mostRecentDeepSleepCall <- 0;
 
 /**************
 Valve Functions
@@ -259,9 +260,13 @@ device-side API functions
 //function to simplify our deep sleep calls
 function deepSleepForTime(inputTime){
     //TODO: add some robust error handling to this function in particular
-    imp.onidle(function() {
-        server.sleepfor(inputTime);
-    });
+    if(!unitTesting){}
+        imp.onidle(function() {
+            server.sleepfor(inputTime);
+        });
+    } else {
+        mostRecentDeepSleepCall = inputTime;
+    }
 }
 
 function collectData(){
@@ -385,24 +390,28 @@ function receiveInstructions(instructions){
     }
 }
 
+function batteryLowCheck(dataToPass){
+    if(dataToPass.batteryVoltage < batteryLow){
+        if(nv.valveState == true){
+             close();
+        }
+        //don't wait for more instructions, just go back to sleep
+        deepSleepForTime(lowBatterySleepTime * 60.0);
+        return
+    } else {
+        //not sure if agent.on works inside functions, but it should?
+        agent.on("receiveInstructions", receiveInstructions);
+        //The below statement works as a "timeout" for receive instructions
+        imp.wakeup(deepSleepForTime(valveCloseMaxSleepTime * 60.0), receiveInstructionsWaitTimer);
+    }
+}
 
 function onConnectedCallback(state, dataToPass) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
+        batteryLowCheck(dataToPass);
         server.log("sendingData");
         sendData(dataToPass);
-        if(dataToPass.batteryVoltage < batteryLow){
-            if(nv.valveState == true){
-                close();
-            }
-            //don't wait for more instructions, just go back to sleep
-            deepSleepForTime(lowBatterySleepTime * 60.0);
-            return
-        } else {
-            //not sure if agent.on works inside functions, but it should?
-            agent.on("receiveInstructions", receiveInstructions);
-            imp.wakeup(deepSleepForTime(valveCloseMaxSleepTime * 60.0), receiveInstructionsWaitTimer);
-        }
     } 
     //if we're not connected...
     else {
@@ -410,12 +419,7 @@ function onConnectedCallback(state, dataToPass) {
         if(nv.valveState == true){
             close();
         }
-        if(!unitTesting){
-            deepSleepForTime(valveCloseMaxSleepTime * 60.0);
-        }else{
-            server.log("Simulated Disconnect")
-            return false
-        }
+        deepSleepForTime(valveCloseMaxSleepTime * 60.0);
     }
 }
 
@@ -432,6 +436,21 @@ function connect(callback, timeout, dataToPass) {
         server.connect(function (connectStatus){
             callback(connectStatus, dataToPass)
         }, timeout);
+    }
+}
+
+function batteryCriticalCheck(dataTable){
+    if(dataTable.batteryVoltage < batteryCritical){
+        //HIGHLY unlikely, pretty much impossible:
+        if(nv.valveState == true){
+            close();
+        }
+        //valve battery is critical, don't even connect to wifi
+        deepSleepForTime(criticalBatterySleepTime * 60.0);
+        //return the main function; pretty much ensures imp.idle() required for deep sleep
+        return
+    } else {
+        connect(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
     }
 }
 
@@ -459,18 +478,7 @@ function main(){
         imp.sleep(90)
     }
     local dataTable = collectData();
-    if(dataTable.batteryVoltage < batteryCritical){
-        //HIGHLY unlikely, pretty much impossible:
-        if(nv.valveState == true){
-            close();
-        }
-        //valve battery is critical, don't even connect to wifi
-        deepSleepForTime(criticalBatterySleepTime * 60.0);
-        //return the main function; pretty much ensures imp.idle() required for deep sleep
-        return
-    } else {
-        connect(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
-    }
+    batteryCriticalCheck(dataTable);
 }
 if(!unitTesting){
     main();

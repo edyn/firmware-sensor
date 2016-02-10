@@ -343,6 +343,36 @@ function testCollectData(){
     }
 }
 
+function testBatterySafety(){
+    local sampleData = collectData();
+    try{
+        sampleData.batteryVoltage = batteryCritical - 0.1;
+        open();
+        imp.sleep(0.2);
+        batteryCriticalCheck(sampleData);
+        if(nv.valveState == false && mostRecentDeepSleepCall == criticalBatterySleepTime * 60.0){
+            logPass("BatteryCriticalCheck");
+        } else {
+            logFail("BatteryCriticalCheck");
+        }
+    } catch(error){
+        logFail("BatteryCriticalCheck", error);
+    }
+    try{
+        sampleData.batteryVoltage = batteryLow - 0.1;
+        open();
+        imp.sleep(0.2);
+        batteryLowCheck(sampleData);
+        if(nv.valveState == false && mostRecentDeepSleepCall == lowBatterySleepTime * 60.0){
+            logPass("BatteryLowCheck");
+        } else {
+            logFail("BatteryLowCheck");
+        } catch(error){
+            logFail("BatteryLowCheck", error)
+        }
+    }
+}
+
 receiveInstructionsTests();
 testLEDs();
 testValve();
