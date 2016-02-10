@@ -6,7 +6,7 @@ const valveCloseMaxSleepTime = 20.0;
 const chargingPollAveraging = 15.0;
 const hardwareVersion = "0.0.1";
 const firmwareVersion = "0.0.1";
-
+wakeReason <- hardware.wakereason();
 
 /**************
 Valve Functions
@@ -73,6 +73,58 @@ if ( ! ("nv" in getroottable() && "valveState" in nv)) {
     valvePinInit();
     valveConfigure();
     close();
+}
+
+//WakeReason Function
+
+function onWakeup(){
+    local branching=0;
+    switch(wakeReason){
+        //branching = 0 cases:
+        //if branching is 0, the device will:
+        //close the valve
+        //enter blinkup mode
+        case WAKEREASON_POWER_ON: 
+            branching=0;
+            break
+        case WAKEREASON_SW_RESET:
+            branching=0;
+            break
+        case WAKEREASON_SQUIRREL_ERROR:
+            branching=0;
+            break
+        case WAKEREASON_PIN1:
+            branching=0;
+            break    
+        //branching 1 means the device can skip it's previous modes
+
+        //This should skip the blinkup period
+        case WAKEREASON_TIMER:
+            branching=1;
+            break
+        case WAKEREASON_BLINKUP:
+            branching=1;
+            break
+        case WAKEREASON_NEW_SQUIRREL:
+            branching=1;
+            break
+        case WAKEREASON_NEW_FIRMWARE:
+            branching=1;
+            break
+        //unlikely/impossible cases, but still 1
+        case WAKEREASON_SNOOZE:
+            branching=1;
+            break
+        case WAKEREASON_HW_RESET:
+            branching=1;
+            break
+        //Below this should NEVER happen, but is there to be safe
+        case null:
+            branching=1
+            server.log("Bad Wakereason");
+            break
+    }//endswitch
+    return branching
 }
 
 function convertToVoltage(inputVoltage){
@@ -295,7 +347,10 @@ function receiveInstructions(instructions){
     //TODO: check for type safety
     //TODO: check for negative values
     if(!unitTesting){
-        //Open case:
+        //on blinkup, just sleep 5 minutes
+        if(wakeReason == 9){
+            deepSleepForTime(valveOpenMaxSleepTime * 60.0);
+        }
         if(nv.valveState == true){
             //do not allow the valve to accept times greater than defaults:
             if(instructions.nextCheckIn > valveOpenMaxSleepTime){
@@ -363,12 +418,28 @@ function connect(callback, timeout) {
 }
 
 function main(){
-    chargingConfigure();
+    //This will only log if the imp is ALREADY connected:
+    server.log("main")
+    imp.enableblinkup(true)
     blueConfigure();
+    blueOn();
     redConfigure();
+    redOn();
     greenConfigure();
+    greenOn();
+    chargingConfigure();
     valvePinInit();
     valveConfigure();
+    hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){
+        if(nv.valveState == true){
+            close();
+        }
+    });
+    //If onWakeup() returns 0, go into 'blinkup phase' 
+    if(!onWakeup()){
+        close()
+        imp.sleep(90)
+    }
     connect(onConnectedCallback , TIMEOUT_SERVER_S);
 }
 if(!unitTesting){
