@@ -444,7 +444,13 @@ function main(){
     }
     local dataTable = collectData();
     if(dataTable.batteryVoltage < batteryCritical){
-
+        //HIGHLY unlikely, pretty much impossible:
+        if(nv.valveState == true){
+            close();
+        }
+        //valve battery is critical, don't even connect to wifi
+        deepSleepForTime(criticalBatterySleepTime);
+        return
     } else {
         connect(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
     }
