@@ -277,8 +277,7 @@ function collectData(){
 }
 
 //Send data to agent
-function sendData(){
-    local dataToSend = collectData();
+function sendData(dataToSend){
     agent.send("sendData", dataToSend);
 }
 
@@ -383,12 +382,13 @@ function receiveInstructions(instructions){
 
 agent.on("receiveInstructions", receiveInstructions);
 
-function onConnectedCallback(state) {
+function onConnectedCallback(state, dataToPass) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
         server.log("sendingData");
-        sendData();
+        sendData(dataToPass);
     } 
+    //if we're not connected...
     else {
         //Valve fails to connect:
         if(nv.valveState == true){
@@ -404,16 +404,18 @@ function onConnectedCallback(state) {
 }
 
 
-function connect(callback, timeout) {
+function connect(callback, timeout, dataToPass) {
     // Check if we're connected before calling server.connect()
     // to avoid race condition
     if (server.isconnected()) {
         // We're already connected, so execute the callback
-        callback(SERVER_CONNECTED);
+        callback(SERVER_CONNECTED, dataToPass);
     } 
     else {
         // Otherwise, proceed as normal
-        server.connect(callback, timeout);
+        server.connect(function (connectStatus){
+            callback(connectStatus, dataToPass)
+            }, timeout);
     }
 }
 
@@ -440,7 +442,12 @@ function main(){
         close()
         imp.sleep(90)
     }
-    connect(onConnectedCallback , TIMEOUT_SERVER_S);
+    local dataTable = collectData();
+    if(dataTable.batteryVoltage < batteryCritical){
+
+    } else {
+        connect(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
+    }
 }
 if(!unitTesting){
     main();
