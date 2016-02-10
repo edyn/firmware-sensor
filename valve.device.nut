@@ -380,13 +380,24 @@ function receiveInstructions(instructions){
     }
 }
 
-agent.on("receiveInstructions", receiveInstructions);
 
 function onConnectedCallback(state, dataToPass) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
         server.log("sendingData");
         sendData(dataToPass);
+        if(dataToPass.batteryVoltage < batteryLow){
+            if(nv.valveState == true){
+                close();
+            }
+            //don't wait for more instructions, just go back to sleep
+            deepSleepForTime(lowBatterySleepTime * 60.0);
+            return
+        } else {
+            //not sure if agent.on works inside functions, but it should?
+            agent.on("receiveInstructions", receiveInstructions);
+            imp.wakeup(deepSleepForTime(valveCloseMaxSleepTime * 60.0), 30);
+        }
     } 
     //if we're not connected...
     else {
@@ -415,7 +426,7 @@ function connect(callback, timeout, dataToPass) {
         // Otherwise, proceed as normal
         server.connect(function (connectStatus){
             callback(connectStatus, dataToPass)
-            }, timeout);
+        }, timeout);
     }
 }
 
@@ -449,7 +460,8 @@ function main(){
             close();
         }
         //valve battery is critical, don't even connect to wifi
-        deepSleepForTime(criticalBatterySleepTime);
+        deepSleepForTime(criticalBatterySleepTime * 60.0);
+        //return the main function; pretty much ensures imp.idle() required for deep sleep
         return
     } else {
         connect(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
