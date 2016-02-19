@@ -13,14 +13,14 @@ globalUnauthorizedActionsStore <- []
 defaultSleepTime <- 20.0 //miutes
 pathForValveState <- "valveState.json"
 pathForValveNextAction <- "valves/v1/valves-now/" + macAgentSide + ".json"
-pathForValveData <- "http://api.valve.stag.edyn.com/readings?macAddress=" + macAgentSide;
+pathForValveData <- "http://api.valve.stag.edyn.com/readings/"+macAgentSide;
 
 function sendDataFromDevice(data) {
     local readingsURL = pathForValveData;
     local headers = {
         "Content-Type":"application/json", 
         "User-Agent":"Imp", 
-        "X-Api-Key":firebaseAuth
+        "Authorization" : "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzY29wZXMiOlsicHVibGljIiwidmFsdmU6YWdlbnQiXSwiaWF0IjoxNDU1NzM4MjY4LCJzdWIiOiJhcHA6dmFsdmUtYWdlbnQifQ.-BKIywHrpbtNo2xuYhcZ-4w5itBFQMM0KHQZmXcYgcM"
     };
     local jsonData = http.jsonencode(data);
     //Going to use camelcase where acronyms count as one word, but each letter is treated as the first letter of the acronym:
