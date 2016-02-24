@@ -1,64 +1,146 @@
-////////////////////////////////////////////////////////////
-// Edyn - Soil IQ - Valve
-//
-// Imp Agent code runs on a server in the Imp Cloud. 
-// It accepts requests to open and close the valve and
-// passes it to the Imp Device when the device requests.
-// The Imp Device sends status data (valve state, battery
-// voltage, etc) to the Edyn Server before the request.
-// 
-// Open requests must include a time and duration.
-// Close requests must include a time.
-//
-// If time has already passed, the action will take place
-// as soon as the Imp Device wakes and receives the request.
-// The duration is set to two hours, if greater. Time and
-// duration specified in seconds.
-////////////////////////////////////////////////////////////
+//Interactions Outline
+//http://bit.ly/1OjA8aN should link to googledoc explaining interactions
 
-//this comment is a feature!
+//GENERAL TODOs:
+//add function to send info to loggly
+//send all data from globalDataStore and globalUnauthorizedActionsStore
 
-// Invoked when the device calls agent.send(...)
-device.on("action_request", function(data) {
-    // send the action to the device and clear it
-    device.send("action_response", server.load());
-    server.save({});
-    
-    // append agent url to data
-    data.url <- http.agenturl();
-    server.log(http.jsonencode(data));
+macAgentSide <- imp.configparams.deviceid;
+firebase <- "https://edynstaging.firebaseio.com/";
+firebaseAuth <- "15Ubz6zcpgvKYQfOUxUtbKYAfyAOHC4wuSKt9fdP";
+globalDataStore <- []
+globalUnauthorizedActionsStore <- []
+defaultSleepTime <- 20.0 //miutes
+pathForValveState <- "valveState.json"
+pathForValveNextAction <- "valves/v1/valves-now/" + macAgentSide + ".json"
+pathForValveData <- "http://api.valve.stag.edyn.com/readings/"+macAgentSide;
 
-    // send data to edyn server
-    // local req = http.post(
-    //     "https://edyn.com/api/v1/valve", 
-    //     {"Content-Type":"text/csv", "User-Agent":"Imp"},
-    //     http.jsonencode(data));
-    local req = http.post(
-        "http://edynbackendpythonstag.elasticbeanstalk.com/api/valve/", 
-        {"Content-Type":"text/csv", "User-Agent":"Imp"},
-        http.jsonencode(data));
+function sendDataFromDevice(data) {
+    local readingsURL = pathForValveData;
+    local headers = {
+        "Content-Type":"application/json", 
+        "User-Agent":"Imp", 
+        "Authorization" : "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzY29wZXMiOlsicHVibGljIiwidmFsdmU6YWdlbnQiXSwiaWF0IjoxNDU1NzM4MjY4LCJzdWIiOiJhcHA6dmFsdmUtYWdlbnQifQ.-BKIywHrpbtNo2xuYhcZ-4w5itBFQMM0KHQZmXcYgcM"
+    };
+    local jsonData = http.jsonencode(data);
+    //Going to use camelcase where acronyms count as one word, but each letter is treated as the first letter of the acronym:
+    //urlReadings is valid, readingsURL is valid, readingsUrl is not.
+    local req = http.post(readingsURL, headers, jsonData);
     local res = req.sendsync();
     if (res.statuscode != 200) {
-        // TODO: retry?
-        server.log("error sending message: " + res.body);
+        server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
+        return res.statuscode
+    } else {
+        server.log("Readings send successfully to backend.");
+        return res.statuscode
     }
-});
+}
 
-// Accept requests to open/close the valve
-http.onrequest(function (request, response) {
+function sendDataHandling(data){
+
+    //TODO: add auth stuff
+    server.log("Received readings data from device");
     try {
-        response.header("Access-Control-Allow-Origin", "*");
-
-        if (request.query.action == "open") {
-            server.save({action = request.query.action, time = request.query.time.tointeger(), duration = request.query.duration.tointeger()}); // seconds
-            response.send(200, "OK");
-        } else if (request.query.action == "close") {
-            server.save({action = request.query.action, time = request.query.time.tointeger()});  // seconds
-            response.send(200, "OK");
-        } else {
-            response.send(500, "Error: Action should be 'open' or 'close'.");
+        //send to server
+        //"Do we want to try this if 'senddatafromdevice()'failed?"
+        //Good question, I'm going to implement it right now as "tell the valve to sleep a default amount of time"
+        //BUT we should handle this better
+        //TODO: figure out proper behavior
+        //do we tell the valve there was a failure? Is there some change in behavior on the valve?
+        local sendDataSuccess = sendDataFromDevice(data);
+        if(!sendDataSuccess){
+            //globalDataStore is the 'log' of actions that failed to send to backend
+            //toDo: make sure we don't store too much here if this fails repeatedly
+            globalDataStore.append(data);
+            //TODO: review if we actually want to skip trying to receive instructions, this might change in the future
+            //default sleep in this mode of failure is 20 minutes, we can change whenver.
+            //skipping the get instructions step because we already have a backend failure
+            server.log("Problem sending data to the backend!!")
+            instructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0};
+            //TODO: add receive instructions error handling.
+            device.send("receiveInstructions", instructions);
         }
-    } catch (ex) {
-        response.send(500, "Error: " + ex);
+        //if sending data to server succeeds
+        else{
+            local instructions = getSuggestedValveState();
+            //if fetching instructions fails
+            if(!instructions){
+                server.log("could not fetch instructions");
+                //Adding a default case for in case it could not fetch instructions from backend
+                instructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0}
+                device.send("receiveInstructions", instructions);
+                return 0
+            //if fetching instructions succeeds
+            }
+            else{
+                server.log("sending instructions to device");
+                device.send("receiveInstructions", instructions);
+                return 1
+            }
+        }
+
+    } catch(error) {
+        server.log("Error from device.on(senddata), sending default instructions");
+        device.send("receiveInstructions", {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0});
+        server.log(error);
     }
+}
+
+
+device.on("sendData", sendDataHandling);
+
+//TODO: we could add "reason" to the data passed to this function if we wanted, I.E. "unexpected"
+function valveStateChangeHandling(data){
+    local valveStateURL = firebase + pathForValveState;
+    local headers = {
+        "Content-Type":"application/json", 
+        "User-Agent":"Imp", 
+        "X-Api-Key":firebaseAuth
+    };
+    local jsonData = http.jsonencode(data);
+    //Going to use camelcase where acronyms count as one word, but each letter is treated as the first letter of the acronym:
+    //urlReadings is valid, readingsURL is valid, readingsUrl is not.
+    local req = http.post(valveStateURL, headers, jsonData);
+    local res = req.sendsync();
+    //TODO: make generic handling function for HTTP requests
+    if (res.statuscode != 200) {
+        server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
+        return res.statuscode
+    } else {
+        server.log("Valve state change acknowledgement send successfully to backend.");
+        return res.statuscode
+    }
+}
+
+device.on("valveStateChange", valveStateChangeHandling);
+
+function getSuggestedValveState(){
+    //TODO: add auth stuff
+    local url = firebase + "/" + macAgentSide + "/" + pathForValveNextAction;
+    local request = http.get(url);
+    local response = request.sendsync();
+    local statusCode = response.statuscode;
+    local resBod = response.body;
+    resBod = http.jsondecode(resBod);
+    //TODO: make generic handling function for HTTP requests
+    if(statusCode != 200){
+        server.log("Failed to fetch next command");
+        //anything that is not false or 0 in squirrel evaluates as True
+        return false
+    }
+    else{
+        local resBod = response.body;
+        resBod = http.jsondecode(resBod);
+        //resBod has two pairs:
+        //resBod.open is the 'next suggested valve state' - boolean
+        //resBod.nextCheckIn is how long the device should sleep for - float minutes from now
+        return resBod;
+    }
+}    
+
+
+device.onconnect(function() { 
+    server.log("Device connected to agent");
 });
+
+
