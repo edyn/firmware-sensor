@@ -406,6 +406,7 @@ function onConnectedCallback(state, dataToPass) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
         if(batteryLowCheck(dataToPass)){
+            TODO: No asynchronous functions inside synchronous-appearing functions allowed.
             //not sure if agent.on works inside functions, but it should?
             agent.on("receiveInstructions", receiveInstructions);
             //The below statement works as a "timeout" for receive instructions
