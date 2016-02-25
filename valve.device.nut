@@ -2,6 +2,7 @@ const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 unitTesting <- false;
 const responsiveTimer = 1200.0; // 1200 seconds = 20 minutes
+const sleepOnErrorTime = 3600.0;
 const valveOpenMaxSleepTime = 1.0; //minutes
 const valveCloseMaxSleepTime = 20.0;
 const chargingPollAveraging = 15.0;
@@ -376,7 +377,7 @@ function receiveInstructions(instructions){
             case WAKEREASON_SQUIRREL_ERROR:
                 nv.iteration = iteration;
                 //sleep for an hour
-                deepSleepForTime(60.0 * 60.0);
+                deepSleepForTime(sleepOnErrorTime);
                 return
                 break
             //Below this should NEVER happen, but is there to be safe
@@ -390,7 +391,7 @@ function receiveInstructions(instructions){
     } catch(error) {
         //TODO: make sure this is handled how we want:
         close();
-        deepSleepForTime(60.0 * 60.0);
+        deepSleepForTime(sleepOnErrorTime);
         return
     }
 
