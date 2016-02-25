@@ -424,7 +424,7 @@ function onConnectedCallback(state, dataToPass) {
 }
 
 
-function connect(callback, timeout, dataToPass) {
+function connectAndSend(callback, timeout, dataToPass) {
     // Check if we're connected before calling server.connect()
     // to avoid race condition
     if (server.isconnected()) {
@@ -450,7 +450,7 @@ function batteryCriticalCheck(dataTable){
         //return the main function; pretty much ensures imp.idle() required for deep sleep
         return
     } else {
-        connect(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
+        connectAndSend(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
     }
 }
 
