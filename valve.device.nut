@@ -1,7 +1,7 @@
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 unitTesting <- false;
-const responsiveTimer = 20.0 * 60.0 // seconds
+const responsiveTimer = 1200.0; // 1200 seconds = 20 minutes
 const valveOpenMaxSleepTime = 1.0; //minutes
 const valveCloseMaxSleepTime = 20.0;
 const chargingPollAveraging = 15.0;
