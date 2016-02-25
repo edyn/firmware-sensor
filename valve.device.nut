@@ -392,24 +392,28 @@ function receiveInstructions(instructions){
 
 function batteryLowCheck(dataToPass){
     if(dataToPass.batteryVoltage < batteryLow){
+        //if the battery is low and valve is open, close the valve
         if(nv.valveState == true){
              close();
         }
-        //don't wait for more instructions, just go back to sleep
-        deepSleepForTime(lowBatterySleepTime * 60.0);
-        return
+        return false
     } else {
-        //not sure if agent.on works inside functions, but it should?
-        agent.on("receiveInstructions", receiveInstructions);
-        //The below statement works as a "timeout" for receive instructions
-        imp.wakeup(deepSleepForTime(valveCloseMaxSleepTime * 60.0), receiveInstructionsWaitTimer);
+        return true
     }
 }
 
 function onConnectedCallback(state, dataToPass) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
-        batteryLowCheck(dataToPass);
+        if(batteryLowCheck(dataToPass)){
+            //not sure if agent.on works inside functions, but it should?
+            agent.on("receiveInstructions", receiveInstructions);
+            //The below statement works as a "timeout" for receive instructions
+            imp.wakeup(deepSleepForTime(valveCloseMaxSleepTime * 60.0), receiveInstructionsWaitTimer);
+        } else{
+            //don't wait for more instructions, just go back to sleep
+            deepSleepForTime(lowBatterySleepTime * 60.0);
+        }
         server.log("sendingData");
         sendData(dataToPass);
     } 
@@ -445,12 +449,10 @@ function batteryCriticalCheck(dataTable){
         if(nv.valveState == true){
             close();
         }
-        //valve battery is critical, don't even connect to wifi
-        deepSleepForTime(criticalBatterySleepTime * 60.0);
         //return the main function; pretty much ensures imp.idle() required for deep sleep
-        return
+        return false
     } else {
-        connectAndSend(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
+        return true
     }
 }
 
@@ -478,7 +480,12 @@ function main(){
         imp.sleep(90)
     }
     local dataTable = collectData();
-    batteryCriticalCheck(dataTable);
+    if(batteryCriticalCheck(dataTable)){
+        connectAndSend(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
+    } else {
+        //valve battery is critical, don't even connect to wifi
+        deepSleepForTime(criticalBatterySleepTime * 60.0);
+    }
 }
 if(!unitTesting){
     main();
