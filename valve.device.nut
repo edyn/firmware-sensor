@@ -302,61 +302,95 @@ function receiveInstructions(instructions){
     server.log(instructions.nextCheckIn);
     server.log(instructions.iteration);
     local change = false;
+    local sleepMinimum = minimum(valveOpenMaxSleepTime,instructions.nextCheckIn);
     //if neither of the below statements 
     //TODO: battery check before opening
     try{
         switch(wakeReason){
-        //branching = 0 cases:
-        //if branching is 0, the device will:
-        //close the valve
-        //enter blinkup mode
-        case WAKEREASON_POWER_ON: 
-            if(instructions.open == true){
-                local sleepMinimum = minimum(valveOpenMaxSleepTime,instructions.nextCheckIn);
-                //disobey does nothing right now
-                disobey("Not opening because of cold boot")
 
-            }
-            break
-        case WAKEREASON_SW_RESET:
-            branching=0;
-            break
-        case WAKEREASON_SQUIRREL_ERROR:
-            branching=0;
-            break
-        case WAKEREASON_PIN1:
-            branching=0;
-            break    
-        //branching 1 means the device can skip it's previous modes
+            /////////////////////////////////////////
+            //disobey opens, deep sleep for minimum//
+            /////////////////////////////////////////
+            //Cold boot, button press, blinkup
 
-        //This should skip the blinkup period
-        case WAKEREASON_TIMER:
-            branching=1;
-            break
-        case WAKEREASON_BLINKUP:
-            branching=1;
-            break
-        case WAKEREASON_NEW_SQUIRREL:
-            branching=1;
-            break
-        case WAKEREASON_NEW_FIRMWARE:
-            branching=1;
-            break
-        //unlikely/impossible cases, but still 1
-        case WAKEREASON_SNOOZE:
-            branching=1;
-            break
-        case WAKEREASON_HW_RESET:
-            branching=1;
-            break
-        //Below this should NEVER happen, but is there to be safe
-        case null:
-            branching=1
-            server.log("Bad Wakereason");
-            break
+            //coldboot
+            case WAKEREASON_POWER_ON: 
+                nv.iteration = instructions.iteration;
+                if(instructions.open == true){
+                    //disobey does nothing right now
+                    disobey("Not opening because of cold boot");
+                }
+                deepSleepForTime(sleepMinimum * 60.0);
+                return
+                //break for good measure?
+                break
+            //button press; same as cold boot except you should also note the time:
+            case WAKEREASON_PIN1:                
+                nv.iteration = instructions.iteration;
+                nv.wakeTime = time();
+                if(instructions.open == true){
+                    //disobey does nothing right now
+                    disobey("Not opening because of button press");
+                }
+                deepSleepForTime(sleepMinimum * 60.0);
+                return
+                break    
+            //blinkup same as cold boot
+            case WAKEREASON_BLINKUP:
+                nv.iteration = instructions.iteration;
+                if(instructions.open == true){
+                    //disobey does nothing right now
+                    disobey("Not opening because of blinkup");
+                }
+                deepSleepForTime(sleepMinimum * 60.0);
+                return
+                break
+
+            ////////////////////
+            //Normal Operation//
+            ////////////////////
+            //Wake from timer, OS update, firmware update
+
+            case WAKEREASON_TIMER:
+                break
+            case WAKEREASON_NEW_SQUIRREL:
+                break
+            case WAKEREASON_NEW_FIRMWARE:
+                break
+
+            /////////////////////////////
+            //unlikely/impossible cases//
+            /////////////////////////////
+            //snooze, hardware reset, software reset, squirrel error, null
+            //behave normally? I guess?
+            //TODO: add loggly to ALL of these:
+
+            case WAKEREASON_SNOOZE:
+                break
+            case WAKEREASON_HW_RESET:
+                break
+            case WAKEREASON_SW_RESET:
+                break
+            //This should be dealt with MUCH earlier, but in case it slipped through:
+            case WAKEREASON_SQUIRREL_ERROR:
+                nv.iteration = iteration;
+                //sleep for an hour
+                deepSleepForTime(60.0 * 60.0);
+                return
+                break
+            //Below this should NEVER happen, but is there to be safe
+            case null:
+                server.log("Bad Wakereason");
+                break
+            //deafult to behave normally
+            default:
+                break
         }
-    } catch(error){
-
+    } catch(error) {
+        //TODO: make sure this is handled how we want:
+        close();
+        deepSleepForTime(60.0 * 60.0);
+        return
     }
     //check iterator vs instructions.iteration if instructions tell it to open but the iterator is frozen, don't open
     try{
