@@ -1,6 +1,7 @@
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 unitTesting <- false;
+const responsiveTimer = 20.0 * 60.0 // seconds
 const valveOpenMaxSleepTime = 1.0; //minutes
 const valveCloseMaxSleepTime = 20.0;
 const chargingPollAveraging = 15.0;
@@ -392,6 +393,7 @@ function receiveInstructions(instructions){
         deepSleepForTime(60.0 * 60.0);
         return
     }
+
     //check iterator vs instructions.iteration if instructions tell it to open but the iterator is frozen, don't open
     try{
         if(instructions.open == true && nv.iteration >= instructions.iteration){
@@ -403,7 +405,11 @@ function receiveInstructions(instructions){
             }
             server.log("Not opening due to iteration error.")
             if(!unitTesting){
-                deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+                if(time() - nv.wakeTime < responsiveTimer){
+                    deepSleepForTime(sleepMinimum * 60.0);
+                } else{
+                    deepSleepForTime(valveCloseMaxSleepTime * 60.0);   
+                }
             }
             return
         }
@@ -438,6 +444,12 @@ function receiveInstructions(instructions){
         close();
         server.log("ERROR IN VALVE STATE CHANGE! closing just in case. error is " + error);
     }
+    //if it's still in the 'responsive' timer state, sleep for sleepminimum
+    //regardless of valve state
+    if(time() - nv.wakeTime < responsiveTimer){
+        deepSleepForTime(sleepMinimum * 60.0);
+        return
+    }
     //If the valve changes state, let the backend know
     if(change == true){
         //TODO: change this to just take a second reading and send it instead
@@ -447,10 +459,6 @@ function receiveInstructions(instructions){
     //TODO: check for type safety
     //TODO: check for negative values
     if(!unitTesting){
-        //on blinkup, just sleep 5 minutes
-        if(wakeReason == 9){
-            deepSleepForTime(valveOpenMaxSleepTime * 60.0);
-        }
         if(nv.valveState == true){
             //do not allow the valve to accept times greater than defaults:
             if(instructions.nextCheckIn > valveOpenMaxSleepTime){
