@@ -69,7 +69,7 @@ function close() {
 //This is run BEFORE main loop, right after declaring the close function for safety.
 //we want to try to close the valve on any cold boot.
 if ( ! ("nv" in getroottable() && "valveState" in nv)) {
-    nv <- {valveState = false, iteration = 0}; 
+    nv <- {valveState = false, iteration = 0, wakeTime = time()}; 
     valvePinInit();
     valveConfigure();
     close();
