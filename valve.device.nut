@@ -68,6 +68,7 @@ function close() {
 
 //This is run BEFORE main loop, right after declaring the close function for safety.
 //we want to try to close the valve on any cold boot.
+//wakeTime is for relevant waketimes; blinkup, cold boot, new os, new firmware
 if ( ! ("nv" in getroottable() && "valveState" in nv)) {
     nv <- {valveState = false, iteration = 0, wakeTime = time()}; 
     valvePinInit();
@@ -282,6 +283,18 @@ function sendData(){
     agent.send("sendData", dataToSend);
 }
 
+function disobey(message){
+    //TODO: teach the valve to disobey it's masters
+}
+
+function minimum(a,b){
+    if(a < b){
+        return a
+    } else{
+        return b
+    }
+}
+
 function receiveInstructions(instructions){
     server.log("received New Instructions");
     local sleepUntil = 0;
@@ -291,7 +304,60 @@ function receiveInstructions(instructions){
     local change = false;
     //if neither of the below statements 
     //TODO: battery check before opening
+    try{
+        switch(wakeReason){
+        //branching = 0 cases:
+        //if branching is 0, the device will:
+        //close the valve
+        //enter blinkup mode
+        case WAKEREASON_POWER_ON: 
+            if(instructions.open == true){
+                local sleepMinimum = minimum(valveOpenMaxSleepTime,instructions.nextCheckIn);
+                //disobey does nothing right now
+                disobey("Not opening because of cold boot")
 
+            }
+            break
+        case WAKEREASON_SW_RESET:
+            branching=0;
+            break
+        case WAKEREASON_SQUIRREL_ERROR:
+            branching=0;
+            break
+        case WAKEREASON_PIN1:
+            branching=0;
+            break    
+        //branching 1 means the device can skip it's previous modes
+
+        //This should skip the blinkup period
+        case WAKEREASON_TIMER:
+            branching=1;
+            break
+        case WAKEREASON_BLINKUP:
+            branching=1;
+            break
+        case WAKEREASON_NEW_SQUIRREL:
+            branching=1;
+            break
+        case WAKEREASON_NEW_FIRMWARE:
+            branching=1;
+            break
+        //unlikely/impossible cases, but still 1
+        case WAKEREASON_SNOOZE:
+            branching=1;
+            break
+        case WAKEREASON_HW_RESET:
+            branching=1;
+            break
+        //Below this should NEVER happen, but is there to be safe
+        case null:
+            branching=1
+            server.log("Bad Wakereason");
+            break
+        }
+    } catch(error){
+
+    }
     //check iterator vs instructions.iteration if instructions tell it to open but the iterator is frozen, don't open
     try{
         if(instructions.open == true && nv.iteration >= instructions.iteration){
@@ -416,6 +482,7 @@ function connect(callback, timeout) {
         server.connect(callback, timeout);
     }
 }
+
 
 function main(){
     //This will only log if the imp is ALREADY connected:
