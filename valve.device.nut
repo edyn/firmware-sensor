@@ -444,16 +444,17 @@ function receiveInstructions(instructions){
         close();
         server.log("ERROR IN VALVE STATE CHANGE! closing just in case. error is " + error);
     }
+
+    //If the valve changes state, let the backend know
+    if(change == true){
+        //TODO: change this to just take a second reading and send it instead
+        agent.send("valveStateChange" , {valveOpen = nv.valveState});
+    }
     //if it's still in the 'responsive' timer state, sleep for sleepminimum
     //regardless of valve state
     if(time() - nv.wakeTime < responsiveTimer){
         deepSleepForTime(sleepMinimum * 60.0);
         return
-    }
-    //If the valve changes state, let the backend know
-    if(change == true){
-        //TODO: change this to just take a second reading and send it instead
-        agent.send("valveStateChange" , {valveOpen = nv.valveState});
     }
     //Check for valid times
     //TODO: check for type safety
