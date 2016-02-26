@@ -405,6 +405,8 @@ function receiveInstructions(instructions){
     }
 
     //check iterator vs instructions.iteration if instructions tell it to open but the iterator is frozen, don't open
+    //TODO: REMEMBER TO UNCOMMENT THIS CHUNK OF CODE!!!
+    /*FROM HERE
     try{
         if(instructions.open == true && nv.iteration >= instructions.iteration){
             //This is embedded within the above if statement to prevent redundant close()s
@@ -428,6 +430,8 @@ function receiveInstructions(instructions){
         close();
         server.log("ERROR IN VALVE ITERATION CHECK! closing just in case. error is " + error);
     }
+    TO HERE*/
+
     //Keep nv iteration current with what the backend thinks the iteration is:
     nv.iteration = instructions.iteration;
     //Valve State Changing
