@@ -1,6 +1,6 @@
 testsPassed <- [];
 testsFailed <- [];
-
+sampleDataGlobal <- collectData()
 //TODO: add a test where timer is greater than time it should sleep.
 
 function logTest(inputStr = "", passFail = false, inputError = false){
@@ -244,7 +244,7 @@ function testValve(){
     //valve closes if it fails to connect:
     open();
     try{
-        onConnectedCallback(0);
+        onConnectedCallback(0, sampleDataGlobal);
         if(nv.valveState == false){
             logPass("Valve Disconnect");
         }
@@ -343,11 +343,42 @@ function testCollectData(){
     }
 }
 
+function testBatterySafety(){
+    local sampleData = collectData();
+    try{
+        sampleData.batteryVoltage = batteryCritical - 0.1;
+        open();
+        imp.sleep(0.2);
+        batteryCriticalCheck(sampleData);
+        if(nv.valveState == false && mostRecentDeepSleepCall == criticalBatterySleepTime * 60.0){
+            logPass("BatteryCriticalCheck");
+        } else {
+            logFail("BatteryCriticalCheck");
+        }
+    } catch(error){
+        logFail("BatteryCriticalCheck", error);
+    }
+    try{
+        sampleData.batteryVoltage = batteryLow - 0.1;
+        open();
+        imp.sleep(0.2);
+        batteryLowCheck(sampleData);
+        if(nv.valveState == false && mostRecentDeepSleepCall == lowBatterySleepTime * 60.0){
+            logPass("BatteryLowCheck");
+        } else {
+            logFail("BatteryLowCheck");
+        } 
+    } catch(error){
+        logFail("BatteryLowCheck", error)
+    }
+}
+
 receiveInstructionsTests();
 testLEDs();
 testValve();
 testCharger();
 testCollectData();
+testBatterySafety();
 imp.wakeup(10,function(){
     server.log("\nDevice Tests Failed:");
     server.log(testsFailed.len() + " tests failed out of " + (testsPassed.len() + testsFailed.len()) + " tests total");
