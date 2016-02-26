@@ -27,7 +27,7 @@ function sendDataFromDevice(data) {
     //urlReadings is valid, readingsURL is valid, readingsUrl is not.
     local req = http.post(readingsURL, headers, jsonData);
     local res = req.sendsync();
-    if (res.statuscode != 200) {
+    if (res.statuscode != 200 && res.statuscode != 201) {
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
     } else {
@@ -73,7 +73,7 @@ function sendDataHandling(data){
             //if fetching instructions succeeds
             }
             else{
-                server.log("sending instructions to device");
+                server.log("sending instructions to device: " + instructions.open + " for " + instructions.nextCheckIn + "minutes.");
                 device.send("receiveInstructions", instructions);
                 return 1
             }
@@ -103,7 +103,7 @@ function valveStateChangeHandling(data){
     local req = http.post(valveStateURL, headers, jsonData);
     local res = req.sendsync();
     //TODO: make generic handling function for HTTP requests
-    if (res.statuscode != 200) {
+    if (res.statuscode != 200 && res.statuscode != 201) {
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
     } else {
@@ -116,19 +116,20 @@ device.on("valveStateChange", valveStateChangeHandling);
 
 function getSuggestedValveState(){
     //TODO: add auth stuff
-    local url = firebase + "/" + macAgentSide + "/" + pathForValveNextAction;
+    local url = firebase + "/" + pathForValveNextAction;
     local request = http.get(url);
     local response = request.sendsync();
     local statusCode = response.statuscode;
     local resBod = response.body;
     resBod = http.jsondecode(resBod);
     //TODO: make generic handling function for HTTP requests
-    if(statusCode != 200){
-        server.log("Failed to fetch next command");
+    if(statusCode != 200 && statusCode != 201){
+        server.log("Failed to fetch next command, status code: " + statusCode);
         //anything that is not false or 0 in squirrel evaluates as True
         return false
     }
     else{
+        server.log("Readings sucessfully retrieved")
         local resBod = response.body;
         resBod = http.jsondecode(resBod);
         //resBod has two pairs:
