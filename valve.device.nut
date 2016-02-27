@@ -510,6 +510,7 @@ function batteryLowCheck(dataToPass){
         if(nv.valveState == true){
              close();
         }
+        disobey("Not opening because of low battery");
         return false
     } else {
         return true
