@@ -14,6 +14,11 @@ defaultSleepTime <- 20.0 //miutes
 pathForValveState <- "valveState.json"
 pathForValveNextAction <- "valves/v1/valves-now/" + macAgentSide + ".json"
 pathForValveData <- "http://api.valve.stag.edyn.com/readings/"+macAgentSide;
+//This is the FW bandaid that retries if a required field for valve instructions is missing
+//sample error message that would trigger this: the index 'nextCheckIn' does not exist (line 76)
+fetchInstructionsTryNumberMax <- 1;
+//wait this long before retrying:
+fetchInstructionsRetryTimer <- 0.5;
 
 function sendDataFromDevice(data) {
     local readingsURL = pathForValveData;
@@ -36,7 +41,7 @@ function sendDataFromDevice(data) {
     }
 }
 
-function sendDataHandling(data){
+function sendDataHandling(data, tryNumber){
 
     //TODO: add auth stuff
     server.log("Received readings data from device");
@@ -80,14 +85,21 @@ function sendDataHandling(data){
         }
 
     } catch(error) {
-        server.log("Error from device.on(senddata), sending default instructions");
-        device.send("receiveInstructions", {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0});
         server.log(error);
+        //retry on error 
+        if(tryNumber < fetchInstructionsTryNumberMax){
+            imp.sleep(0.5)
+            server.log("trying fetch instructions for the " + (tryNumber + 1) + "time.");
+            sendDataHandling(data, (tryNumber + 1));
+        } else {
+            server.log("Error from device.on(senddata), sending default instructions");
+            device.send("receiveInstructions", {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0});
+        }
     }
 }
 
-
-device.on("sendData", sendDataHandling);
+//The parens and curlies can be a little confusing, might want to expand them?
+device.on("sendData", function(data){sendDataHandling(data,0);});
 
 //TODO: we could add "reason" to the data passed to this function if we wanted, I.E. "unexpected"
 function valveStateChangeHandling(data){
