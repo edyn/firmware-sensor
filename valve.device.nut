@@ -524,7 +524,7 @@ function onConnectedCallback(state, dataToPass) {
             //not sure if agent.on works inside functions, but it should?
             agent.on("receiveInstructions", receiveInstructions);
             //The below statement works as a "timeout" for receive instructions
-            imp.wakeup(deepSleepForTime(valveCloseMaxSleepTime * 60.0), receiveInstructionsWaitTimer);
+            imp.wakeup(receiveInstructionsWaitTimer,function(){deepSleepForTime(valveCloseMaxSleepTime * 60.0)});
         } else{
             //don't wait for more instructions, just go back to sleep
             deepSleepForTime(lowBatterySleepTime * 60.0);
