@@ -105,7 +105,8 @@ function fetchAndSendInstructions(tryNumber){
             fetchAndSendInstructions(tryNumber + 1);
         } else {
             server.log("Repeated error from fetchAndSendInstructions(), sending default instructions");
-            device.send("receiveInstructions", {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0});
+            local defaultInstructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0};
+            device.send("receiveInstructions", defaultInstructions);
         }
     }
 }
