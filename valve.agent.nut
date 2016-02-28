@@ -4,6 +4,7 @@
 //GENERAL TODOs:
 //add function to send info to loggly
 //send all data from globalDataStore and globalUnauthorizedActionsStore
+//TRACK ERRORS THROUGH LOGGLY ASAP
 
 macAgentSide <- imp.configparams.deviceid;
 firebase <- "https://edynstaging.firebaseio.com/";
@@ -14,6 +15,11 @@ defaultSleepTime <- 20.0 //miutes
 pathForValveState <- "valveState.json"
 pathForValveNextAction <- "valves/v1/valves-now/" + macAgentSide + ".json"
 pathForValveData <- "http://api.valve.stag.edyn.com/readings/"+macAgentSide;
+//This is the FW bandaid that retries if a required field for valve instructions is missing
+//sample error message that would trigger this: the index 'nextCheckIn' does not exist (line 76)
+fetchInstructionsTryNumberMax <- 1;
+//wait this long before retrying:
+fetchInstructionsRetryTimer <- 0.5;
 
 function sendDataFromDevice(data) {
     local readingsURL = pathForValveData;
@@ -62,30 +68,48 @@ function sendDataHandling(data){
         }
         //if sending data to server succeeds
         else{
-            local instructions = getSuggestedValveState();
-            //if fetching instructions fails
-            if(!instructions){
-                server.log("could not fetch instructions");
-                //Adding a default case for in case it could not fetch instructions from backend
-                instructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0}
-                device.send("receiveInstructions", instructions);
-                return 0
-            //if fetching instructions succeeds
-            }
-            else{
-                server.log("sending instructions to device: " + instructions.open + " for " + instructions.nextCheckIn + "minutes.");
-                device.send("receiveInstructions", instructions);
-                return 1
-            }
+            fetchAndSendInstructions(0)
         }
-
-    } catch(error) {
-        server.log("Error from device.on(senddata), sending default instructions");
-        device.send("receiveInstructions", {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0});
+    //if there's an error in this function, just tell the valve to go to sleep.
+    } catch(error){
         server.log(error);
+        instructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0};
+        //TODO: add receive instructions error handling.
+        device.send("receiveInstructions", instructions);
     }
 }
 
+function fetchAndSendInstructions(tryNumber){
+    try{
+        local instructions = getSuggestedValveState();
+        //if fetching instructions fails
+        if(!instructions){
+            server.log("could not fetch instructions");
+            //Adding a default case for in case it could not fetch instructions from backend
+            instructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0}
+            device.send("receiveInstructions", instructions);
+            return 0
+            //if fetching instructions succeeds
+        } else {
+            server.log("sending instructions to device: " + instructions.open + " for " + instructions.nextCheckIn + "minutes.");
+            device.send("receiveInstructions", instructions);
+            return 1
+        }    
+    } catch(error) {
+        server.log("Error in fetchAndSendInstructions:")
+        server.log(error);
+        //retry on error 
+        if(tryNumber < fetchInstructionsTryNumberMax){
+            imp.sleep(0.5)
+            server.log("trying fetch instructions for the " + (tryNumber + 1) + "time.");
+            fetchAndSendInstructions(tryNumber + 1);
+        } else {
+            server.log("Repeated error from fetchAndSendInstructions(), sending default instructions");
+            local defaultInstructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0};
+            device.send("receiveInstructions", defaultInstructions);
+        }
+    }
+}
 
 device.on("sendData", sendDataHandling);
 
