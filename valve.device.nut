@@ -428,6 +428,8 @@ function receiveInstructions(instructions){
     catch(error){
         close();
         server.log("ERROR IN VALVE ITERATION CHECK! closing just in case. error is " + error);
+        deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+        return 
     }
     
     //Keep nv iteration current with what the backend thinks the iteration is:
