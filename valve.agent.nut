@@ -110,7 +110,6 @@ function fetchAndSendInstructions(tryNumber){
     }
 }
 
-//The parens and curlies can be a little confusing, might want to expand them?
 device.on("sendData", sendDataHandling(data));
 
 //TODO: we could add "reason" to the data passed to this function if we wanted, I.E. "unexpected"
