@@ -42,7 +42,7 @@ function sendDataFromDevice(data) {
     }
 }
 
-function sendDataHandling(data, tryNumber){
+function sendDataHandling(data){
 
     //TODO: add auth stuff
     server.log("Received readings data from device");
@@ -111,7 +111,7 @@ function fetchAndSendInstructions(tryNumber){
 }
 
 //The parens and curlies can be a little confusing, might want to expand them?
-device.on("sendData", function(data){sendDataHandling(data,0);});
+device.on("sendData", sendDataHandling(data));
 
 //TODO: we could add "reason" to the data passed to this function if we wanted, I.E. "unexpected"
 function valveStateChangeHandling(data){
