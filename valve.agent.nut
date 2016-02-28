@@ -110,7 +110,7 @@ function fetchAndSendInstructions(tryNumber){
     }
 }
 
-device.on("sendData", sendDataHandling(data));
+device.on("sendData", sendDataHandling);
 
 //TODO: we could add "reason" to the data passed to this function if we wanted, I.E. "unexpected"
 function valveStateChangeHandling(data){
