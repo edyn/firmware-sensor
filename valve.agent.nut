@@ -56,6 +56,18 @@ function sendDataHandling(data){
     //TODO: add auth stuff
     server.log("Received readings data from device");
     try {
+        if("batteryVoltage" in data){
+            server.log("Battery Voltage: "data.batteryVoltage);
+        }
+        if("wakeReason" in data){
+            server.log("Wake Reason: "data.wakeReason);
+        }
+        if("solarVoltage" in data){
+            server.log("Solar Voltage: " data.solarVoltage);
+        }
+        if("rssi" in data){
+            server.log("RSSI: " data.rssi);
+        }
         //send to server
         //"Do we want to try this if 'senddatafromdevice()'failed?"
         //Good question, I'm going to implement it right now as "tell the valve to sleep a default amount of time"
