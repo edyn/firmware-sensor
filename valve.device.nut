@@ -15,6 +15,7 @@ const criticalBatterySleepTime = 360;
 const receiveInstructionsWaitTimer = 30; 
 wakeReason <- hardware.wakereason();
 mostRecentDeepSleepCall <- 0;
+blinkupTimer <- 90;
 
 /**************
 Valve Functions
@@ -602,7 +603,7 @@ function main(){
     //If onWakeup() returns 0, go into 'blinkup phase' 
     if(!onWakeup()){
         close()
-        imp.sleep(90)
+        imp.sleep(blinkupTimer)
     }
     local dataTable = collectData();
     if(batteryCriticalCheck(dataTable)){
