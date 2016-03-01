@@ -294,8 +294,16 @@ function sendData(dataToSend){
     agent.send("sendData", dataToSend);
 }
 
-function disobey(message){
-    //TODO: teach the valve to disobey it's masters
+function disobey(message, dataToPass){
+    try{
+        server.log("disobeying because " + message);
+        dataToPass.disobeyReason <- message;
+        sendData(dataToPass);
+    } catch (error){
+        //this is actually a VERY high priority error
+        //TODO: loggly this
+        server.log("Error in disobey: " + error);
+    }
 }
 
 function minimum(a,b){
@@ -306,7 +314,7 @@ function minimum(a,b){
     }
 }
 
-function receiveInstructions(instructions){
+function receiveInstructions(instructions, dataToPass){
     server.log("received New Instructions");
     local sleepUntil = 0;
     server.log(instructions.open);
@@ -329,7 +337,7 @@ function receiveInstructions(instructions){
                 nv.iteration = instructions.iteration;
                 if(instructions.open == true){
                     //disobey does nothing right now
-                    disobey("Not opening because of cold boot");
+                    disobey("Not opening because of cold boot", dataToPass);
                 }
                 deepSleepForTime(sleepMinimum * 60.0);
                 return
@@ -341,7 +349,7 @@ function receiveInstructions(instructions){
                 nv.wakeTime = time();
                 if(instructions.open == true){
                     //disobey does nothing right now
-                    disobey("Not opening because of button press");
+                    disobey("Not opening because of button press", dataToPass);
                 }
                 deepSleepForTime(sleepMinimum * 60.0);
                 return
@@ -351,7 +359,7 @@ function receiveInstructions(instructions){
                 nv.iteration = instructions.iteration;
                 if(instructions.open == true){
                     //disobey does nothing right now
-                    disobey("Not opening because of blinkup");
+                    disobey("Not opening because of blinkup", dataToPass);
                 }
                 deepSleepForTime(sleepMinimum * 60.0);
                 return
@@ -523,9 +531,9 @@ function onConnectedCallback(state, dataToPass) {
         if(batteryLowCheck(dataToPass)){
             //TODO: No asynchronous functions inside synchronous-appearing functions allowed.
             //not sure if agent.on works inside functions, but it should?
-            agent.on("receiveInstructions", receiveInstructions);
+            agent.on("receiveInstructions", function(instructions){receiveInstructions(instructions, dataToPass)});
             //The below statement works as a "timeout" for receive instructions
-            imp.wakeup(receiveInstructionsWaitTimer,function(){deepSleepForTime(valveCloseMaxSleepTime * 60.0)});
+            imp.wakeup(deepSleepForTime(valveCloseMaxSleepTime * 60.0), receiveInstructionsWaitTimer);
         } else{
             //don't wait for more instructions, just go back to sleep
             deepSleepForTime(lowBatterySleepTime * 60.0);
@@ -607,4 +615,3 @@ function main(){
 if(!unitTesting){
     main();
 }
-
