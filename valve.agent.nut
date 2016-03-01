@@ -21,6 +21,15 @@ fetchInstructionsTryNumberMax <- 1;
 //wait this long before retrying:
 fetchInstructionsRetryTimer <- 0.5;
 
+function disobeyInData(data){
+    if("disobeyReason" in data){
+        server.log("Device Disobeyed");
+        return true
+    } else {
+        return false
+    }
+}
+
 function sendDataFromDevice(data) {
     local readingsURL = pathForValveData;
     local headers = {
@@ -64,18 +73,24 @@ function sendDataHandling(data){
             server.log("Problem sending data to the backend!!")
             instructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0};
             //TODO: add receive instructions error handling.
-            device.send("receiveInstructions", instructions);
+            if(!disobeyInData(data)){
+                device.send("receiveInstructions", instructions);
+            }
         }
         //if sending data to server succeeds
         else{
-            fetchAndSendInstructions(0)
+            if(!disobeyInData(data)){
+                fetchAndSendInstructions(0)
+            }
         }
     //if there's an error in this function, just tell the valve to go to sleep.
     } catch(error){
         server.log(error);
         instructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0};
         //TODO: add receive instructions error handling.
-        device.send("receiveInstructions", instructions);
+        if(!disobeyInData){
+            device.send("receiveInstructions", instructions);
+        }
     }
 }
 
