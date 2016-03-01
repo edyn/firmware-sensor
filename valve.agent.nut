@@ -23,7 +23,7 @@ fetchInstructionsRetryTimer <- 0.5;
 
 function disobeyInData(data){
     if("disobeyReason" in data){
-        server.log("Device Disobeyed");
+        server.log("Device Disobeyed" + data.disobeyReason);
         return true
     } else {
         return false
