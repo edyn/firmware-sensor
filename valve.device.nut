@@ -16,7 +16,8 @@ const receiveInstructionsWaitTimer = 30;
 wakeReason <- hardware.wakereason();
 mostRecentDeepSleepCall <- 0;
 blinkupTimer <- 90;
-
+watchDogTimeOut <- 130; //Equals 90 second blinkup + 30 second connect + 10 seconds of whatever else
+watchDogSleepTime <- 20.0;//arbitrarily chosen to be 20 minutes
 /**************
 Valve Functions
 ***************/
@@ -613,6 +614,17 @@ function main(){
         deepSleepForTime(criticalBatterySleepTime * 60.0);
     }
 }
+
+function softwareWatchdogTimer(){
+    if(server.isconnected()){
+        //TODO: make this loggly:
+        server.log("WATCHDOG TIMER TOOK OVER! SOMETHING WENT BAD!")
+    }
+    deepSleepForTime(watchDogSleepTime * 60.0);
+    return
+}
+
 if(!unitTesting){
+    imp.wakeup(watchDogTimeOut, softwareWatchdogTimer);
     main();
 }
