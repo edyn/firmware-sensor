@@ -195,6 +195,9 @@ function valveStateChangeHandling(data){
 }
 
 device.on("valveStateChange", valveStateChangeHandling);
+device.on("logglyLog", Loggly.log);//not sure if this will work, gotta test it
+device.on("logglyWarn", Loggly.warn);//not sure if this will work, gotta test it
+device.on("logglyError", Loggly.err);//not sure if this will work, gotta test it
 
 function getSuggestedValveState(){
     //TODO: add auth stuff

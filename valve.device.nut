@@ -215,7 +215,29 @@ function getChargingStatus(){
     return {battery = batteryReadingAverage, solar = solarReadingAverage, amperage = chargeCurrentAverage}
 }
 
+function logglyLog(logTable = {}, forceConnect = false){
+    if(server.isConnected()){
+        agent.send("logglyLog", logTable)
+    } else if(forceConnect){
+        //connect and send loggly stuff
+    }
+}
 
+function logglyWarn(logTable = {}, forceConnect = false){
+    if(server.isConnected()){
+        agent.send("logglyWarn", logTable)
+    } else if(forceConnect){
+        //connect and send loggly stuff
+    }
+}
+
+function logglyError(logTable = {}, forceConnect = false){
+    if(server.isConnected()){
+        agent.send("logglyError", logTable)
+    } else if(forceConnect){
+        //connect and send loggly stuff
+    }
+}
 
 //Red Led Functions
 function redConfigure(){
