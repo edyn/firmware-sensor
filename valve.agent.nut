@@ -21,8 +21,27 @@ fetchInstructionsTryNumberMax <- 1;
 //wait this long before retrying:
 fetchInstructionsRetryTimer <- 0.5;
 
+//Loggly stuff:
+logglyKey <- "0127ef83-0c31-4185-afc1-4438df3258fb"
+loggly <- Loggly(logglyKey, { 
+    "tags" : "valveLogs",
+    "timeout" : 60,
+    "limit" : 20 //arbitrary 
+});
+//example loggly command:
+//    loggly.log({
+//        "battery" : 4,
+//        "power" : 1,
+//        "rssi" : 2,
+//        "msg" : 3
+//    });
+
+
 function disobeyInData(data){
     if("disobeyReason" in data){
+        loggly.log({
+            "disobey" : data.disobeyReason,
+        });
         server.log("Device Disobeyed");
         return true
     } else {
@@ -42,7 +61,17 @@ function sendDataFromDevice(data) {
     //urlReadings is valid, readingsURL is valid, readingsUrl is not.
     local req = http.post(readingsURL, headers, jsonData);
     local res = req.sendsync();
+    if(data.wakeReason == 5){//Waking from squirrel runtime error
+        Loggly.err({
+            "Error" : "Valve waking from error"
+        });
+    }
     if (res.statuscode != 200 && res.statuscode != 201) {
+        Loggly.warn({
+            "Warning" : "Error sending data",
+            "function" : "sendDataFromDevice (agent)",
+            "status code" : statusCode
+        });
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
     } else {
@@ -86,6 +115,10 @@ function sendDataHandling(data){
     //if there's an error in this function, just tell the valve to go to sleep.
     } catch(error){
         server.log(error);
+        Loggly.err({
+            "error" : error,
+            "function" : "sendDataHandling" 
+        });
         instructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0};
         //TODO: add receive instructions error handling.
         if(!disobeyInData){
@@ -112,6 +145,11 @@ function fetchAndSendInstructions(tryNumber){
         }    
     } catch(error) {
         server.log("Error in fetchAndSendInstructions:")
+        Loggly.err({
+            "Error" : error,
+            "in function" : "fetchAndSendInstructions (agent)",
+            "Try number" : tryNumber
+        });
         server.log(error);
         //retry on error 
         if(tryNumber < fetchInstructionsTryNumberMax){
@@ -143,6 +181,11 @@ function valveStateChangeHandling(data){
     local res = req.sendsync();
     //TODO: make generic handling function for HTTP requests
     if (res.statuscode != 200 && res.statuscode != 201) {
+        Loggly.warn({
+            "Warning" : "Error sending message",
+            "function" : "valveStateChangeHandling (agent)",
+            "status code" : statusCode
+        });
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
     } else {
@@ -163,6 +206,11 @@ function getSuggestedValveState(){
     resBod = http.jsondecode(resBod);
     //TODO: make generic handling function for HTTP requests
     if(statusCode != 200 && statusCode != 201){
+        Loggly.warn({
+            "Warning" : "Failed to fetch next command",
+            "function" : "getSuggestedValveState (agent)",
+            "status code" : statusCode
+        });
         server.log("Failed to fetch next command, status code: " + statusCode);
         //anything that is not false or 0 in squirrel evaluates as True
         return false
@@ -181,6 +229,9 @@ function getSuggestedValveState(){
 
 device.onconnect(function() { 
     server.log("Device connected to agent");
+    Loggly.log({
+        "Device Connected" : time()
+    });
 });
 
 
