@@ -1,6 +1,8 @@
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 unitTesting <- false;
+const errorSleepTime = 20.0; //minutes (arbitrary)
+const logglyConnectTimeout = 20.0; //seconds
 const responsiveTimer = 1200.0; // 1200 seconds = 20 minutes
 const sleepOnErrorTime = 3600.0;
 const valveOpenMaxSleepTime = 1.0; //minutes
@@ -15,7 +17,7 @@ const criticalBatterySleepTime = 360;
 const receiveInstructionsWaitTimer = 30; 
 wakeReason <- hardware.wakereason();
 mostRecentDeepSleepCall <- 0;
-
+macAddress <- imp.getmacaddress();
 /**************
 Valve Functions
 ***************/
@@ -215,11 +217,32 @@ function getChargingStatus(){
     return {battery = batteryReadingAverage, solar = solarReadingAverage, amperage = chargeCurrentAverage}
 }
 
+function forcedLogglyConnect(state, logTable, logLevel){
+    // If we're connected...
+    if (state == SERVER_CONNECTED) {
+        agent.send(logLevel, logTable);
+        return
+    } 
+    //if we're not connected...
+    else {
+        //Valve fails to connect:
+        if(nv.valveState == true){
+            close();
+        }
+        deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+        return
+    }
+}
+
 function logglyLog(logTable = {}, forceConnect = false){
     if(server.isConnected()){
         agent.send("logglyLog", logTable)
     } else if(forceConnect){
         //connect and send loggly stuff
+        //really no reason we'd ever force a connect for a regular log...
+        server.connect(function (connectStatus){
+            forcedLogglyConnect(connectStatus, logTable, "logglyLog");
+        }, timeout);
     }
 }
 
@@ -228,6 +251,9 @@ function logglyWarn(logTable = {}, forceConnect = false){
         agent.send("logglyWarn", logTable)
     } else if(forceConnect){
         //connect and send loggly stuff
+        server.connect(function (connectStatus){
+            forcedLogglyConnect(connectStatus, logTable, "logglyWarn");
+        }, timeout);
     }
 }
 
@@ -236,6 +262,9 @@ function logglyError(logTable = {}, forceConnect = false){
         agent.send("logglyError", logTable)
     } else if(forceConnect){
         //connect and send loggly stuff
+        server.connect(function (connectStatus){
+            forcedLogglyConnect(connectStatus, logTable, "logglyError");
+        }, timeout);
     }
 }
 
@@ -285,12 +314,28 @@ device-side API functions
 //function to simplify our deep sleep calls
 function deepSleepForTime(inputTime){
     //TODO: add some robust error handling to this function in particular
-    if(!unitTesting){
-        imp.onidle(function() {
-            server.sleepfor(inputTime);
+    try{
+        if(!unitTesting){
+            imp.onidle(function() {
+                server.sleepfor(inputTime);
+            });
+        } else {
+            mostRecentDeepSleepCall = inputTime;
+        }
+    } catch(error) {        
+        if(nv.valveState){
+            close();
+        }
+        logglyError({
+            "error" : error,
+            "function" : "deepSleepForTime",
+            "device" : macAddress
         });
-    } else {
-        mostRecentDeepSleepCall = inputTime;
+        //this should be less dependent on external variables
+        imp.onidle(function() {
+            server.sleepfor(1200);
+        });
+        return
     }
 }
 
@@ -321,9 +366,15 @@ function disobey(message, dataToPass){
         server.log("disobeying because " + message);
         dataToPass.disobeyReason <- message;
         sendData(dataToPass);
-    } catch (error){
-        //this is actually a VERY high priority error
-        //TODO: loggly this
+    } catch (error){        
+        if(nv.valveState){
+            close();
+        }
+        logglyError({
+            "error" : error,
+            "function" : "disobey",
+            "device" : macAddress
+        })
         server.log("Error in disobey: " + error);
     }
 }
@@ -429,7 +480,14 @@ function receiveInstructions(instructions, dataToPass){
         }
     } catch(error) {
         //TODO: make sure this is handled how we want:
-        close();
+        if(nv.valveState){
+            close();
+        }
+        logglyError({
+            "error" : error,
+            "function" : "receiveInstructions (wakereason switch)",
+            "device" : macAddress
+        });
         deepSleepForTime(sleepOnErrorTime);
         return
     }
@@ -456,7 +514,14 @@ function receiveInstructions(instructions, dataToPass){
         }
     }
     catch(error){
-        close();
+        if(nv.valveState){
+            close();
+        }
+        logglyError({
+            "error" : error,
+            "function" : "receiveInstructions (iteration check)",
+            "device" : macAddress
+        });
         server.log("ERROR IN VALVE ITERATION CHECK! closing just in case. error is " + error);
         deepSleepForTime(valveCloseMaxSleepTime * 60.0);
         return 
@@ -485,52 +550,73 @@ function receiveInstructions(instructions, dataToPass){
         }
     }
     catch(error){
-        close();
+        if(nv.valveState){
+            close();
+        }
+        logglyError({
+            "error" : error,
+            "function" : "receiveInstructions (process instructions)",
+            "device" : macAddress
+        });
         server.log("ERROR IN VALVE STATE CHANGE! closing just in case. error is " + error);
-    }
-
-    //If the valve changes state, let the backend know
-    if(change == true){
-        //TODO: change this to just take a second reading and send it instead
-        agent.send("valveStateChange" , {valveOpen = nv.valveState});
-    }
-    //if it's still in the 'responsive' timer state, sleep for sleepminimum
-    //regardless of valve state
-    if(time() - nv.wakeTime < responsiveTimer){
-        deepSleepForTime(sleepMinimum * 60.0);
+        deepSleepForTime(errorSleepTime * 60.0);
         return
     }
-    //Check for valid times
-    //TODO: check for type safety
-    //TODO: check for negative values
-    if(!unitTesting){
-        if(nv.valveState == true){
-            //do not allow the valve to accept times greater than defaults:
-            if(instructions.nextCheckIn > valveOpenMaxSleepTime){
-                deepSleepForTime(valveOpenMaxSleepTime * 60.0);
-                return 
-            }
-            //The next check in time is valid:
-            else{
-                deepSleepForTime(instructions.nextCheckIn * 60.0);
-                return 
-            }
+    try{
+        //If the valve changes state, let the backend know
+        if(change == true){
+            //TODO: change this to just take a second reading and send it instead
+            agent.send("valveStateChange" , {valveOpen = nv.valveState});
         }
-        //Closed Case:
-        else if(nv.valveState == false){
-            //do not allow the valve to accept times greater than defaults:
-            if(instructions.nextCheckIn > valveCloseMaxSleepTime){
-                deepSleepForTime(valveCloseMaxSleepTime * 60.0);
-                return 
-            }
-            //The next check in time is valid:
-            else{
-                deepSleepForTime(instructions.nextCheckIn * 60.0);
-                return 
-            }
+        //if it's still in the 'responsive' timer state, sleep for sleepminimum
+        //regardless of valve state
+        if(time() - nv.wakeTime < responsiveTimer){
+            deepSleepForTime(sleepMinimum * 60.0);
+            return
         }
-        //this should NEVER occur, but is here for safety's sake
-        deepSleepForTime(valveOpenMaxSleepTime * 60.0);
+        //Check for valid times
+        //TODO: check for type safety
+        //TODO: check for negative values
+        if(!unitTesting){
+            if(nv.valveState == true){
+                //do not allow the valve to accept times greater than defaults:
+                if(instructions.nextCheckIn > valveOpenMaxSleepTime){
+                    deepSleepForTime(valveOpenMaxSleepTime * 60.0);
+                    return 
+                }
+                //The next check in time is valid:
+                else{
+                    deepSleepForTime(instructions.nextCheckIn * 60.0);
+                    return 
+                }
+            }
+            //Closed Case:
+            else if(nv.valveState == false){
+                //do not allow the valve to accept times greater than defaults:
+                if(instructions.nextCheckIn > valveCloseMaxSleepTime){
+                    deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+                    return 
+                }
+                //The next check in time is valid:
+                else{
+                    deepSleepForTime(instructions.nextCheckIn * 60.0);
+                    return 
+                }
+            }
+            //this should NEVER occur, but is here for safety's sake
+            deepSleepForTime(valveOpenMaxSleepTime * 60.0);
+        }
+    } catch(error) {
+        if(nv.valveState){
+            close();
+        }
+        logglyError({
+            "error" : error,
+            "function" : "receiveInstructions (sleep determination)",
+            "device" : macAddress
+        });
+        deepSleepForTime(errorSleepTime * 60.0);
+        return
     }
 }
 
@@ -570,6 +656,7 @@ function onConnectedCallback(state, dataToPass) {
             close();
         }
         deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+        return
     }
 }
 
@@ -606,32 +693,51 @@ function batteryCriticalCheck(dataTable){
 function main(){
     //This will only log if the imp is ALREADY connected:
     server.log("main")
-    imp.enableblinkup(true)
-    blueConfigure();
-    blueOn();
-    redConfigure();
-    redOn();
-    greenConfigure();
-    greenOn();
-    chargingConfigure();
-    valvePinInit();
-    valveConfigure();
-    hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){
-        if(nv.valveState == true){
+    try{
+        imp.enableblinkup(true)
+        blueConfigure();
+        blueOn();
+        redConfigure();
+        redOn();
+        greenConfigure();
+        greenOn();
+        chargingConfigure();
+        valvePinInit();
+        valveConfigure();
+        hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){
+            if(nv.valveState == true){
+                close();
+            }
+        });
+
+        //If onWakeup() returns 0, go into 'blinkup phase'
+
+        if(!onWakeup()){
+            close()
+            imp.sleep(90)
+        }
+        local dataTable = collectData();
+        if(batteryCriticalCheck(dataTable)){
+            connectAndSend(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
+        } else {
+            //valve battery is critical, don't even connect to wifi
+            deepSleepForTime(criticalBatterySleepTime * 60.0);
+        }
+    //This actually catches a huge amount of potential errors because it covers connectAndSend:
+    } catch(error) {
+        //This will need to have a forced connect:
+        if(nv.valveState){
             close();
         }
-    });
-    //If onWakeup() returns 0, go into 'blinkup phase' 
-    if(!onWakeup()){
-        close()
-        imp.sleep(90)
-    }
-    local dataTable = collectData();
-    if(batteryCriticalCheck(dataTable)){
-        connectAndSend(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
-    } else {
-        //valve battery is critical, don't even connect to wifi
-        deepSleepForTime(criticalBatterySleepTime * 60.0);
+        logglyError({
+            "error" : error,
+            "function" : "initializations and connect",
+            "device" : macAddress
+        }, true); //this 'true' is to enable force connect
+        //TODO: this error case can force a connect regardless of battery critical state, you might want to change this in the future!!!
+        deepSleepForTime(errorSleepTime * 60.0);
+        //return from main pretty much guarantees that it will go to sleep right away
+        return
     }
 }
 if(!unitTesting){
