@@ -42,7 +42,7 @@ function sendDataFromDevice(data) {
     //urlReadings is valid, readingsURL is valid, readingsUrl is not.
     local req = http.post(readingsURL, headers, jsonData);
     local res = req.sendsync();
-    if (res.statuscode != 200 && res.statuscode != 201) {
+    if (res.statuscode != 200 && res.statuscode != 201 && statusCode != 202) {
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
     } else {
@@ -154,7 +154,7 @@ function valveStateChangeHandling(data){
     local req = http.post(valveStateURL, headers, jsonData);
     local res = req.sendsync();
     //TODO: make generic handling function for HTTP requests
-    if (res.statuscode != 200 && res.statuscode != 201) {
+    if (res.statuscode != 200 && res.statuscode != 201 && statusCode != 202) {
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
     } else {
@@ -174,7 +174,7 @@ function getSuggestedValveState(){
     local resBod = response.body;
     resBod = http.jsondecode(resBod);
     //TODO: make generic handling function for HTTP requests
-    if(statusCode != 200 && statusCode != 201){
+    if(statusCode != 200 && statusCode != 201 && statusCode != 202){
         server.log("Failed to fetch next command, status code: " + statusCode);
         //anything that is not false or 0 in squirrel evaluates as True
         return false
