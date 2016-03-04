@@ -36,7 +36,7 @@ loggly <- Loggly(logglyKey, {
 //        "msg" : 3
 //    });
 
-funtion deviceLogglyLog(logTable){
+function deviceLogglyLog(logTable){
     logTable.macAddress <- macAgentSide;
     loggly.log(logTable);
 }
