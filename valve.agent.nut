@@ -99,7 +99,7 @@ function sendDataFromDevice(data) {
 }
 
 function sendDataHandling(data){
-
+    local instructions ={}
     //TODO: add auth stuff
     server.log("Received readings data from device");
     try {
