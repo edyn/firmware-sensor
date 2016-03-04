@@ -21,8 +21,42 @@ fetchInstructionsTryNumberMax <- 1;
 //wait this long before retrying:
 fetchInstructionsRetryTimer <- 0.5;
 
+//Loggly stuff:
+logglyKey <- "0127ef83-0c31-4185-afc1-4438df3258fb"
+loggly <- Loggly(logglyKey, { 
+    "tags" : "valveLogs",
+    "timeout" : 60,
+    "limit" : 20 //arbitrary 
+});
+//example loggly command:
+//    loggly.log({
+//        "battery" : 4,
+//        "power" : 1,
+//        "rssi" : 2,
+//        "msg" : 3
+//    });
+
+funtion deviceLogglyLog(logTable){
+    logTable.macAddress <- macAgentSide;
+    loggly.log(logTable);
+}
+
+funtion deviceLogglyWarn(logTable){
+    logTable.macAddress <- macAgentSide;
+    loggly.warn(logTable);
+}
+
+funtion deviceLogglyErr(logTable){
+    logTable.macAddress <- macAgentSide;
+    loggly.err(logTable);
+}
+
 function disobeyInData(data){
     if("disobeyReason" in data){
+        loggly.log({
+            "disobey" : data.disobeyReason,
+            "macAddress" : macAgentSide
+        });
         server.log("Device Disobeyed" + data.disobeyReason);
         return true
     } else {
@@ -42,7 +76,18 @@ function sendDataFromDevice(data) {
     //urlReadings is valid, readingsURL is valid, readingsUrl is not.
     local req = http.post(readingsURL, headers, jsonData);
     local res = req.sendsync();
+    if(data.wakeReason == WAKEREASON_SQUIRREL_ERROR){//Waking from squirrel runtime error
+        loggly.err({
+            "error" : "Valve waking from error"
+        });
+    }
     if (res.statuscode != 200 && res.statuscode != 201 && statusCode != 202) {
+        loggly.warn({
+            "warning" : "Error sending data",
+            "function" : "sendDataFromDevice (agent)",
+            "statusCode" : res.statuscode,
+            "macAddress" : macAgentSide
+        });
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
     } else {
@@ -98,6 +143,11 @@ function sendDataHandling(data){
     //if there's an error in this function, just tell the valve to go to sleep.
     } catch(error){
         server.log(error);
+        loggly.err({
+            "error" : error,
+            "function" : "sendDataHandling",
+            "macAddress" : macAgentSide 
+        });
         instructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0};
         //TODO: add receive instructions error handling.
         if(!disobeyInData){
@@ -124,6 +174,12 @@ function fetchAndSendInstructions(tryNumber){
         }    
     } catch(error) {
         server.log("Error in fetchAndSendInstructions:")
+        loggly.err({
+            "error" : error,
+            "function" : "fetchAndSendInstructions (agent)",
+            "tryNumber" : tryNumber,
+            "macAddress" : macAgentSide
+        });
         server.log(error);
         //retry on error 
         if(tryNumber < fetchInstructionsTryNumberMax){
@@ -155,6 +211,12 @@ function valveStateChangeHandling(data){
     local res = req.sendsync();
     //TODO: make generic handling function for HTTP requests
     if (res.statuscode != 200 && res.statuscode != 201 && statusCode != 202) {
+        loggly.warn({
+            "warning" : "Error sending message",
+            "function" : "valveStateChangeHandling (agent)",
+            "statusCode" : res.statusCode,
+            "macAddress" : macAgentSide
+        });
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
     } else {
@@ -164,6 +226,9 @@ function valveStateChangeHandling(data){
 }
 
 device.on("valveStateChange", valveStateChangeHandling);
+device.on("logglyLog", deviceLogglyLog);//not sure if this will work, gotta test it
+device.on("logglyWarn", deviceLogglyWarn);//not sure if this will work, gotta test it
+device.on("logglyError", deviceLogglyErr);//not sure if this will work, gotta test it
 
 function getSuggestedValveState(){
     //TODO: add auth stuff
@@ -175,6 +240,12 @@ function getSuggestedValveState(){
     resBod = http.jsondecode(resBod);
     //TODO: make generic handling function for HTTP requests
     if(statusCode != 200 && statusCode != 201 && statusCode != 202){
+        loggly.warn({
+            "warning" : "Failed to fetch next command",
+            "function" : "getSuggestedValveState (agent)",
+            "statusCode" : statusCode,
+            "macAddress" : macAgentSide
+        });
         server.log("Failed to fetch next command, status code: " + statusCode);
         //anything that is not false or 0 in squirrel evaluates as True
         return false
@@ -193,6 +264,10 @@ function getSuggestedValveState(){
 
 device.onconnect(function() { 
     server.log("Device connected to agent");
+    loggly.log({
+        "deviceConnected" : time(),
+        "macAddress" : macAgentSide
+    });
 });
 
 
