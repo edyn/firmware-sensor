@@ -18,6 +18,9 @@ const receiveInstructionsWaitTimer = 30;
 wakeReason <- hardware.wakereason();
 mostRecentDeepSleepCall <- 0;
 macAddress <- imp.getmacaddress();
+blinkupTimer <- 90;
+watchDogTimeOut <- 130; //Equals 90 second blinkup + 30 second connect + 10 seconds of whatever else
+watchDogSleepTime <- 20.0;//arbitrarily chosen to be 20 minutes
 /**************
 Valve Functions
 ***************/
@@ -626,7 +629,7 @@ function batteryLowCheck(dataToPass){
         if(nv.valveState == true){
              close();
         }
-        disobey("Not opening because of low battery");
+        disobey("Not opening because of low battery", dataToPass);
         return false
     } else {
         return true
@@ -641,7 +644,7 @@ function onConnectedCallback(state, dataToPass) {
             //not sure if agent.on works inside functions, but it should?
             agent.on("receiveInstructions", function(instructions){receiveInstructions(instructions, dataToPass)});
             //The below statement works as a "timeout" for receive instructions
-            imp.wakeup(deepSleepForTime(valveCloseMaxSleepTime * 60.0), receiveInstructionsWaitTimer);
+            imp.wakeup(receiveInstructionsWaitTimer, function(){deepSleepForTime(valveCloseMaxSleepTime * 60.0)});
         } else{
             //don't wait for more instructions, just go back to sleep
             deepSleepForTime(lowBatterySleepTime * 60.0);
@@ -709,15 +712,15 @@ function main(){
                 close();
             }
         });
-
-        //If onWakeup() returns 0, go into 'blinkup phase'
-
+        //If onWakeup() returns 0, go into 'blinkup phase' 
         if(!onWakeup()){
             close()
-            imp.sleep(90)
+            imp.sleep(blinkupTimer)
         }
         local dataTable = collectData();
-        if(batteryCriticalCheck(dataTable)){
+        //it's worth it for us to know battery level on these wakereasons
+        //they all connect to wifi before doing anything else anyways
+        if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
             connectAndSend(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
         } else {
             //valve battery is critical, don't even connect to wifi
@@ -740,6 +743,17 @@ function main(){
         return
     }
 }
+
+function softwareWatchdogTimer(){
+    if(server.isconnected()){
+        //TODO: make this loggly:
+        server.log("WATCHDOG TIMER TOOK OVER! SOMETHING WENT BAD!")
+    }
+    deepSleepForTime(watchDogSleepTime * 60.0);
+    return
+}
+
 if(!unitTesting){
+    imp.wakeup(watchDogTimeOut, softwareWatchdogTimer);
     main();
 }

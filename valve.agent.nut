@@ -57,7 +57,7 @@ function disobeyInData(data){
             "disobey" : data.disobeyReason,
             "macAddress" : macAgentSide
         });
-        server.log("Device Disobeyed");
+        server.log("Device Disobeyed" + data.disobeyReason);
         return true
     } else {
         return false
@@ -81,7 +81,7 @@ function sendDataFromDevice(data) {
             "error" : "Valve waking from error"
         });
     }
-    if (res.statuscode != 200 && res.statuscode != 201) {
+    if (res.statuscode != 200 && res.statuscode != 201 && statusCode != 202) {
         loggly.warn({
             "warning" : "Error sending data",
             "function" : "sendDataFromDevice (agent)",
@@ -101,6 +101,18 @@ function sendDataHandling(data){
     //TODO: add auth stuff
     server.log("Received readings data from device");
     try {
+        if("batteryVoltage" in data){
+            server.log("Battery Voltage: "data.batteryVoltage);
+        }
+        if("wakeReason" in data){
+            server.log("Wake Reason: "data.wakeReason);
+        }
+        if("solarVoltage" in data){
+            server.log("Solar Voltage: " data.solarVoltage);
+        }
+        if("rssi" in data){
+            server.log("RSSI: " data.rssi);
+        }
         //send to server
         //"Do we want to try this if 'senddatafromdevice()'failed?"
         //Good question, I'm going to implement it right now as "tell the valve to sleep a default amount of time"
@@ -198,7 +210,7 @@ function valveStateChangeHandling(data){
     local req = http.post(valveStateURL, headers, jsonData);
     local res = req.sendsync();
     //TODO: make generic handling function for HTTP requests
-    if (res.statuscode != 200 && res.statuscode != 201) {
+    if (res.statuscode != 200 && res.statuscode != 201 && statusCode != 202) {
         loggly.warn({
             "warning" : "Error sending message",
             "function" : "valveStateChangeHandling (agent)",
@@ -227,7 +239,7 @@ function getSuggestedValveState(){
     local resBod = response.body;
     resBod = http.jsondecode(resBod);
     //TODO: make generic handling function for HTTP requests
-    if(statusCode != 200 && statusCode != 201){
+    if(statusCode != 200 && statusCode != 201 && statusCode != 202){
         loggly.warn({
             "warning" : "Failed to fetch next command",
             "function" : "getSuggestedValveState (agent)",
