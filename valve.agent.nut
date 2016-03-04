@@ -36,6 +36,20 @@ loggly <- Loggly(logglyKey, {
 //        "msg" : 3
 //    });
 
+funtion deviceLogglyLog(logTable){
+    logTable.macAddress <- macAgentSide;
+    loggly.log(logTable);
+}
+
+funtion deviceLogglyWarn(logTable){
+    logTable.macAddress <- macAgentSide;
+    loggly.warn(logTable);
+}
+
+funtion deviceLogglyErr(logTable){
+    logTable.macAddress <- macAgentSide;
+    loggly.err(logTable);
+}
 
 function disobeyInData(data){
     if("disobeyReason" in data){
@@ -184,7 +198,7 @@ function valveStateChangeHandling(data){
         loggly.warn({
             "warning" : "Error sending message",
             "function" : "valveStateChangeHandling (agent)",
-            "statusCode" : statusCode
+            "statusCode" : res.statusCode
         });
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
@@ -195,9 +209,9 @@ function valveStateChangeHandling(data){
 }
 
 device.on("valveStateChange", valveStateChangeHandling);
-device.on("logglyLog", loggly.log);//not sure if this will work, gotta test it
-device.on("logglyWarn", loggly.warn);//not sure if this will work, gotta test it
-device.on("logglyError", loggly.err);//not sure if this will work, gotta test it
+device.on("logglyLog", deviceLogglyLog);//not sure if this will work, gotta test it
+device.on("logglyWarn", deviceLogglyWarn);//not sure if this will work, gotta test it
+device.on("logglyError", deviceLogglyErr);//not sure if this will work, gotta test it
 
 function getSuggestedValveState(){
     //TODO: add auth stuff

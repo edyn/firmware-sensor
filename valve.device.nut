@@ -328,8 +328,7 @@ function deepSleepForTime(inputTime){
         }
         logglyError({
             "error" : error,
-            "function" : "deepSleepForTime",
-            "device" : macAddress
+            "function" : "deepSleepForTime"
         });
         //this should be less dependent on external variables
         imp.onidle(function() {
@@ -372,8 +371,7 @@ function disobey(message, dataToPass){
         }
         logglyError({
             "error" : error,
-            "function" : "disobey",
-            "device" : macAddress
+            "function" : "disobey"
         })
         server.log("Error in disobey: " + error);
     }
@@ -485,8 +483,7 @@ function receiveInstructions(instructions, dataToPass){
         }
         logglyError({
             "error" : error,
-            "function" : "receiveInstructions (wakereason switch)",
-            "device" : macAddress
+            "function" : "receiveInstructions (wakereason switch)"
         });
         deepSleepForTime(sleepOnErrorTime);
         return
@@ -519,8 +516,7 @@ function receiveInstructions(instructions, dataToPass){
         }
         logglyError({
             "error" : error,
-            "function" : "receiveInstructions (iteration check)",
-            "device" : macAddress
+            "function" : "receiveInstructions (iteration check)"
         });
         server.log("ERROR IN VALVE ITERATION CHECK! closing just in case. error is " + error);
         deepSleepForTime(valveCloseMaxSleepTime * 60.0);
@@ -555,8 +551,7 @@ function receiveInstructions(instructions, dataToPass){
         }
         logglyError({
             "error" : error,
-            "function" : "receiveInstructions (process instructions)",
-            "device" : macAddress
+            "function" : "receiveInstructions (process instructions)"
         });
         server.log("ERROR IN VALVE STATE CHANGE! closing just in case. error is " + error);
         deepSleepForTime(errorSleepTime * 60.0);
@@ -612,8 +607,7 @@ function receiveInstructions(instructions, dataToPass){
         }
         logglyError({
             "error" : error,
-            "function" : "receiveInstructions (sleep determination)",
-            "device" : macAddress
+            "function" : "receiveInstructions (sleep determination)"
         });
         deepSleepForTime(errorSleepTime * 60.0);
         return
@@ -731,8 +725,7 @@ function main(){
         }
         logglyError({
             "error" : error,
-            "function" : "initializations and connect",
-            "device" : macAddress
+            "function" : "initializations and connect"
         }, true); //this 'true' is to enable force connect
         //TODO: this error case can force a connect regardless of battery critical state, you might want to change this in the future!!!
         deepSleepForTime(criticalBatterySleepTime * 60.0);
