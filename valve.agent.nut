@@ -62,12 +62,12 @@ function sendDataFromDevice(data) {
     local req = http.post(readingsURL, headers, jsonData);
     local res = req.sendsync();
     if(data.wakeReason == 5){//Waking from squirrel runtime error
-        Loggly.err({
+        loggly.err({
             "Error" : "Valve waking from error"
         });
     }
     if (res.statuscode != 200 && res.statuscode != 201) {
-        Loggly.warn({
+        loggly.warn({
             "Warning" : "Error sending data",
             "function" : "sendDataFromDevice (agent)",
             "status code" : statusCode
@@ -115,7 +115,7 @@ function sendDataHandling(data){
     //if there's an error in this function, just tell the valve to go to sleep.
     } catch(error){
         server.log(error);
-        Loggly.err({
+        loggly.err({
             "error" : error,
             "function" : "sendDataHandling" 
         });
@@ -145,7 +145,7 @@ function fetchAndSendInstructions(tryNumber){
         }    
     } catch(error) {
         server.log("Error in fetchAndSendInstructions:")
-        Loggly.err({
+        loggly.err({
             "Error" : error,
             "in function" : "fetchAndSendInstructions (agent)",
             "Try number" : tryNumber
@@ -181,7 +181,7 @@ function valveStateChangeHandling(data){
     local res = req.sendsync();
     //TODO: make generic handling function for HTTP requests
     if (res.statuscode != 200 && res.statuscode != 201) {
-        Loggly.warn({
+        loggly.warn({
             "Warning" : "Error sending message",
             "function" : "valveStateChangeHandling (agent)",
             "status code" : statusCode
@@ -195,9 +195,9 @@ function valveStateChangeHandling(data){
 }
 
 device.on("valveStateChange", valveStateChangeHandling);
-device.on("logglyLog", Loggly.log);//not sure if this will work, gotta test it
-device.on("logglyWarn", Loggly.warn);//not sure if this will work, gotta test it
-device.on("logglyError", Loggly.err);//not sure if this will work, gotta test it
+device.on("logglyLog", loggly.log);//not sure if this will work, gotta test it
+device.on("logglyWarn", loggly.warn);//not sure if this will work, gotta test it
+device.on("logglyError", loggly.err);//not sure if this will work, gotta test it
 
 function getSuggestedValveState(){
     //TODO: add auth stuff
@@ -209,7 +209,7 @@ function getSuggestedValveState(){
     resBod = http.jsondecode(resBod);
     //TODO: make generic handling function for HTTP requests
     if(statusCode != 200 && statusCode != 201){
-        Loggly.warn({
+        loggly.warn({
             "Warning" : "Failed to fetch next command",
             "function" : "getSuggestedValveState (agent)",
             "status code" : statusCode
@@ -232,7 +232,7 @@ function getSuggestedValveState(){
 
 device.onconnect(function() { 
     server.log("Device connected to agent");
-    Loggly.log({
+    loggly.log({
         "Device Connected" : time()
     });
 });
