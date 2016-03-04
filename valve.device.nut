@@ -328,7 +328,8 @@ function deepSleepForTime(inputTime){
         }
         logglyError({
             "error" : error,
-            "function" : "deepSleepForTime"
+            "function" : "deepSleepForTime",
+            "message" : "BAD error, deepsleepfortime has a bug!"
         });
         //this should be less dependent on external variables
         imp.onidle(function() {
@@ -371,7 +372,8 @@ function disobey(message, dataToPass){
         }
         logglyError({
             "error" : error,
-            "function" : "disobey"
+            "function" : "disobey",
+            "message" : "BAD error, disobey has a bug!"
         })
         server.log("Error in disobey: " + error);
     }
@@ -483,7 +485,8 @@ function receiveInstructions(instructions, dataToPass){
         }
         logglyError({
             "error" : error,
-            "function" : "receiveInstructions (wakereason switch)"
+            "function" : "receiveInstructions (wakereason switch)",
+            "message" : "something in the wake reason switching behavior is failing"
         });
         deepSleepForTime(sleepOnErrorTime);
         return
@@ -516,7 +519,8 @@ function receiveInstructions(instructions, dataToPass){
         }
         logglyError({
             "error" : error,
-            "function" : "receiveInstructions (iteration check)"
+            "function" : "receiveInstructions (iteration check)",
+            "message" : "something in the iteration checking logic is bugged"
         });
         server.log("ERROR IN VALVE ITERATION CHECK! closing just in case. error is " + error);
         deepSleepForTime(valveCloseMaxSleepTime * 60.0);
@@ -551,7 +555,8 @@ function receiveInstructions(instructions, dataToPass){
         }
         logglyError({
             "error" : error,
-            "function" : "receiveInstructions (process instructions)"
+            "function" : "receiveInstructions (process instructions)",
+            "message" : "ERROR IN VALVE STATE CHANGE! closing just in case."
         });
         server.log("ERROR IN VALVE STATE CHANGE! closing just in case. error is " + error);
         deepSleepForTime(errorSleepTime * 60.0);
@@ -607,7 +612,8 @@ function receiveInstructions(instructions, dataToPass){
         }
         logglyError({
             "error" : error,
-            "function" : "receiveInstructions (sleep determination)"
+            "function" : "receiveInstructions (sleep determination)",
+            "message" : "the logic to determine if the valve for sleep or not is throwing an error"
         });
         deepSleepForTime(errorSleepTime * 60.0);
         return
@@ -725,7 +731,8 @@ function main(){
         }
         logglyError({
             "error" : error,
-            "function" : "initializations and connect"
+            "function" : "initializations and connect",
+            "message" : "INITIALIZATION ERROR! HIGHEST PRIORITY FIX"
         }, true); //this 'true' is to enable force connect
         //TODO: this error case can force a connect regardless of battery critical state, you might want to change this in the future!!!
         deepSleepForTime(criticalBatterySleepTime * 60.0);
