@@ -41,12 +41,12 @@ function deviceLogglyLog(logTable){
     loggly.log(logTable);
 }
 
-funtion deviceLogglyWarn(logTable){
+function deviceLogglyWarn(logTable){
     logTable.macAddress <- macAgentSide;
     loggly.warn(logTable);
 }
 
-funtion deviceLogglyErr(logTable){
+function deviceLogglyErr(logTable){
     logTable.macAddress <- macAgentSide;
     loggly.err(logTable);
 }
