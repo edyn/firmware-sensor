@@ -164,7 +164,7 @@ function fetchAndSendInstructions(tryNumber){
         server.log("Error in fetchAndSendInstructions:")
         loggly.err({
             "error" : error,
-            "inFunction" : "fetchAndSendInstructions (agent)",
+            "function" : "fetchAndSendInstructions (agent)",
             "tryNumber" : tryNumber,
             "macAddress" : macAgentSide
         });
