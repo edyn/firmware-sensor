@@ -242,7 +242,7 @@ function logglyLog(logTable = {}, forceConnect = false){
         //really no reason we'd ever force a connect for a regular log...
         server.connect(function (connectStatus){
             forcedLogglyConnect(connectStatus, logTable, "logglyLog");
-        }, timeout);
+        }, logglyConnectTimeout);
     }
 }
 
@@ -253,7 +253,7 @@ function logglyWarn(logTable = {}, forceConnect = false){
         //connect and send loggly stuff
         server.connect(function (connectStatus){
             forcedLogglyConnect(connectStatus, logTable, "logglyWarn");
-        }, timeout);
+        }, logglyConnectTimeout);
     }
 }
 
@@ -264,7 +264,7 @@ function logglyError(logTable = {}, forceConnect = false){
         //connect and send loggly stuff
         server.connect(function (connectStatus){
             forcedLogglyConnect(connectStatus, logTable, "logglyError");
-        }, timeout);
+        }, logglyConnectTimeout);
     }
 }
 
