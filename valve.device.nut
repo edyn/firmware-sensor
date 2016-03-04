@@ -607,7 +607,7 @@ function main(){
         imp.sleep(blinkupTimer)
     }
     local dataTable = collectData();
-    if(batteryCriticalCheck(dataTable)){
+    if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP){
         connectAndSend(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
     } else {
         //valve battery is critical, don't even connect to wifi
