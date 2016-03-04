@@ -23,7 +23,7 @@ fetchInstructionsRetryTimer <- 0.5;
 
 function disobeyInData(data){
     if("disobeyReason" in data){
-        server.log("Device Disobeyed");
+        server.log("Device Disobeyed" + data.disobeyReason);
         return true
     } else {
         return false
@@ -42,7 +42,7 @@ function sendDataFromDevice(data) {
     //urlReadings is valid, readingsURL is valid, readingsUrl is not.
     local req = http.post(readingsURL, headers, jsonData);
     local res = req.sendsync();
-    if (res.statuscode != 200 && res.statuscode != 201) {
+    if (res.statuscode != 200 && res.statuscode != 201 && statusCode != 202) {
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
     } else {
@@ -56,6 +56,18 @@ function sendDataHandling(data){
     //TODO: add auth stuff
     server.log("Received readings data from device");
     try {
+        if("batteryVoltage" in data){
+            server.log("Battery Voltage: "data.batteryVoltage);
+        }
+        if("wakeReason" in data){
+            server.log("Wake Reason: "data.wakeReason);
+        }
+        if("solarVoltage" in data){
+            server.log("Solar Voltage: " data.solarVoltage);
+        }
+        if("rssi" in data){
+            server.log("RSSI: " data.rssi);
+        }
         //send to server
         //"Do we want to try this if 'senddatafromdevice()'failed?"
         //Good question, I'm going to implement it right now as "tell the valve to sleep a default amount of time"
@@ -142,7 +154,7 @@ function valveStateChangeHandling(data){
     local req = http.post(valveStateURL, headers, jsonData);
     local res = req.sendsync();
     //TODO: make generic handling function for HTTP requests
-    if (res.statuscode != 200 && res.statuscode != 201) {
+    if (res.statuscode != 200 && res.statuscode != 201 && statusCode != 202) {
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
     } else {
@@ -162,7 +174,7 @@ function getSuggestedValveState(){
     local resBod = response.body;
     resBod = http.jsondecode(resBod);
     //TODO: make generic handling function for HTTP requests
-    if(statusCode != 200 && statusCode != 201){
+    if(statusCode != 200 && statusCode != 201 && statusCode != 202){
         server.log("Failed to fetch next command, status code: " + statusCode);
         //anything that is not false or 0 in squirrel evaluates as True
         return false
