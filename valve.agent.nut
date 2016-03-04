@@ -49,7 +49,7 @@ function deviceLogglyWarn(logTable){
 
 function deviceLogglyErr(logTable){
     logTable.macAddress <- macAgentSide;
-    loggly.err(logTable);
+    loggly.error(logTable);
 }
 
 function disobeyInData(data){
@@ -78,7 +78,7 @@ function sendDataFromDevice(data) {
     local req = http.post(readingsURL, headers, jsonData);
     local res = req.sendsync();
     if(data.wakeReason == WAKEREASON_SQUIRREL_ERROR){//Waking from squirrel runtime error
-        loggly.err({
+        loggly.error({
             "error" : "Valve waking from error"
         });
     }
@@ -144,7 +144,7 @@ function sendDataHandling(data){
     //if there's an error in this function, just tell the valve to go to sleep.
     } catch(error){
         server.log(error);
-        loggly.err({
+        loggly.error({
             "error" : error,
             "function" : "sendDataHandling",
             "macAddress" : macAgentSide 
@@ -175,7 +175,7 @@ function fetchAndSendInstructions(tryNumber){
         }    
     } catch(error) {
         server.log("Error in fetchAndSendInstructions:")
-        loggly.err({
+        loggly.error({
             "error" : error,
             "function" : "fetchAndSendInstructions (agent)",
             "tryNumber" : tryNumber,
