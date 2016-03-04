@@ -63,14 +63,14 @@ function sendDataFromDevice(data) {
     local res = req.sendsync();
     if(data.wakeReason == WAKEREASON_SQUIRREL_ERROR){//Waking from squirrel runtime error
         loggly.err({
-            "Error" : "Valve waking from error"
+            "error" : "Valve waking from error"
         });
     }
     if (res.statuscode != 200 && res.statuscode != 201) {
         loggly.warn({
-            "Warning" : "Error sending data",
+            "warning" : "Error sending data",
             "function" : "sendDataFromDevice (agent)",
-            "status code" : statusCode
+            "statusCode" : res.statuscode
         });
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
@@ -146,9 +146,9 @@ function fetchAndSendInstructions(tryNumber){
     } catch(error) {
         server.log("Error in fetchAndSendInstructions:")
         loggly.err({
-            "Error" : error,
-            "in function" : "fetchAndSendInstructions (agent)",
-            "Try number" : tryNumber
+            "error" : error,
+            "inFunction" : "fetchAndSendInstructions (agent)",
+            "tryNumber" : tryNumber
         });
         server.log(error);
         //retry on error 
@@ -182,9 +182,9 @@ function valveStateChangeHandling(data){
     //TODO: make generic handling function for HTTP requests
     if (res.statuscode != 200 && res.statuscode != 201) {
         loggly.warn({
-            "Warning" : "Error sending message",
+            "warning" : "Error sending message",
             "function" : "valveStateChangeHandling (agent)",
-            "status code" : statusCode
+            "statusCode" : statusCode
         });
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
@@ -210,9 +210,9 @@ function getSuggestedValveState(){
     //TODO: make generic handling function for HTTP requests
     if(statusCode != 200 && statusCode != 201){
         loggly.warn({
-            "Warning" : "Failed to fetch next command",
+            "warning" : "Failed to fetch next command",
             "function" : "getSuggestedValveState (agent)",
-            "status code" : statusCode
+            "statusCode" : statusCode
         });
         server.log("Failed to fetch next command, status code: " + statusCode);
         //anything that is not false or 0 in squirrel evaluates as True
@@ -233,7 +233,7 @@ function getSuggestedValveState(){
 device.onconnect(function() { 
     server.log("Device connected to agent");
     loggly.log({
-        "Device Connected" : time()
+        "deviceConnected" : time()
     });
 });
 
