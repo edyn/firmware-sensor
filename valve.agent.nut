@@ -61,7 +61,7 @@ function sendDataFromDevice(data) {
     //urlReadings is valid, readingsURL is valid, readingsUrl is not.
     local req = http.post(readingsURL, headers, jsonData);
     local res = req.sendsync();
-    if(data.wakeReason == 5){//Waking from squirrel runtime error
+    if(data.wakeReason == WAKEREASON_SQUIRREL_ERROR){//Waking from squirrel runtime error
         loggly.err({
             "Error" : "Valve waking from error"
         });
