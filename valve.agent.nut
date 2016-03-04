@@ -103,16 +103,16 @@ function sendDataHandling(data){
     server.log("Received readings data from device");
     try {
         if("batteryVoltage" in data){
-            server.log("Battery Voltage: "data.batteryVoltage);
+            server.log("Battery Voltage: " + data.batteryVoltage);
         }
         if("wakeReason" in data){
-            server.log("Wake Reason: "data.wakeReason);
+            server.log("Wake Reason: " + data.wakeReason);
         }
         if("solarVoltage" in data){
-            server.log("Solar Voltage: " data.solarVoltage);
+            server.log("Solar Voltage: " + data.solarVoltage);
         }
         if("rssi" in data){
-            server.log("RSSI: " data.rssi);
+            server.log("RSSI: " + data.rssi);
         }
         //send to server
         //"Do we want to try this if 'senddatafromdevice()'failed?"
