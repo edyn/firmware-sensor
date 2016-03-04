@@ -6,6 +6,7 @@
 //send all data from globalDataStore and globalUnauthorizedActionsStore
 //TRACK ERRORS THROUGH LOGGLY ASAP
 
+#require "Loggly.class.nut:1.0.1"
 macAgentSide <- imp.configparams.deviceid;
 firebase <- "https://edynstaging.firebaseio.com/";
 firebaseAuth <- "15Ubz6zcpgvKYQfOUxUtbKYAfyAOHC4wuSKt9fdP";
