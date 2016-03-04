@@ -735,7 +735,7 @@ function main(){
             "device" : macAddress
         }, true); //this 'true' is to enable force connect
         //TODO: this error case can force a connect regardless of battery critical state, you might want to change this in the future!!!
-        deepSleepForTime(errorSleepTime * 60.0);
+        deepSleepForTime(criticalBatterySleepTime * 60.0);
         //return from main pretty much guarantees that it will go to sleep right away
         return
     }
