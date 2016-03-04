@@ -16,6 +16,7 @@ defaultSleepTime <- 20.0 //miutes
 pathForValveState <- "valveState.json"
 pathForValveNextAction <- "valves/v1/valves-now/" + macAgentSide + ".json"
 pathForValveData <- "http://api.valve.stag.edyn.com/readings/"+macAgentSide;
+const WAKEREASON_SQUIRREL_ERROR = 5;
 //This is the FW bandaid that retries if a required field for valve instructions is missing
 //sample error message that would trigger this: the index 'nextCheckIn' does not exist (line 76)
 fetchInstructionsTryNumberMax <- 1;
@@ -82,7 +83,7 @@ function sendDataFromDevice(data) {
             "error" : "Valve waking from error"
         });
     }
-    if (res.statuscode != 200 && res.statuscode != 201 && statusCode != 202) {
+    if (res.statuscode != 200 && res.statuscode != 201 && statuscode != 202) {
         loggly.warn({
             "warning" : "Error sending data",
             "function" : "sendDataFromDevice (agent)",
@@ -211,11 +212,11 @@ function valveStateChangeHandling(data){
     local req = http.post(valveStateURL, headers, jsonData);
     local res = req.sendsync();
     //TODO: make generic handling function for HTTP requests
-    if (res.statuscode != 200 && res.statuscode != 201 && statusCode != 202) {
+    if (res.statuscode != 200 && res.statuscode != 201 && res.statuscode != 202) {
         loggly.warn({
             "warning" : "Error sending message",
             "function" : "valveStateChangeHandling (agent)",
-            "statusCode" : res.statusCode,
+            "statusCode" : res.statuscode,
             "macAddress" : macAgentSide
         });
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
