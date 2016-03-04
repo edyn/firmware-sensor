@@ -55,6 +55,7 @@ function disobeyInData(data){
     if("disobeyReason" in data){
         loggly.log({
             "disobey" : data.disobeyReason,
+            "macAddress" : macAgentSide
         });
         server.log("Device Disobeyed");
         return true
@@ -84,7 +85,8 @@ function sendDataFromDevice(data) {
         loggly.warn({
             "warning" : "Error sending data",
             "function" : "sendDataFromDevice (agent)",
-            "statusCode" : res.statuscode
+            "statusCode" : res.statuscode,
+            "macAddress" : macAgentSide
         });
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
@@ -131,7 +133,8 @@ function sendDataHandling(data){
         server.log(error);
         loggly.err({
             "error" : error,
-            "function" : "sendDataHandling" 
+            "function" : "sendDataHandling",
+            "macAddress" : macAgentSide 
         });
         instructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0};
         //TODO: add receive instructions error handling.
@@ -162,7 +165,8 @@ function fetchAndSendInstructions(tryNumber){
         loggly.err({
             "error" : error,
             "inFunction" : "fetchAndSendInstructions (agent)",
-            "tryNumber" : tryNumber
+            "tryNumber" : tryNumber,
+            "macAddress" : macAgentSide
         });
         server.log(error);
         //retry on error 
@@ -198,7 +202,8 @@ function valveStateChangeHandling(data){
         loggly.warn({
             "warning" : "Error sending message",
             "function" : "valveStateChangeHandling (agent)",
-            "statusCode" : res.statusCode
+            "statusCode" : res.statusCode,
+            "macAddress" : macAgentSide
         });
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
         return res.statuscode
@@ -226,7 +231,8 @@ function getSuggestedValveState(){
         loggly.warn({
             "warning" : "Failed to fetch next command",
             "function" : "getSuggestedValveState (agent)",
-            "statusCode" : statusCode
+            "statusCode" : statusCode,
+            "macAddress" : macAgentSide
         });
         server.log("Failed to fetch next command, status code: " + statusCode);
         //anything that is not false or 0 in squirrel evaluates as True
@@ -247,7 +253,8 @@ function getSuggestedValveState(){
 device.onconnect(function() { 
     server.log("Device connected to agent");
     loggly.log({
-        "deviceConnected" : time()
+        "deviceConnected" : time(),
+        "macAddress" : macAgentSide
     });
 });
 
