@@ -10,7 +10,8 @@ const valveCloseMaxSleepTime = 20.0;
 const chargingPollAveraging = 15.0;
 const hardwareVersion = "0.0.1";
 const firmwareVersion = "0.0.1";
-const batteryLow = 3.2;
+//TODO: CHANGE THIS TO SOMETHING MORE ACCURATE:
+const batteryLow = 3.0;
 const lowBatterySleepTime = 60 //minutes = 1 hour
 const batteryCritical = 2.9;
 const criticalBatterySleepTime = 360; 
