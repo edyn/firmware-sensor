@@ -420,7 +420,7 @@ function testErrors(){
     imp.sleep(0.2);
     throwErrors = "disa";
     try{
-        disobey{"unitTestDisobey",sampleDataGlobal}
+        disobey("unitTestDisobey",sampleDataGlobal)
         if(!nv.valveState){
             logPass("DisobeyErrorTest");
         } else {

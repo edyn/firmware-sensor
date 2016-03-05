@@ -83,7 +83,7 @@ function sendDataFromDevice(data) {
             "error" : "Valve waking from error"
         });
     }
-    if (res.statuscode != 200 && res.statuscode != 201 && statuscode != 202) {
+    if (res.statuscode != 200 && res.statuscode != 201 && res.statuscode != 202) {
         loggly.warn({
             "warning" : "Error sending data",
             "function" : "sendDataFromDevice (agent)",

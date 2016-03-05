@@ -4,9 +4,10 @@ firebaseAuthTemp = firebaseAuth;
 testsPassed <- [];
 testsFailed <-[];
 
+//this
 realDataTable <- {
     macId = "20000c2a690a2e2b",
-    wakereason = 1,
+    wakeReason = 1,
     batteryLevel = 3.3,
     solarLevel = 4.3,
     valveOpen = true,
