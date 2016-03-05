@@ -19,15 +19,31 @@ with open(deviceFile, 'r') as fin:
 with open(deviceTests, 'r') as fin:
     deviceTests=fin.read()
 
+errNumber = 0
+errTable = ['a"','b"','c"','d"','e"','f"','g"','h"','i"']
+currentfunc=""
+
 wholeLine=""
 wholeDeviceUnitFile=""
 for letter in deviceText:
     wholeLine+=letter
     if(letter=="\n"):
+        if(len(wholeLine)>6):
+            if(wholeLine[0:8]=="function"):
+                currentfunc = '"'+wholeLine[9:12]
+                print "changing to" + currentfunc
+                errNumber = 0
         if(wholeLine=="unitTesting <- false;\n"):
             print "foundit!"
             print wholeLine
-            wholeDeviceUnitFile+="unitTesting <- true;\n"
+            wholeDeviceUnitFile+="unitTesting <- true;\nthrowErrors <- 'z';\n"
+        elif(len(wholeLine)>4):
+            if(wholeLine[-5:]=="try{\n"):
+                wholeDeviceUnitFile += wholeLine
+                wholeDeviceUnitFile += ("if(throwErrors==" + currentfunc+errTable[errNumber]+"){server.log(THISTHROWSERRORS)};\n")
+                errNumber += 1
+            else:
+                wholeDeviceUnitFile+=wholeLine
         else:
             wholeDeviceUnitFile+=wholeLine
         wholeLine=""
