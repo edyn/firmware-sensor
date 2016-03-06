@@ -6,6 +6,7 @@
 //send all data from globalDataStore and globalUnauthorizedActionsStore
 //TRACK ERRORS THROUGH LOGGLY ASAP
 
+#require "Loggly.class.nut:1.0.1"
 macAgentSide <- imp.configparams.deviceid;
 firebase <- "https://edynstaging.firebaseio.com/";
 firebaseAuth <- "15Ubz6zcpgvKYQfOUxUtbKYAfyAOHC4wuSKt9fdP";
@@ -15,6 +16,7 @@ defaultSleepTime <- 20.0 //miutes
 pathForValveState <- "valveState.json"
 pathForValveNextAction <- "valves/v1/valves-now/" + macAgentSide + ".json"
 pathForValveData <- "http://api.valve.stag.edyn.com/readings/"+macAgentSide;
+const WAKEREASON_SQUIRREL_ERROR = 5;
 //This is the FW bandaid that retries if a required field for valve instructions is missing
 //sample error message that would trigger this: the index 'nextCheckIn' does not exist (line 76)
 fetchInstructionsTryNumberMax <- 1;
@@ -36,19 +38,19 @@ loggly <- Loggly(logglyKey, {
 //        "msg" : 3
 //    });
 
-funtion deviceLogglyLog(logTable){
+function deviceLogglyLog(logTable){
     logTable.macAddress <- macAgentSide;
     loggly.log(logTable);
 }
 
-funtion deviceLogglyWarn(logTable){
+function deviceLogglyWarn(logTable){
     logTable.macAddress <- macAgentSide;
     loggly.warn(logTable);
 }
 
-funtion deviceLogglyErr(logTable){
+function deviceLogglyErr(logTable){
     logTable.macAddress <- macAgentSide;
-    loggly.err(logTable);
+    loggly.error(logTable);
 }
 
 function disobeyInData(data){
@@ -77,11 +79,11 @@ function sendDataFromDevice(data) {
     local req = http.post(readingsURL, headers, jsonData);
     local res = req.sendsync();
     if(data.wakeReason == WAKEREASON_SQUIRREL_ERROR){//Waking from squirrel runtime error
-        loggly.err({
+        loggly.error({
             "error" : "Valve waking from error"
         });
     }
-    if (res.statuscode != 200 && res.statuscode != 201 && statusCode != 202) {
+    if (res.statuscode != 200 && res.statuscode != 201 && res.statuscode != 202) {
         loggly.warn({
             "warning" : "Error sending data",
             "function" : "sendDataFromDevice (agent)",
@@ -97,21 +99,21 @@ function sendDataFromDevice(data) {
 }
 
 function sendDataHandling(data){
-
+    local instructions ={}
     //TODO: add auth stuff
     server.log("Received readings data from device");
     try {
         if("batteryVoltage" in data){
-            server.log("Battery Voltage: "data.batteryVoltage);
+            server.log("Battery Voltage: " + data.batteryVoltage);
         }
         if("wakeReason" in data){
-            server.log("Wake Reason: "data.wakeReason);
+            server.log("Wake Reason: " + data.wakeReason);
         }
         if("solarVoltage" in data){
-            server.log("Solar Voltage: " data.solarVoltage);
+            server.log("Solar Voltage: " + data.solarVoltage);
         }
         if("rssi" in data){
-            server.log("RSSI: " data.rssi);
+            server.log("RSSI: " + data.rssi);
         }
         //send to server
         //"Do we want to try this if 'senddatafromdevice()'failed?"
@@ -143,7 +145,7 @@ function sendDataHandling(data){
     //if there's an error in this function, just tell the valve to go to sleep.
     } catch(error){
         server.log(error);
-        loggly.err({
+        loggly.error({
             "error" : error,
             "function" : "sendDataHandling",
             "macAddress" : macAgentSide 
@@ -174,7 +176,7 @@ function fetchAndSendInstructions(tryNumber){
         }    
     } catch(error) {
         server.log("Error in fetchAndSendInstructions:")
-        loggly.err({
+        loggly.error({
             "error" : error,
             "function" : "fetchAndSendInstructions (agent)",
             "tryNumber" : tryNumber,
@@ -210,11 +212,11 @@ function valveStateChangeHandling(data){
     local req = http.post(valveStateURL, headers, jsonData);
     local res = req.sendsync();
     //TODO: make generic handling function for HTTP requests
-    if (res.statuscode != 200 && res.statuscode != 201 && statusCode != 202) {
+    if (res.statuscode != 200 && res.statuscode != 201 && res.statuscode != 202) {
         loggly.warn({
             "warning" : "Error sending message",
             "function" : "valveStateChangeHandling (agent)",
-            "statusCode" : res.statusCode,
+            "statusCode" : res.statuscode,
             "macAddress" : macAgentSide
         });
         server.log("Error sending message to Postgres database. Status code: " + res.statuscode);
