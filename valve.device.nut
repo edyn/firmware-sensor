@@ -239,7 +239,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
 }
 
 function logglyLog(logTable = {}, forceConnect = false){
-    if(server.isConnected()){
+    if(server.isconnected()){
         agent.send("logglyLog", logTable)
     } else if(forceConnect){
         //connect and send loggly stuff
@@ -251,7 +251,7 @@ function logglyLog(logTable = {}, forceConnect = false){
 }
 
 function logglyWarn(logTable = {}, forceConnect = false){
-    if(server.isConnected()){
+    if(server.isconnected()){
         agent.send("logglyWarn", logTable)
     } else if(forceConnect){
         //connect and send loggly stuff
@@ -262,7 +262,7 @@ function logglyWarn(logTable = {}, forceConnect = false){
 }
 
 function logglyError(logTable = {}, forceConnect = false){
-    if(server.isConnected()){
+    if(server.isconnected()){
         agent.send("logglyError", logTable)
     } else if(forceConnect){
         //connect and send loggly stuff
