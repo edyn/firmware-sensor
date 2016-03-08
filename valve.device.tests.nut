@@ -35,9 +35,10 @@ function receiveInstructionsTests(){
     //Test 1
     //testing the opening of the valve, should succeed
     //should succeed
+    nv.iteration = 0;
     try{
         //open the valve, should be valid
-        receiveInstructions({open = true , nextCheckIn = 0.1, iteration = 1}, sampleDataGlobal);
+        receiveInstructions({open = true , nextCheckIn = 0.1, iteration = 4}, sampleDataGlobal);
         //if the valve thinks it's valvestate is true, it passes
         if(nv.valveState){
             logPass("Valve Open");
