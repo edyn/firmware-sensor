@@ -518,7 +518,7 @@ function testErrors(){
 }
 
 
-
+testErrors();
 receiveInstructionsTests();
 testLEDs();
 testValve();
