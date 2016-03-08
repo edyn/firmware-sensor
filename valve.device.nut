@@ -22,6 +22,8 @@ macAddress <- imp.getmacaddress();
 blinkupTimer <- 90;
 watchDogTimeOut <- 130; //Equals 90 second blinkup + 30 second connect + 10 seconds of whatever else
 watchDogSleepTime <- 20.0;//arbitrarily chosen to be 20 minutes
+batteryAveragingPointNumber <- 20;
+
 /**************
 Valve Functions
 ***************/
@@ -84,10 +86,23 @@ function close() {
 //we want to try to close the valve on any cold boot.
 //wakeTime is for relevant waketimes; blinkup, cold boot, new os, new firmware
 if ( ! ("nv" in getroottable() && "valveState" in nv)) {
-    nv <- {valveState = false, iteration = 0, wakeTime = time()}; 
+    nv <- {valveState = false, iteration = 0, wakeTime = time(), averagingIterator = 0; averagingSum = 0.0, lastEMA = 0.0}; 
     valvePinInit();
     valveConfigure();
     close();
+}
+
+function calculateBatteryEMA(newDataPoint){
+    //calculate first regular average:
+    if(nv.averagingIterator < batteryAveragingPointNumber){
+        nv.averagingSum += newDataPoint;
+        nv.iterator += 1;
+        return (nv.averagingSum / nv.iterator)
+    } else {
+        local emaMultiplier =  (2.0 / (batteryAveragingPointNumber + 1));
+        local currentEMA = (emaMultiplier * newDataPoint) + nv.lastEMA * (1.0 - emaMultiplier);
+        return currentEMA
+    }
 }
 
 //WakeReason Function
