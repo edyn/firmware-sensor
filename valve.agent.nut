@@ -8,14 +8,14 @@
 
 #require "Loggly.class.nut:1.0.1"
 macAgentSide <- imp.configparams.deviceid;
-firebase <- "https://edynstaging.firebaseio.com/";
-firebaseAuth <- "15Ubz6zcpgvKYQfOUxUtbKYAfyAOHC4wuSKt9fdP";
+firebase <- "https://edynpepper.firebaseio.com/";
+firebaseAuth <- "1YsKtvLswSYsI4tcCDX62X3ZKh7eU94HeV8dmLf7";
 globalDataStore <- []
 globalUnauthorizedActionsStore <- []
 defaultSleepTime <- 20.0 //miutes
 pathForValveState <- "valveState.json"
 pathForValveNextAction <- "valves/v1/valves-now/" + macAgentSide + ".json"
-pathForValveData <- "http://api.valve.stag.edyn.com/readings/"+macAgentSide;
+pathForValveData <- "http://api.valve.prod.edyn.com/readings/" + macAgentSide
 const WAKEREASON_SQUIRREL_ERROR = 5;
 //This is the FW bandaid that retries if a required field for valve instructions is missing
 //sample error message that would trigger this: the index 'nextCheckIn' does not exist (line 76)
