@@ -11,9 +11,9 @@ const chargingPollAveraging = 15.0;
 const hardwareVersion = "0.0.1";
 const firmwareVersion = "0.0.1";
 //TODO: CHANGE THIS TO SOMETHING MORE ACCURATE:
-const batteryLow = 3.0;
+const batteryLow = 3.20;
 const lowBatterySleepTime = 60 //minutes = 1 hour
-const batteryCritical = 2.9;
+const batteryCritical = 3.10;
 const criticalBatterySleepTime = 360; 
 const receiveInstructionsWaitTimer = 30; 
 wakeReason <- hardware.wakereason();
