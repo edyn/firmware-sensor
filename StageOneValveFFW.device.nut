@@ -1,21 +1,27 @@
-//Stage 2 is identical to stage 1 but results in a blessing
-//Stage 2 will result in the unit being blessed
+//Stage 1 will result in the unit NOT being blessed
 //LEDs will ONLY show up in this order:
 //EIMP lights will display regularly if not connected
 //Solid blue+green: connected but RSSI too low to pass
 //Solid red: waiting for all charging systems to pass first check
 //Solid yellow: testing valve on/off and charger stats
 //Solid white: battery too low to ship 
-//Solid green: ready to be turned off and shipped
+//Blinking Green/yellow rapid: ready to be turned off and pass to the next stage of the line
 //Blinking white: failed blessing, must be turned off and retested
 
 
+//"NO LOCK PRODUCTION CODE"
+
+failNumber <- 0; //counts failures
+failsToSend <- 10;
+
 devMac <- imp.getmacaddress();
-edynDevs <- ["0c2a690a2e2b","0c2a6908e8c1","0c2a6908feb4","0c2a6908ac62","0c2a690875f5","0c2a6908a99d","0c2a6908c2eb"];
-factoryDevs <- ["0c2a690a2e2b","0c2a6908e8c1","0c2a6908feb4","0c2a6908ac62","0c2a690875f5","0c2a6908a99d","0c2a6908c2eb"];
+edynDevs <- ["0c2a690a2e2b","0c2a6908e8c1","0c2a6908a8f9","0c2a6908f8b2","0c2a690890d4","0c2a69090e9d","0c2a690907c5","0c2a6908fbc2","0c2a6908e8b8","0c2a69090f86","0c2a6908c4e1","0c2a69090f86"];
+factoryDevs <- ["0c2a690a2e2b","0c2a6908e8c1","0c2a6908a8f9","0c2a6908f8b2","0c2a690890d4","0c2a69090e9d","0c2a690907c5","0c2a6908fbc2","0c2a6908e8b8","0c2a69090f86","0c2a6908c4e1","0c2a69090f86"];
 devType <- "None";
 debug <- true;
 
+const ssid = "Ellsworth AP"
+const pw = "ellsworth1"
 //This is required to get the "yellow blinking" behavior once the customer receives the device.
 if(imp.getssid() == ""){
     while(1){}
@@ -35,9 +41,9 @@ firstChargeCur <- 0.0;
 firstRSSIValue <- 0;
 
 //first check minimums
-firstBatMin <- 3.28;//~25-30% SOC on the battery, we'll be increasing this later
+firstBatMin <- 3.26;//~25-30% SOC on the battery, we'll be increasing this later
 firstSolarMin <- 4.5;//calibrated in factory
-firstChargeMin <- (-0.03);//calibrated in factory ~= -0.04 when not charging
+firstChargeMin <- (-0.045);//calibrated in factory ~= -0.04 when not charging
 //Need to figure out a good value for RSSI once we start production:
 firstRSSIMin <- (-60);
 
@@ -57,7 +63,6 @@ secondBatMin <- 3.25;
 
 //second check battery reading
 secondBatVol <- 0.0;
-
 
 //DL=debug loop, meant for debugging when no console is available
 //should NEVER be called in final production code
@@ -122,7 +127,7 @@ function blinkupRoutine(){
 }
 
 function configureDev(){
-    for (local x = 0; x<edynDevs.len(); x++){
+    for (local x = 0; x < edynDevs.len(); x++){
         if(devMac == edynDevs[x]){
             server.log("edyn dev")
             hardware.pinC.configure(DIGITAL_OUT);
@@ -331,6 +336,22 @@ if(devType == "Prod"){
             hardware.pinD.write(1);
         }
         
+        function signalSend(){
+            redOff();
+            blueOff();
+            greenOff();
+            for(local z=0; z<3; z++){
+                redOn();
+                imp.sleep(0.2);
+                greenOn();
+                imp.sleep(0.2);
+                blueOn();
+                imp.sleep(0.2)
+                greenOff();
+                blueOff();
+            }
+        }
+        
         //checks all charging related systems and wifi strength
         //valve is checked before any of this is run.
         function checkSystems(){
@@ -349,6 +370,15 @@ if(devType == "Prod"){
                     firstRSSIValue = rssiTemp;
                 }
                 else if (!firstRSSIPass){
+                    if(server.isconnected()){
+                        agent.send("Not Passed",
+                        {
+                            "testFailed" : "RSSI", 
+                            "failValue" : rssiTemp, 
+                            "expectedValueMin" : firstRSSIMin, 
+                            "expectedValueMax" : "N/A"
+                        });
+                    }
                     server.log("rssi failed" + firstRSSIMin)
                 }
             }
@@ -357,10 +387,11 @@ if(devType == "Prod"){
             server.disconnect();
             redOn();
             blueOff();
+            failNumber = 0;
             while(!firstSolarPass || !firstChargePass){
                 open()
                 imp.sleep(1)
-                readings = getChargingStatus();
+                readings=getChargingStatus();
                 if(readings.solar > firstSolarMin && readings.solar < firstSolarMax && !firstSolarPass){
                     firstSolarPass = true;
                     firstSolarVol = readings.solar;
@@ -369,6 +400,31 @@ if(devType == "Prod"){
                     firstChargePass = true;
                     firstChargeCur = readings.amperage;
                 }
+                //failures
+                if(!firstChargePass || !firstSolarPass){
+                    if(failNumber < failsToSend){
+                        failNumber += 1;
+                    } else {
+                        failNumber = 0;
+                        server.connect();
+                        while(!server.isconnected()){
+                            imp.sleep(0.2);
+                        }
+                        agent.send("Not Passed",
+                        {
+                            "testFailed" : "Charging", 
+                            "failValue" : "Amperage: " + readings.amperage + " Solar Voltage: " + readings.solar , 
+                            "expectedValueMin" : "Amperage: " + firstChargeMin + " Solar: " + firstSolarMin, 
+                            "expectedValueMax" : "Amperage: " + firstChargeMax + " Solar: " + firstSolarMax
+                        });
+                        signalSend();
+                        redOn();
+                        greenOn();
+                        blueOff();
+                        imp.sleep(2);
+                        server.disconnect();
+                    }
+                }
                 close()
                 imp.sleep(1)
             }
@@ -376,7 +432,11 @@ if(devType == "Prod"){
             redOn()
             blueOn()
             greenOn()
-            
+            while(!server.isconnected()){
+                imp.sleep(0.2);
+            }
+            failNumber = 0; 
+            server.log("Beginning Battery Check")
             while(!firstBatPass){
                 imp.sleep(1)
                 readings = getChargingStatus();
@@ -384,11 +444,40 @@ if(devType == "Prod"){
                     firstBatPass = true;
                     firstBatVol = readings.battery;
                     server.log("batteryPassed")
+                } else {
+                    server.log("failed")
+                    if(failNumber < failsToSend){
+                            failNumber += 1;
+                            server.log(failNumber)
+                    } else {
+                        server.log("Sending")
+                        failNumber = 0;
+                        agent.send("Not Passed",
+                        {
+                            "testFailed" : "Battery", 
+                            "failValue" : readings.battery, 
+                            "expectedValueMin" : firstBatMin, 
+                            "expectedValueMax" : firstBatMax
+                        });
+                        signalSend();
+                        greenOn();
+                        blueOn();
+                        redOn();
+                    }
                 }
+                server.log("EndCheck")
             }
+            
 
             if(firstRSSIPass && firstChargePass && firstSolarPass && firstBatPass){
                 server.log("all passed")
+                agent.send("Passed",
+                {
+                    "RSSI" : firstRSSIValue,
+                    "Solar_Voltage" : firstSolarVol,
+                    "Amperage" : firstChargeCur,
+                    "Battery_Voltage" : firstBatVol
+                })
                 return
             }
         }
@@ -496,10 +585,34 @@ if(devType == "Prod"){
                 server.log("checkSystemsBegin")
                 checkSystems();
                 server.log("Check Systems Complete")
-                blessDevice();
+                greenOn()
+                blueOff()
+                redOff()
+                while(1){
+                    redOff()
+                    imp.sleep(0.3)
+                    redOn()
+                    imp.sleep(0.3)
+                }
+                #blessDevice();
             }    
         }
         main();  
     }
-    catch(error){}
+    catch(error){
+        blueOff();
+        greenOff();
+        redOff();
+        server.connect();
+        while(1){
+            agent.send("error",{"error" : error})
+            for(local n=0; n<10; n++){
+                redOn();
+                imp.sleep(0.2);
+                redOff();
+                imp.sleep(0.2);
+            }
+        }
+        
+    }
 }
