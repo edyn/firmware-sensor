@@ -640,6 +640,10 @@ function batteryLowCheck(dataToPass){
     }
 }
 
+function requestInstructions(){
+    agent.send("requestInstructions", [])
+}
+
 function onConnectedCallback(state, dataToPass) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
@@ -655,6 +659,7 @@ function onConnectedCallback(state, dataToPass) {
         }
         server.log("sendingData");
         sendData(dataToPass);
+        requestInstructions();
     } 
     //if we're not connected...
     else {

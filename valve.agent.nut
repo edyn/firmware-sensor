@@ -66,6 +66,10 @@ function disobeyInData(data){
     }
 }
 
+device.on("requestInstructions", function(){
+    fetchAndSendInstructions(0);
+});
+
 function sendDataFromDevice(data) {
     local readingsURL = pathForValveData;
     local headers = {
@@ -129,18 +133,8 @@ function sendDataHandling(data){
             //TODO: review if we actually want to skip trying to receive instructions, this might change in the future
             //default sleep in this mode of failure is 20 minutes, we can change whenver.
             //skipping the get instructions step because we already have a backend failure
-            server.log("Problem sending data to the backend!!")
-            instructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0};
+            server.log("Problem sending data to the backend!!") //already logged as a warning in sendDataFromDevice()
             //TODO: add receive instructions error handling.
-            if(!disobeyInData(data)){
-                device.send("receiveInstructions", instructions);
-            }
-        }
-        //if sending data to server succeeds
-        else{
-            if(!disobeyInData(data)){
-                fetchAndSendInstructions(0)
-            }
         }
     //if there's an error in this function, just tell the valve to go to sleep.
     } catch(error){
@@ -150,11 +144,7 @@ function sendDataHandling(data){
             "function" : "sendDataHandling",
             "macAddress" : macAgentSide 
         });
-        instructions = {"open" : false, "nextCheckIn" : defaultSleepTime, iteration = 0};
-        //TODO: add receive instructions error handling.
-        if(!disobeyInData){
-            device.send("receiveInstructions", instructions);
-        }
+
     }
 }
 
