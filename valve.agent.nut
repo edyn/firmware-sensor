@@ -22,6 +22,7 @@ const WAKEREASON_SQUIRREL_ERROR = 5;
 fetchInstructionsTryNumberMax <- 1;
 //wait this long before retrying:
 fetchInstructionsRetryTimer <- 0.5;
+unitTesting <- 0;
 
 //Loggly stuff:
 logglyKey <- "0127ef83-0c31-4185-afc1-4438df3258fb"
@@ -66,7 +67,7 @@ function disobeyInData(data){
     }
 }
 
-device.on("requestInstructions", function(){
+device.on("requestInstructions", function(data){
     fetchAndSendInstructions(0);
 });
 
@@ -262,4 +263,40 @@ device.onconnect(function() {
     });
 });
 
+
+
+function retrySendingData(){
+    //globalDataStore.len() is called many times rather than being a single variable because it changes throughout the function.
+    if(globalDataStore.len()){
+        local initialNumber = globalDataStore.len();
+        local lastResponse = 0;
+        local currentReading = {};
+        local unsentReadingsTemp = []
+        if(globalDataStore.len() > 100){
+            server.log("Over 100 unsent readings");
+            deviceLogglyWarn({"warning" : globalDataStore.len() + "unsent readings!"})
+        }
+        while(globalDataStore.len() > 0){
+            server.log("Found " + globalDataStore.len() + " unsent readings, attempting to send them now")
+            currentReading=globalDataStore.pop();
+            lastResponse = sendDataFromDevice(currentReading);
+            if(lastResponse < 200 || lastResponse > 203){
+                server.log("A stored reading was unsuccessful on it's retry, will try again later");
+                unsentReadingsTemp.append(currentReading)
+            } else {
+                server.log("A stored reading was sent successfully");
+            }
+        }
+        if(globalDataStore.len()>0){
+            server.log("Unsent Readings Remaining: " + globalDataStore.len());
+        } else if(initialNumber){
+            server.log("sent all unsent readings, " + initialNumber + " in total.");
+        }
+        globalDataStore = unsentReadingsTemp;
+    }
+    imp.wakeup(60,retrySendingData)
+}
+if(!unitTesting){
+    retrySendingData();
+}
 
