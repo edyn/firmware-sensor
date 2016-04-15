@@ -525,6 +525,7 @@ testValve();
 testCharger();
 testCollectData();
 testBatterySafety();
+testErrors();
 imp.wakeup(10,function(){
     server.log("\nDevice Tests Failed:");
     server.log(testsFailed.len() + " tests failed out of " + (testsPassed.len() + testsFailed.len()) + " tests total");

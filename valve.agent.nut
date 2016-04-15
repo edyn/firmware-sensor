@@ -17,6 +17,7 @@ pathForValveState <- "valveState.json"
 pathForValveNextAction <- "valves/v1/valves-now/" + macAgentSide + ".json"
 pathForValveData <- "http://api.valve.prod.edyn.com/readings/" + macAgentSide
 const WAKEREASON_SQUIRREL_ERROR = 5;
+bearerAuth <- "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzY29wZXMiOlsicHVibGljIiwidmFsdmU6YWdlbnQiXSwiaWF0IjoxNDU1NzM4MjY4LCJzdWIiOiJhcHA6dmFsdmUtYWdlbnQifQ.-BKIywHrpbtNo2xuYhcZ-4w5itBFQMM0KHQZmXcYgcM";
 //This is the FW bandaid that retries if a required field for valve instructions is missing
 //sample error message that would trigger this: the index 'nextCheckIn' does not exist (line 76)
 fetchInstructionsTryNumberMax <- 1;
@@ -76,18 +77,20 @@ function sendDataFromDevice(data) {
     local headers = {
         "Content-Type":"application/json", 
         "User-Agent":"Imp", 
-        "Authorization" : "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzY29wZXMiOlsicHVibGljIiwidmFsdmU6YWdlbnQiXSwiaWF0IjoxNDU1NzM4MjY4LCJzdWIiOiJhcHA6dmFsdmUtYWdlbnQifQ.-BKIywHrpbtNo2xuYhcZ-4w5itBFQMM0KHQZmXcYgcM"
+        "Authorization" : bearerAuth
     };
     local jsonData = http.jsonencode(data);
     //Going to use camelcase where acronyms count as one word, but each letter is treated as the first letter of the acronym:
     //urlReadings is valid, readingsURL is valid, readingsUrl is not.
     local req = http.post(readingsURL, headers, jsonData);
     local res = req.sendsync();
-    if(data.wakeReason == WAKEREASON_SQUIRREL_ERROR){//Waking from squirrel runtime error
-        loggly.error({
-            "error" : "Valve waking from error"
-        });
-    }
+    if("wakeReason" in data){
+        if(data.wakeReason == WAKEREASON_SQUIRREL_ERROR){//Waking from squirrel runtime error
+            loggly.error({
+                "error" : "Valve waking from error"
+            });
+        }
+    }  
     if (res.statuscode != 200 && res.statuscode != 201 && res.statuscode != 202) {
         loggly.warn({
             "warning" : "Error sending data",
@@ -294,7 +297,9 @@ function retrySendingData(){
         }
         globalDataStore = unsentReadingsTemp;
     }
-    imp.wakeup(60,retrySendingData)
+    if(!unitTesting){
+        imp.wakeup(60,retrySendingData);
+    }
 }
 if(!unitTesting){
     retrySendingData();
