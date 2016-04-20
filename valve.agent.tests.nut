@@ -7,14 +7,16 @@ testsFailed <-[];
 //this
 realDataTable <- {
     macId = "20000c2a690a2e2b",
-    wakeReason = 1,
-    batteryLevel = 3.3,
-    solarLevel = 4.3,
-    valveOpen = true,
+    wakeReason = 0,
+    batteryVoltage = 3.3,
+    solarVoltage = 3.4,
+    amperage = 1.0,
+    valveState = true,
     timestamp = date().time,
-    rssi = -60,
-    firmwareVersion = imp.getsoftwareversion(),
-    hardwareVersion = "0.0.1"
+    rssi = (-60),
+    OSVersion = "AnyString",
+    hardwareVersion = "AnyString",
+    firmwareVersion = "AnyString"
 }
 
 function logTest(inputStr = "", passFail = false, inputError = false){
@@ -45,10 +47,11 @@ function logFail(inputStr = "", inputError = false){
 
 function sendDataFromDeviceTests(){
 
-    //test 1: regular operation with dummy data inputs should succeed
+    //test 1: regular operation with dummy data inputs should no longer succeed 
+    //but a (test) failure is probably due to a backend issue? (means if sending data succeeds, there's a backend issue rather than a firmare issue)
     try{
-        local result = sendDataFromDevice({dummyData = "Random Inputs Should Succeed"});
-        if(result){
+        local statusCode = sendDataFromDevice({dummyData = "Random Inputs Shouldn't Succeed"});
+        if(statusCode != 200 && statusCode != 201 && statusCode != 202 && statusCode != 203){
             logPass("sendDataFromDevice (random inputs)");
         }
         else{
@@ -59,12 +62,13 @@ function sendDataFromDeviceTests(){
         logFail("sendDataFromDevice (random inputs)", error)
     }
     //test 2: trying to send with invalid authorization should fail
-    firebaseAuth <- "IncorrectAuth";
+    local tempAuth = bearerAuth;
+    bearerAuth = "IncorrectAuth";
     try{
         local statusCode = sendDataFromDevice({dummyData = "Random Inputs Should Succeed"});
         //(opposite of previous comment) Anything we send shoudl fail in this test because we are inputting a bad API key
         //TODO: handle 4xx and 5xx differently from one another.
-        if(statusCode != 200){
+        if(statusCode != 200 && statusCode != 201 && statusCode != 202 && statusCode != 203){
             logPass("sendDataFromDevice (bad auth)");
         }
         else{
@@ -74,13 +78,13 @@ function sendDataFromDeviceTests(){
     catch(error){
         logFail("sendDataFromDevice (bad auth)", error);
     }
-    firebaseAuth <- firebaseAuthTemp;
+    bearerAuth = tempAuth;
     //same as last test but with regular data
     try{
         local statusCode = sendDataFromDevice(realDataTable);
         //anything should work when new rules are implemented.
         //TODO: handle 4xx and 5xx differently from one another.
-        if(statusCode != 200){
+        if(statusCode != 200 && statusCode != 201 && statusCode != 202 && statusCode != 203){
             logFail("sendDataFromDevice (real data)")
         }
         else{
@@ -91,11 +95,26 @@ function sendDataFromDeviceTests(){
     //still shouldn't throw an error, so this should be considered a failure in either case
     catch(error){
             logFail("sendDataFromDevice (real data)",error)
-    }    
+    }  
+    //test 4: send from globaldatastore:
+    try{
+        globalDataStore.append(realDataTable);
+        globalDataStore.append(realDataTable);
+        globalDataStore.append(realDataTable);
+        globalDataStore.append(realDataTable);
+        retrySendingDataIfNeeded();
+        if(globalDataStore.len()==0){
+            logPass("RetrySendingData");
+        } else {
+            logFail("RetrySendingData");
+        }
+    } catch (error) {
+        logFail("RetrySendingData", error)
+    }
 }
 
 sendDataFromDeviceTests();
-imp.wakeup(10,function(){
+imp.wakeup(15,function(){
     server.log("\nAgent Tests Failed:");
     server.log(testsFailed.len() + " out of " + (testsPassed.len()+testsFailed.len()) + " tests total");
     if(testsFailed.len()>0){
