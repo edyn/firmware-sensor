@@ -281,7 +281,7 @@ function retrySendingData(){
         }
         while(globalDataStore.len() > 0){
             server.log("Found " + globalDataStore.len() + " unsent readings, attempting to send them now")
-            currentReading=globalDataStore.pop();
+            currentReading=globalDataStore.remove(0);
             lastResponse = sendDataFromDevice(currentReading);
             if(lastResponse < 200 || lastResponse > 203){
                 server.log("A stored reading was unsuccessful on it's retry, will try again later");
