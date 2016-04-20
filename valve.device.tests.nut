@@ -413,7 +413,7 @@ function logglyTests(){
 }
 */
 
-function testErrors(){
+function testErrorBranches(){
     //disobey a
     //expect valve to close (nothing else)
     open();
@@ -517,15 +517,13 @@ function testErrors(){
 
 }
 
-
-testErrors();
 receiveInstructionsTests();
 testLEDs();
 testValve();
 testCharger();
 testCollectData();
 testBatterySafety();
-testErrors();
+testErrorBranches();
 imp.wakeup(10,function(){
     server.log("\nDevice Tests Failed:");
     server.log(testsFailed.len() + " tests failed out of " + (testsPassed.len() + testsFailed.len()) + " tests total");

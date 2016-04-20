@@ -48,7 +48,7 @@ function logFail(inputStr = "", inputError = false){
 function sendDataFromDeviceTests(){
 
     //test 1: regular operation with dummy data inputs should no longer succeed 
-    //but a failure is probably due to a backend issue?
+    //but a (test) failure is probably due to a backend issue? (means if sending data succeeds, there's a backend issue rather than a firmare issue)
     try{
         local statusCode = sendDataFromDevice({dummyData = "Random Inputs Shouldn't Succeed"});
         if(statusCode != 200 && statusCode != 201 && statusCode != 202 && statusCode != 203){
@@ -102,7 +102,7 @@ function sendDataFromDeviceTests(){
         globalDataStore.append(realDataTable);
         globalDataStore.append(realDataTable);
         globalDataStore.append(realDataTable);
-        retrySendingData();
+        retrySendingDataIfNeeded();
         if(globalDataStore.len()==0){
             logPass("RetrySendingData");
         } else {

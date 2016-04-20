@@ -268,7 +268,7 @@ device.onconnect(function() {
 
 
 
-function retrySendingData(){
+function retrySendingDataIfNeeded(){
     //globalDataStore.len() is called many times rather than being a single variable because it changes throughout the function.
     if(globalDataStore.len()){
         local initialNumber = globalDataStore.len();
@@ -298,10 +298,10 @@ function retrySendingData(){
         globalDataStore = unsentReadingsTemp;
     }
     if(!unitTesting){
-        imp.wakeup(60,retrySendingData);
+        imp.wakeup(60,retrySendingDataIfNeeded);
     }
 }
 if(!unitTesting){
-    retrySendingData();
+    retrySendingDataIfNeeded();
 }
 
