@@ -96,7 +96,7 @@ function sendDataFromDevice(data) {
     }  
     if (res.statuscode != 200 && res.statuscode != 201 && res.statuscode != 202) {
         loggly.warn({
-            "warning" : "Error sending data",
+            "message" : "Error sending data",
             "function" : "sendDataFromDevice (agent)",
             "statusCode" : res.statuscode,
             "macAddress" : macAgentSide
