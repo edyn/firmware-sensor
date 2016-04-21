@@ -2,6 +2,7 @@ testsPassed <- [];
 testsFailed <- [];
 sampleDataGlobal <- collectData()
 //TODO: add a test where timer is greater than time it should sleep.
+wakeReason = 1;
 
 function logTest(inputStr = "", passFail = false, inputError = false){
     if(passFail){
@@ -34,9 +35,10 @@ function receiveInstructionsTests(){
     //Test 1
     //testing the opening of the valve, should succeed
     //should succeed
+    nv.iteration = 0;
     try{
         //open the valve, should be valid
-        receiveInstructions({open = true , nextCheckIn = 0.1, iteration = 1});
+        receiveInstructions({open = true , nextCheckIn = 0.1, iteration = 4}, sampleDataGlobal);
         //if the valve thinks it's valvestate is true, it passes
         if(nv.valveState){
             logPass("Valve Open");
@@ -55,7 +57,7 @@ function receiveInstructionsTests(){
     //should succeed
     try{
         //close the valve, should be valid
-        receiveInstructions({open = false , nextCheckIn = 0.1, iteration = 0});
+        receiveInstructions({open = false , nextCheckIn = 0.1, iteration = 0}, sampleDataGlobal);
         //if the valve thinks it's valvestate is false, it passes
         if(!nv.valveState){
             logPass("Valve Close");
@@ -73,7 +75,7 @@ function receiveInstructionsTests(){
     //trying receiveInstructions without an open value
     //should fail
     try{
-        receiveInstructions({nextCheckIn = 0.1});
+        receiveInstructions({nextCheckIn = 0.1}, sampleDataGlobal);
         //if receiveInstructions passes without error, the test fails
         logFail("receiveInstructions (not enough params, missing 'open')");
     }
@@ -85,7 +87,7 @@ function receiveInstructionsTests(){
     //trying receiveInstructions without a nextCheckIn value
     //should fail
     try{
-        receiveInstructions({open = true});
+        receiveInstructions({open = true}, sampleDataGlobal);
         //if receiveInstructions passes without error, the test fails
         logFail("receiveInstructions (not enough params, missing 'nextCheckIn')");
     }
@@ -101,7 +103,7 @@ function receiveInstructionsTests(){
     open();
     local instructions = {open = true, nextCheckIn = 1, iteration = 1};
     try{
-        receiveInstructions(instructions);
+        receiveInstructions(instructions, sampleDataGlobal);
         if(nv.valveState == true){
             logFail("receiveInstructions (failed iteration)");
         }else{
@@ -120,7 +122,7 @@ function receiveInstructionsTests(){
     close();
     local instructions = {open = true, nextCheckIn = 1, iteration = 1};
     try{
-        receiveInstructions(instructions);
+        receiveInstructions(instructions, sampleDataGlobal);
         if(nv.valveState == false){
             logFail("receiveInstructions (proper iteration)");
         }else{
@@ -139,7 +141,7 @@ function receiveInstructionsTests(){
     close();
     local instructions = {open = true, nextCheckIn = 1};
     try{
-        receiveInstructions(instructions);
+        receiveInstructions(instructions, sampleDataGlobal);
         logFail("receiveInstructions (missing iteration parameter)")
     }
     //if there isn't issue in the above test, it failed
@@ -349,7 +351,44 @@ function testBatterySafety(){
         sampleData.batteryVoltage = batteryCritical - 0.1;
         open();
         imp.sleep(0.2);
-        batteryCriticalCheck(sampleData);
+        if(!batteryCriticalCheck(sampleData)){
+            if(!nv.valveState){
+                logPass("BatteryCriticalCheck");
+            } else {
+                logFail("BatteryCriticalCheck");
+            }
+
+        } else {
+            logFail("BatteryCriticalCheck");
+        }
+    } catch(error){
+        logFail("BatteryCriticalCheck", error);
+    }
+    try{
+        sampleData.batteryVoltage = batteryLow - 0.1;
+        open();
+        imp.sleep(0.2);
+        batteryLowCheck(sampleData);
+        if(!batteryLowCheck(sampleData)){
+            if(!nv.valveState){
+                logPass("BatteryLowCheck");
+            } else {
+                logFail("BatteryLowCheck");
+            }
+        } else {
+            logFail("BatteryLowCheck");
+        } 
+    } catch(error){
+        logFail("BatteryLowCheck", error)
+    }
+}
+/*
+function logglyTests(){
+    //forcedLogglyConnect
+    open();
+    forcedLogglyConnect(NO_WIFI);
+    try{
+        forced
         if(nv.valveState == false && mostRecentDeepSleepCall == criticalBatterySleepTime * 60.0){
             logPass("BatteryCriticalCheck");
         } else {
@@ -372,6 +411,111 @@ function testBatterySafety(){
         logFail("BatteryLowCheck", error)
     }
 }
+*/
+
+function testErrorBranches(){
+    //disobey a
+    //expect valve to close (nothing else)
+    open();
+    nv.iteration=0;
+    imp.sleep(0.2);
+    throwErrors = "disa";
+    try{
+        disobey("unitTestDisobey",sampleDataGlobal)
+        if(!nv.valveState){
+            logPass("DisobeyErrorTest");
+        } else {
+            logFail("DisobeyErrorTest");
+        } 
+    } catch(error){
+        logFail("DisobeyErrorTest", error);
+    }
+    //receive instructions error a
+    imp.sleep(0.2);
+    open();
+    imp.sleep(0.2);
+    throwErrors = "reca";
+    nv.iteration=0;
+    mostRecentDeepSleepCall = 0;
+    try{
+        receiveInstructions({open = true , nextCheckIn = 0.1, iteration = 1}, sampleDataGlobal);
+        if(!nv.valveState && mostRecentDeepSleepCall == sleepOnErrorTime){
+            logPass("receiveInstructionsErrorA");
+        } else {
+            logFail("receiveInstructionsErrorA");
+        } 
+    } catch(error){
+        logFail("receiveInstructionsErrorA", error);
+    }
+    //receive instructions error b
+    imp.sleep(0.2);
+    open();
+    imp.sleep(0.2);
+    throwErrors = "recb";
+    nv.iteration=0;
+    mostRecentDeepSleepCall = 0;
+    try{
+        receiveInstructions({open = true , nextCheckIn = 0.1, iteration = 1}, sampleDataGlobal);
+        if(!nv.valveState && mostRecentDeepSleepCall == valveCloseMaxSleepTime * 60.0){
+            logPass("receiveInstructionsErrorB");
+        } else {
+            logFail("receiveInstructionsErrorB");
+        } 
+    } catch(error){
+        logFail("receiveInstructionsErrorB", error);
+    }
+    //receive instructions error c
+    imp.sleep(0.2);
+    open();
+    imp.sleep(0.2);
+    throwErrors = "recc";
+    nv.iteration=0;
+    mostRecentDeepSleepCall = 0;
+    try{
+        receiveInstructions({open = true , nextCheckIn = 0.1, iteration = 1}, sampleDataGlobal);
+        if(!nv.valveState && mostRecentDeepSleepCall == errorSleepTime * 60.0){
+            logPass("receiveInstructionsErrorC");
+        } else {
+            logFail("receiveInstructionsErrorC");
+        } 
+    } catch(error){
+        logFail("receiveInstructionsErrorC", error);
+    }  
+    //receive instructions error d
+    imp.sleep(0.2);
+    open();
+    imp.sleep(0.2);
+    throwErrors = "recd";
+    nv.iteration=0;
+    mostRecentDeepSleepCall = 0;
+    try{
+        receiveInstructions({open = true , nextCheckIn = 0.1, iteration = 1}, sampleDataGlobal);
+        if(!nv.valveState && mostRecentDeepSleepCall == errorSleepTime * 60.0){
+            logPass("receiveInstructionsErrorD");
+        } else {
+            logFail("receiveInstructionsErrorD");
+        } 
+    } catch(error){
+        logFail("receiveInstructionsErrorD", error);
+    }
+    //main/initializations error a
+    imp.sleep(0.2);
+    open();
+    imp.sleep(0.2);
+    throwErrors = "maia";
+    mostRecentDeepSleepCall = 0;
+    try{
+        main()
+        if(!nv.valveState && mostRecentDeepSleepCall == criticalBatterySleepTime * 60.0){
+            logPass("mainErrorA");
+        } else {
+            logFail("mainErrorA");
+        } 
+    } catch(error){
+        logFail("mainErrorA", error);
+    }
+
+}
 
 receiveInstructionsTests();
 testLEDs();
@@ -379,6 +523,7 @@ testValve();
 testCharger();
 testCollectData();
 testBatterySafety();
+testErrorBranches();
 imp.wakeup(10,function(){
     server.log("\nDevice Tests Failed:");
     server.log(testsFailed.len() + " tests failed out of " + (testsPassed.len() + testsFailed.len()) + " tests total");
@@ -387,6 +532,8 @@ imp.wakeup(10,function(){
         for (local x = 0; x < testsFailed.len(); x++){
             server.log(testsFailed[x]);
         }
+    } else {
+        server.log("ALL DEVICE TESTS PASSED");
     }
     server.log("\n");
 })
