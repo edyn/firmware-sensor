@@ -43,21 +43,21 @@ loggly <- Loggly(logglyKey, {
 function deviceLogglyLog(logTable){
     logTable.macAddress <- macAgentSide;
     logTable.sourceGroup <- "Firmware";
-    logTable.stage <- "Production";
+    logTable.env <- "Production";
     loggly.log(logTable);
 }
 
 function deviceLogglyWarn(logTable){
     logTable.macAddress <- macAgentSide;
     logTable.sourceGroup <- "Firmware";
-    logTable.stage <- "Production";
+    logTable.env <- "Production";
     loggly.warn(logTable);
 }
 
 function deviceLogglyErr(logTable){
     logTable.macAddress <- macAgentSide;
     logTable.sourceGroup <- "Firmware";
-    logTable.stage <- "Production";
+    logTable.env<- "Production";
     loggly.error(logTable);
 }
 
