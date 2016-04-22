@@ -97,7 +97,7 @@ function calculateBatteryEMA(newDataPoint){
     if(nv.averagingIterator < batteryAveragingPointNumber){
         nv.averagingSum += newDataPoint;
         nv.averagingIterator += 1;
-        return (nv.averagingSum / nv.iterator)
+        return (nv.averagingSum / nv.averagingIterator)
     } else {
         local emaMultiplier =  (2.0 / (batteryAveragingPointNumber + 1));
         local currentEMA = (emaMultiplier * newDataPoint) + nv.lastEMA * (1.0 - emaMultiplier);
