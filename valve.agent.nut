@@ -211,7 +211,7 @@ function valveStateChangeHandling(data){
     //TODO: make generic handling function for HTTP requests
     if (res.statuscode != 200 && res.statuscode != 201 && res.statuscode != 202) {
         loggly.warn({
-            "warning" : "Error sending message",
+            "message" : "Error sending message",
             "function" : "valveStateChangeHandling (agent)",
             "statusCode" : res.statuscode,
             "macAddress" : macAgentSide
@@ -240,7 +240,7 @@ function getSuggestedValveState(){
     //TODO: make generic handling function for HTTP requests
     if(statusCode != 200 && statusCode != 201 && statusCode != 202){
         loggly.warn({
-            "warning" : "Failed to fetch next command",
+            "message" : "Failed to fetch next command",
             "function" : "getSuggestedValveState (agent)",
             "statusCode" : statusCode,
             "macAddress" : macAgentSide
