@@ -644,26 +644,18 @@ function requestInstructions(){
     agent.send("requestInstructions", [])
 }
 
-function onConnectedCallback(state, dataToPass) {
+function onConnectedSendData(state, dataToPass) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
-        if(batteryLowCheck(dataToPass)){
-            //TODO: No asynchronous functions inside synchronous-appearing functions allowed.
-            //not sure if agent.on works inside functions, but it should?
-            agent.on("receiveInstructions", function(instructions){receiveInstructions(instructions, dataToPass)});
-            //The below statement works as a "timeout" for receive instructions
-            imp.wakeup(receiveInstructionsWaitTimer, function(){deepSleepForTime(valveCloseMaxSleepTime * 60.0)});
-        } else{
-            //don't wait for more instructions, just go back to sleep
+        server.log("Sending Data To Agent");
+        sendData(dataToPass);
+        if(!batteryLowCheck(dataToPass)){
+            //After sending data go to sleep without requesting instructions:
             deepSleepForTime(lowBatterySleepTime * 60.0);
         }
-        server.log("sendingData");
-        sendData(dataToPass);
-        requestInstructions();
     } 
     //if we're not connected...
     else {
-        //Valve fails to connect:
         if(nv.valveState == true){
             close();
         }
@@ -672,8 +664,26 @@ function onConnectedCallback(state, dataToPass) {
     }
 }
 
+function onConnectedRequestInstructions(state, dataToPass){
+    // If we're connected...
+    if (state == SERVER_CONNECTED) {
+        //TODO: No asynchronous functions inside synchronous-appearing functions allowed.
+        //The below statement works as a "timeout" for receive instructions
+        imp.wakeup(receiveInstructionsWaitTimer, function(){deepSleepForTime(valveCloseMaxSleepTime * 60.0)});
+        server.log("Requesting Instructions From Agent");
+        requestInstructions();
+    } 
+    //if we're not connected...
+    else {
+        if(nv.valveState == true){
+            close();
+        }
+        deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+        return
+    }
+}
 
-function connectAndSend(callback, timeout, dataToPass) {
+function connectAndCallback(callback, timeout, dataToPass) {
     // Check if we're connected before calling server.connect()
     // to avoid race condition
     if (server.isconnected()) {
@@ -694,7 +704,6 @@ function batteryCriticalCheck(dataTable){
         if(nv.valveState == true){
             close();
         }
-        //return the main function; pretty much ensures imp.idle() required for deep sleep
         return false
     } else {
         return true
@@ -716,26 +725,36 @@ function main(){
         chargingConfigure();
         valvePinInit();
         valveConfigure();
+        agent.on("receiveInstructions", function(instructions){receiveInstructions(instructions, dataToPass)});
         hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){
             if(nv.valveState == true){
                 close();
             }
         });
-        //If onWakeup() returns 0, go into 'blinkup phase' 
         if(!onWakeup()){
-            close()
-            imp.sleep(blinkupTimer)
+            close();
         }
         local dataTable = collectData();
         //it's worth it for us to know battery level on these wakereasons
         //they all connect to wifi before doing anything else anyways
         if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
-            connectAndSend(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
+            connectAndCallback(onConnectedSendData , TIMEOUT_SERVER_S, dataTable);
+        }
+        //If onWakeup() returns 0, go into 'blinkup phase' 
+        if(!onWakeup()){
+            //this is going to be changed in the manual watering PR, which should come pretty soon
+            imp.sleep(blinkupTimer);
+        }
+        //if the battery is not critical, get instructions, otherwise don't connect and just go to sleep
+        if(batteryCriticalCheck(dataTable)){
+            connectAndCallback(onConnectedRequestInstructions , TIMEOUT_SERVER_S, dataTable);
         } else {
             //valve battery is critical, don't even connect to wifi
             deepSleepForTime(criticalBatterySleepTime * 60.0);
+            //returning from main function pretty much ensures that it will go to sleep immediately
+            return
         }
-    //This actually catches a huge amount of potential errors because it covers connectAndSend:
+    //This actually catches a huge amount of potential errors because it covers sending data:
     } catch(error) {
         //This will need to have a forced connect:
         if(nv.valveState){
