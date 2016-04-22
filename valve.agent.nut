@@ -26,7 +26,7 @@ fetchInstructionsRetryTimer <- 0.5;
 unitTesting <- 0;
 
 //Loggly stuff:
-logglyKey <- "0127ef83-0c31-4185-afc1-4438df3258fb"
+logglyKey <- "1890ff8f-0c0a-4ca0-b2f4-74f8f3ea469b"
 loggly <- Loggly(logglyKey, { 
     "tags" : "valveLogs",
     "timeout" : 60,
@@ -42,16 +42,22 @@ loggly <- Loggly(logglyKey, {
 
 function deviceLogglyLog(logTable){
     logTable.macAddress <- macAgentSide;
+    logTable.sourceGroup <- "Firmware";
+    logTable.env <- "Production";
     loggly.log(logTable);
 }
 
 function deviceLogglyWarn(logTable){
     logTable.macAddress <- macAgentSide;
+    logTable.sourceGroup <- "Firmware";
+    logTable.env <- "Production";
     loggly.warn(logTable);
 }
 
 function deviceLogglyErr(logTable){
     logTable.macAddress <- macAgentSide;
+    logTable.sourceGroup <- "Firmware";
+    logTable.env<- "Production";
     loggly.error(logTable);
 }
 
@@ -93,7 +99,7 @@ function sendDataFromDevice(data) {
     }  
     if (res.statuscode != 200 && res.statuscode != 201 && res.statuscode != 202) {
         loggly.warn({
-            "warning" : "Error sending data",
+            "message" : "Error sending data",
             "function" : "sendDataFromDevice (agent)",
             "statusCode" : res.statuscode,
             "macAddress" : macAgentSide
@@ -208,7 +214,7 @@ function valveStateChangeHandling(data){
     //TODO: make generic handling function for HTTP requests
     if (res.statuscode != 200 && res.statuscode != 201 && res.statuscode != 202) {
         loggly.warn({
-            "warning" : "Error sending message",
+            "message" : "Error sending message",
             "function" : "valveStateChangeHandling (agent)",
             "statusCode" : res.statuscode,
             "macAddress" : macAgentSide
@@ -237,7 +243,7 @@ function getSuggestedValveState(){
     //TODO: make generic handling function for HTTP requests
     if(statusCode != 200 && statusCode != 201 && statusCode != 202){
         loggly.warn({
-            "warning" : "Failed to fetch next command",
+            "message" : "Failed to fetch next command",
             "function" : "getSuggestedValveState (agent)",
             "statusCode" : statusCode,
             "macAddress" : macAgentSide
