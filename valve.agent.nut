@@ -26,7 +26,7 @@ fetchInstructionsRetryTimer <- 0.5;
 unitTesting <- 0;
 
 //Loggly stuff:
-logglyKey <- "0127ef83-0c31-4185-afc1-4438df3258fb"
+logglyKey <- "1890ff8f-0c0a-4ca0-b2f4-74f8f3ea469b"
 loggly <- Loggly(logglyKey, { 
     "tags" : "valveLogs",
     "timeout" : 60,
