@@ -487,7 +487,7 @@ function receiveInstructions(instructions, dataToPass){
                 break
             //This should be dealt with MUCH earlier, but in case it slipped through:
             case WAKEREASON_SQUIRREL_ERROR:
-                nv.iteration = iteration;
+                nv.iteration = instructions.iteration;
                 //sleep for an hour
                 deepSleepForTime(sleepOnErrorTime);
                 return
@@ -740,7 +740,6 @@ function main(){
         chargingConfigure();
         valvePinInit();
         valveConfigure();
-        agent.on("receiveInstructions", function(instructions){receiveInstructions(instructions, dataToPass)});
         hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){
             if(nv.valveState == true){
                 close();
@@ -750,6 +749,7 @@ function main(){
             close();
         }
         local dataTable = collectData();
+        agent.on("receiveInstructions", function(instructions){receiveInstructions(instructions, dataTable)});
         nv.lastEMA = calculateBatteryEMA(dataTable.batteryVoltage);
         dataTable.meanBattery <- nv.lastEMA;
         //it's worth it for us to know battery level on these wakereasons

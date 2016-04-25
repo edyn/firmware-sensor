@@ -57,7 +57,7 @@ function deviceLogglyWarn(logTable){
 function deviceLogglyErr(logTable){
     logTable.macAddress <- macAgentSide;
     logTable.sourceGroup <- "Firmware";
-    logTable.env<- "Production";
+    logTable.env <- "Production";
     loggly.error(logTable);
 }
 
