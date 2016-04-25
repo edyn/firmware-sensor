@@ -361,6 +361,110 @@ function deepSleepForTime(inputTime){
     }
 }
 
+
+//checking if there's any reason to not ask for instructions
+function checkIgnoreReasons(dataTable){
+
+    //ignore because of wakereason:
+
+    try{
+        switch(wakeReason){
+
+            /////////////////////////////////////////
+            //disobey opens, deep sleep for minimum//
+            /////////////////////////////////////////
+            //Cold boot, button press, blinkup
+
+            //coldboot
+            case WAKEREASON_POWER_ON:
+                if(nv.valveState){
+                    close();
+                } 
+                return true
+                //break for good measure?
+                break
+            //button press; same as cold boot except you should also note the time:
+            case WAKEREASON_PIN1:
+                if(nv.valveState){
+                    close();
+                }                
+                nv.wakeTime = time();
+                return true
+                break    
+            //blinkup same as cold boot
+            case WAKEREASON_BLINKUP:
+                if(nv.valveState){
+                    close();
+                }
+                return true
+                break
+
+            ////////////////////
+            //Normal Operation//
+            ////////////////////
+            //Wake from timer, OS update, firmware update all allow watering
+
+            case WAKEREASON_TIMER:
+                break
+            case WAKEREASON_NEW_SQUIRREL:
+                break
+            case WAKEREASON_NEW_FIRMWARE:
+                break
+
+            /////////////////////////////
+            //unlikely/impossible cases//
+            /////////////////////////////
+            //snooze, hardware reset, software reset, squirrel error, null
+            //behave normally? I guess?
+            //TODO: add loggly to ALL of these:
+
+            case WAKEREASON_SNOOZE:
+                break
+            case WAKEREASON_HW_RESET:
+                break
+            case WAKEREASON_SW_RESET:
+                break
+            //This should be dealt with MUCH earlier, but in case it slipped through:
+            case WAKEREASON_SQUIRREL_ERROR:
+                if(nv.valveState){
+                    close();
+                }
+                return true
+                break
+            //Below this should NEVER happen, but is there to be safe
+            case null:
+                server.log("Bad Wakereason");
+                break
+            //deafult to behave normally
+            default:
+                break
+        }
+
+        //low battery check
+
+        if(!batteryLowCheck(dataTable)){
+            if(nv.valveState){
+                close();
+            }
+            return true
+        }
+        //no reason to ignore:
+        return false
+
+    } catch(error) {
+        if(nv.valveState){
+            close();
+        }
+        logglyError({
+            "error" : error,
+            "function" : "checkIgnoreReasons",
+            "message" : "something in the function must have invalid arguments"
+        });
+        deepSleepForTime(sleepOnErrorTime);
+        return true
+    }
+}
+
 function collectData(){
     //TODO: add directly to chargingtable instead of having two tables combine
     local dataTable = {};
@@ -375,6 +479,7 @@ function collectData(){
     dataTable.OSVersion <- imp.getsoftwareversion();
     dataTable.hardwareVersion <-hardwareVersion;
     dataTable.firmwareVersion <- firmwareVersion;
+    dataTable.ignore <- checkIgnoreReasons
     return dataTable
 }
 
@@ -419,100 +524,6 @@ function receiveInstructions(instructions, dataToPass){
     local sleepMinimum = minimum(valveOpenMaxSleepTime,instructions.nextCheckIn);
     //if neither of the below statements 
     //TODO: battery check before opening
-    try{
-        switch(wakeReason){
-
-            /////////////////////////////////////////
-            //disobey opens, deep sleep for minimum//
-            /////////////////////////////////////////
-            //Cold boot, button press, blinkup
-
-            //coldboot
-            case WAKEREASON_POWER_ON: 
-                nv.iteration = instructions.iteration;
-                if(instructions.open == true){
-                    //disobey does nothing right now
-                    disobey("Not opening because of cold boot", dataToPass);
-                }
-                deepSleepForTime(sleepMinimum * 60.0);
-                return
-                //break for good measure?
-                break
-            //button press; same as cold boot except you should also note the time:
-            case WAKEREASON_PIN1:                
-                nv.iteration = instructions.iteration;
-                nv.wakeTime = time();
-                if(instructions.open == true){
-                    //disobey does nothing right now
-                    disobey("Not opening because of button press", dataToPass);
-                }
-                deepSleepForTime(sleepMinimum * 60.0);
-                return
-                break    
-            //blinkup same as cold boot
-            case WAKEREASON_BLINKUP:
-                nv.iteration = instructions.iteration;
-                if(instructions.open == true){
-                    //disobey does nothing right now
-                    disobey("Not opening because of blinkup", dataToPass);
-                }
-                deepSleepForTime(sleepMinimum * 60.0);
-                return
-                break
-
-            ////////////////////
-            //Normal Operation//
-            ////////////////////
-            //Wake from timer, OS update, firmware update
-
-            case WAKEREASON_TIMER:
-                break
-            case WAKEREASON_NEW_SQUIRREL:
-                break
-            case WAKEREASON_NEW_FIRMWARE:
-                break
-
-            /////////////////////////////
-            //unlikely/impossible cases//
-            /////////////////////////////
-            //snooze, hardware reset, software reset, squirrel error, null
-            //behave normally? I guess?
-            //TODO: add loggly to ALL of these:
-
-            case WAKEREASON_SNOOZE:
-                break
-            case WAKEREASON_HW_RESET:
-                break
-            case WAKEREASON_SW_RESET:
-                break
-            //This should be dealt with MUCH earlier, but in case it slipped through:
-            case WAKEREASON_SQUIRREL_ERROR:
-                nv.iteration = instructions.iteration;
-                //sleep for an hour
-                deepSleepForTime(sleepOnErrorTime);
-                return
-                break
-            //Below this should NEVER happen, but is there to be safe
-            case null:
-                server.log("Bad Wakereason");
-                break
-            //deafult to behave normally
-            default:
-                break
-        }
-    } catch(error) {
-        //TODO: make sure this is handled how we want:
-        if(nv.valveState){
-            close();
-        }
-        logglyError({
-            "error" : error,
-            "function" : "receiveInstructions (wakereason switch)",
-            "message" : "something in the wake reason switching behavior is failing"
-        });
-        deepSleepForTime(sleepOnErrorTime);
-        return
-    }
 
     //check iterator vs instructions.iteration if instructions tell it to open but the iterator is frozen, don't open
 
@@ -752,6 +763,9 @@ function main(){
         agent.on("receiveInstructions", function(instructions){receiveInstructions(instructions, dataTable)});
         nv.lastEMA = calculateBatteryEMA(dataTable.batteryVoltage);
         dataTable.meanBattery <- nv.lastEMA;
+
+        //Main function changed to callbacks, see https://docs.google.com/document/d/1D25kIreUbUYOQ9z72y-ZKp2SG0pjLMBXMHB1SetFISk/edit for information
+
         //it's worth it for us to know battery level on these wakereasons
         //they all connect to wifi before doing anything else anyways
         if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
