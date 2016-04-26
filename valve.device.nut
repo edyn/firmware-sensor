@@ -831,7 +831,15 @@ function main(){
         }
     } catch(error){
         server.log(error)
-        //put something here
+        if(nv.valveState){
+            close();
+        }
+        logglyError({
+            "error" : error,
+            "function" : "main",
+            "message" : "Main error! Could be in initializations, send data,  blinkupcycle, requestinstructions or other."
+        });
+        deepSleepForTime(errorSleepTime * 60.0);
     }
 }
 

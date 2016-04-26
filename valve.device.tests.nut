@@ -506,7 +506,7 @@ function testErrorBranches(){
     mostRecentDeepSleepCall = 0;
     try{
         main()
-        if(!nv.valveState && mostRecentDeepSleepCall == criticalBatterySleepTime * 60.0){
+        if(!nv.valveState && mostRecentDeepSleepCall == errorSleepTime * 60.0){
             logPass("mainErrorA");
         } else {
             logFail("mainErrorA");
