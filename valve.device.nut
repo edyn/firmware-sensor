@@ -807,7 +807,7 @@ function main(){
 
 
 
-
+/*
         //Main function changed to callbacks, see https://docs.google.com/document/d/1D25kIreUbUYOQ9z72y-ZKp2SG0pjLMBXMHB1SetFISk/edit for information
 
         //it's worth it for us to know battery level on these wakereasons
@@ -841,7 +841,7 @@ function main(){
         //return from main pretty much guarantees that it will go to sleep right away
         return
     }
-}
+}*/
 
 function softwareWatchdogTimer(){
     if(server.isconnected()){
