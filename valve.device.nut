@@ -362,6 +362,17 @@ function deepSleepForTime(inputTime){
 }
 
 
+
+
+
+
+///////////////////////////////////////////////////// Above is good, Below is meh
+
+
+
+
+
+
 //checking if there's any reason to not ask for instructions
 function checkIgnoreReasons(dataTable){
 
@@ -479,7 +490,7 @@ function collectData(){
     dataTable.OSVersion <- imp.getsoftwareversion();
     dataTable.hardwareVersion <-hardwareVersion;
     dataTable.firmwareVersion <- firmwareVersion;
-    dataTable.ignore <- checkIgnoreReasons
+    dataTable.ignore <- checkIgnoreReasons(dataTable);
     return dataTable
 }
 
@@ -709,7 +720,7 @@ function onConnectedRequestInstructions(state, dataToPass){
     }
 }
 
-function connectAndCallback(callback, timeout, dataToPass) {
+function connectAndCallback(callback, timeout, dataToPass, optionalSecondCallback = false) {
     // Check if we're connected before calling server.connect()
     // to avoid race condition
     if (server.isconnected()) {
@@ -736,6 +747,14 @@ function batteryCriticalCheck(dataTable){
     }
 }
 
+function blinkupCycle(dataTable, callback){
+    //If onWakeup() returns 0, go into 'blinkup phase' 
+    if(!onWakeup()){
+        //this is going to be changed in the manual watering PR, which should come pretty soon
+        imp.sleep(blinkupTimer);
+    }
+    callback(dataTable);
+}
 
 function main(){
     //This will only log if the imp is ALREADY connected:
@@ -764,6 +783,31 @@ function main(){
         nv.lastEMA = calculateBatteryEMA(dataTable.batteryVoltage);
         dataTable.meanBattery <- nv.lastEMA;
 
+        if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
+            connectAndCallback(onConnectedSendData , TIMEOUT_SERVER_S, dataTable, function(dataTable){blinkupCycle(dataTable,onConnectedRequestInstructions)});
+        } else {
+            blinkupCycle(dataTable, function(){
+                if(nv.valveState){
+                    close();
+                }
+                deepSleepForTime(criticalBatterySleepTime)
+            });
+        }
+    } catch(error){
+        //put something here
+    }
+}
+
+
+
+
+
+/////////////////////////////////////////////////// ABOVE IS FINE, BELOW IS MEH
+
+
+
+
+
         //Main function changed to callbacks, see https://docs.google.com/document/d/1D25kIreUbUYOQ9z72y-ZKp2SG0pjLMBXMHB1SetFISk/edit for information
 
         //it's worth it for us to know battery level on these wakereasons
@@ -771,11 +815,7 @@ function main(){
         if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
             connectAndCallback(onConnectedSendData , TIMEOUT_SERVER_S, dataTable);
         }
-        //If onWakeup() returns 0, go into 'blinkup phase' 
-        if(!onWakeup()){
-            //this is going to be changed in the manual watering PR, which should come pretty soon
-            imp.sleep(blinkupTimer);
-        }
+
         //if the battery is not critical, get instructions, otherwise don't connect and just go to sleep
         if(batteryCriticalCheck(dataTable)){
             connectAndCallback(onConnectedRequestInstructions , TIMEOUT_SERVER_S, dataTable);
