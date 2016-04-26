@@ -349,6 +349,7 @@ function testBatterySafety(){
     local sampleData = collectData();
     try{
         sampleData.batteryVoltage = batteryCritical - 0.1;
+        sampleData.batteryMean = batteryCritical - 0.1;
         open();
         imp.sleep(0.2);
         if(!batteryCriticalCheck(sampleData)){
@@ -365,7 +366,8 @@ function testBatterySafety(){
         logFail("BatteryCriticalCheck", error);
     }
     try{
-        sampleData.batteryVoltage = batteryLow - 0.1;
+        sampleData.batteryVoltage = batteryCritical - 0.1;
+        sampleData.batteryMean = batteryCritical - 0.1;
         open();
         imp.sleep(0.2);
         batteryLowCheck(sampleData);
