@@ -835,51 +835,6 @@ function main(){
     }
 }
 
-
-
-
-
-/////////////////////////////////////////////////// ABOVE IS FINE, BELOW IS MEH
-
-
-
-
-/*
-        //Main function changed to callbacks, see https://docs.google.com/document/d/1D25kIreUbUYOQ9z72y-ZKp2SG0pjLMBXMHB1SetFISk/edit for information
-
-        //it's worth it for us to know battery level on these wakereasons
-        //they all connect to wifi before doing anything else anyways
-        if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
-            connectAndCallback(onConnectedSendData , TIMEOUT_SERVER_S, dataTable);
-        }
-
-        //if the battery is not critical, get instructions, otherwise don't connect and just go to sleep
-        if(batteryCriticalCheck(dataTable)){
-            connectAndCallback(onConnectedRequestInstructions , TIMEOUT_SERVER_S, dataTable);
-        } else {
-            //valve battery is critical, don't even connect to wifi
-            deepSleepForTime(criticalBatterySleepTime * 60.0);
-            //returning from main function pretty much ensures that it will go to sleep immediately
-            return
-        }
-    //This actually catches a huge amount of potential errors because it covers sending data:
-    } catch(error) {
-        //This will need to have a forced connect:
-        if(nv.valveState){
-            close();
-        }
-        logglyError({
-            "error" : error,
-            "function" : "initializations and connect",
-            "message" : "INITIALIZATION ERROR! HIGHEST PRIORITY FIX"
-        }, true); //this 'true' is to enable force connect
-        //TODO: this error case can force a connect regardless of battery critical state, you might want to change this in the future!!!
-        deepSleepForTime(criticalBatterySleepTime * 60.0);
-        //return from main pretty much guarantees that it will go to sleep right away
-        return
-    }
-}*/
-
 function softwareWatchdogTimer(){
     if(server.isconnected()){
         //TODO: make this loggly:
