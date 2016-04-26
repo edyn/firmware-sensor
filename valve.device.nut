@@ -490,13 +490,14 @@ function collectData(){
     dataTable.OSVersion <- imp.getsoftwareversion();
     dataTable.hardwareVersion <-hardwareVersion;
     dataTable.firmwareVersion <- firmwareVersion;
-    dataTable.ignore <- checkIgnoreReasons(dataTable);
     return dataTable
 }
 
 //Send data to agent
-function sendData(dataToSend){
+function sendData(dataToSend, callback){
+    server.log("send data function")
     agent.send("sendData", dataToSend);
+    callback(dataToSend);
 }
 
 function disobey(message, dataToPass){
@@ -684,11 +685,11 @@ function requestInstructions(){
     agent.send("requestInstructions", [])
 }
 
-function onConnectedSendData(state, dataToPass) {
+function onConnectedSendData(state, dataToPass, callback = function(argument){return null}) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
         server.log("Sending Data To Agent");
-        sendData(dataToPass);
+        sendData(dataToPass,function (data){callback(data)});
         if(!batteryLowCheck(dataToPass)){
             //After sending data go to sleep without requesting instructions:
             deepSleepForTime(lowBatterySleepTime * 60.0);
@@ -705,9 +706,10 @@ function onConnectedSendData(state, dataToPass) {
 }
 
 function onConnectedRequestInstructions(dataToPass){
+    server.log("request instructions")
     //we should still be connected from when we sent data
     //if we have a reason to ignore already:
-    if(server.isConnected()){
+    if(server.isconnected()){
         if(dataToPass.ignore){
             if(nv.valveState){
                 close();
@@ -741,18 +743,28 @@ function onConnectedRequestInstructions(dataToPass){
     }
 }
 
-function connectAndCallback(callback, timeout, dataToPass, optionalSecondCallback = false) {
+function connectAndCallback(callback, timeout, dataToPass, secondCallback = false, optionalSecondCallback = null) {
     // Check if we're connected before calling server.connect()
     // to avoid race condition
     if (server.isconnected()) {
         // We're already connected, so execute the callback
-        callback(SERVER_CONNECTED, dataToPass);
+        if(!optionalSecondCallback){
+            callback(SERVER_CONNECTED, dataToPass);
+        } else {
+            callback(SERVER_CONNECTED, dataToPass, function(secondCallbackData){secondCallback(secondCallbackData)})
+        }
     } 
     else {
         // Otherwise, proceed as normal
-        server.connect(function (connectStatus){
-            callback(connectStatus, dataToPass)
-        }, timeout);
+        if(!optionalSecondCallback){
+            server.connect(function (connectStatus){
+                callback(connectStatus, dataToPass)
+            }, timeout);   
+        } else {
+            server.connect(function (connectStatus){
+                callback(SERVER_CONNECTED, dataToPass, function(secondCallbackData){secondCallback(secondCallbackData)})
+            }, timeout);       
+        }
     }
 }
 
@@ -770,6 +782,7 @@ function batteryCriticalCheck(dataTable){
 
 function blinkupCycle(dataTable, callback){
     //If onWakeup() returns 0, go into 'blinkup phase' 
+    server.log("blinkupcycle")
     if(!onWakeup()){
         //this is going to be changed in the manual watering PR, which should come pretty soon
         imp.sleep(blinkupTimer);
@@ -803,9 +816,10 @@ function main(){
         agent.on("receiveInstructions", function(instructions){receiveInstructions(instructions, dataTable)});
         nv.lastEMA = calculateBatteryEMA(dataTable.batteryVoltage);
         dataTable.meanBattery <- nv.lastEMA;
+        dataTable.ignore <- checkIgnoreReasons(dataTable);
 
         if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
-            connectAndCallback(onConnectedSendData , TIMEOUT_SERVER_S, dataTable, function(dataTable){blinkupCycle(dataTable,onConnectedRequestInstructions)});
+            connectAndCallback(onConnectedSendData , TIMEOUT_SERVER_S, dataTable, function(dataTable){blinkupCycle(dataTable, onConnectedRequestInstructions)}, true);
         //battery has to be critical for code below here to run:
         } else {
             blinkupCycle(dataTable, function(){
@@ -816,6 +830,7 @@ function main(){
             });
         }
     } catch(error){
+        server.log(error)
         //put something here
     }
 }
