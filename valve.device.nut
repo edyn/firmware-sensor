@@ -540,6 +540,9 @@ function receiveInstructions(instructions, dataToPass){
 
     try{
         if(instructions.open == true && nv.iteration >= instructions.iteration){
+
+            //ADD A DISOBEY
+
             //This is embedded within the above if statement to prevent redundant close()s
             if(nv.valveState == true){
                 agent.send("valveStateChange" , {valveOpen = false});
@@ -575,7 +578,7 @@ function receiveInstructions(instructions, dataToPass){
     nv.iteration = instructions.iteration;
     //Valve State Changing
     try{
-        //if valve is open and instructions say to close
+        //or valve is closed and instructions say to open
         if(instructions.open == true && nv.valveState == false){
             //sleep to ensure we don't open/close valve too quickly
             imp.sleep(0.5);
@@ -584,7 +587,7 @@ function receiveInstructions(instructions, dataToPass){
             change = true;
             server.log("opening Valve");
         }
-        //or valve is closed and instructions say to open
+        //if valve is open and instructions say to close
         else if (instructions.open == false && nv.valveState == true){
             imp.sleep(0.5);
             agent.send("valveStateChange" , {valveOpen = false});
@@ -701,20 +704,38 @@ function onConnectedSendData(state, dataToPass) {
     }
 }
 
-function onConnectedRequestInstructions(state, dataToPass){
-    // If we're connected...
-    if (state == SERVER_CONNECTED) {
-        //TODO: No asynchronous functions inside synchronous-appearing functions allowed.
-        //The below statement works as a "timeout" for receive instructions
-        imp.wakeup(receiveInstructionsWaitTimer, function(){deepSleepForTime(valveCloseMaxSleepTime * 60.0)});
-        server.log("Requesting Instructions From Agent");
-        requestInstructions();
-    } 
+function onConnectedRequestInstructions(dataToPass){
+    //we should still be connected from when we sent data
+    //if we have a reason to ignore already:
+    if(server.isConnected()){
+        if(dataToPass.ignore){
+            if(nv.valveState){
+                close();
+            }
+            //battery is low
+            if(!batteryLowCheck(dataToPass)){
+                deepSleepForTime(lowBatterySleepTime * 60.0);
+                return
+            } else if(time() - nv.wakeTime < responsiveTimer) {
+                deepSleepForTime(valveOpenMaxSleepTime * 60.0);
+                return
+            } else {
+                deepSleepForTime(valveCloseMaxSleepTime * 20.0);
+                return
+            }
+        } else {
+            //The below statement works as a "timeout" for receive instructions
+            imp.wakeup(receiveInstructionsWaitTimer, function(){deepSleepForTime(valveCloseMaxSleepTime * 60.0)});
+            server.log("Requesting Instructions From Agent");
+            requestInstructions();
+            return
+        } 
     //if we're not connected...
-    else {
+    } else {
         if(nv.valveState == true){
             close();
         }
+        //is this the appropriate amount of time? probably not, should add new variable like noWifiSleepTime
         deepSleepForTime(valveCloseMaxSleepTime * 60.0);
         return
     }
@@ -785,12 +806,13 @@ function main(){
 
         if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
             connectAndCallback(onConnectedSendData , TIMEOUT_SERVER_S, dataTable, function(dataTable){blinkupCycle(dataTable,onConnectedRequestInstructions)});
+        //battery has to be critical for code below here to run:
         } else {
             blinkupCycle(dataTable, function(){
                 if(nv.valveState){
                     close();
                 }
-                deepSleepForTime(criticalBatterySleepTime)
+                deepSleepForTime(criticalBatterySleepTime);
             });
         }
     } catch(error){
