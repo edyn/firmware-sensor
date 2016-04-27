@@ -521,8 +521,6 @@ function receiveInstructions(instructions, dataToPass){
     server.log(instructions.iteration);
     local change = false;
     local sleepMinimum = minimum(valveOpenMaxSleepTime,instructions.nextCheckIn);
-    //if neither of the below statements 
-    //TODO: battery check before opening
 
     //check iterator vs instructions.iteration if instructions tell it to open but the iterator is frozen, don't open
 
@@ -801,13 +799,17 @@ function main(){
             close();
         }
         local dataTable = collectData();
-        agent.on("receiveInstructions", function(instructions){receiveInstructions(instructions, dataTable)});
         nv.lastEMA = calculateBatteryEMA(dataTable.batteryVoltage);
         dataTable.batteryMean <- nv.lastEMA;
         dataTable.ignore <- checkIgnoreReasons(dataTable);
+        agent.on("receiveInstructions", function(instructions){
+            receiveInstructions(instructions, dataTable)
+        });
 
         if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
-            connectAndCallback(onConnectedSendData , TIMEOUT_SERVER_S, dataTable, function(dataTable){blinkupCycle(dataTable, onConnectedRequestInstructions)}, true);
+            connectAndCallback(onConnectedSendData , TIMEOUT_SERVER_S, dataTable, function(dataTable){
+                blinkupCycle(dataTable, onConnectedRequestInstructions)
+            }, true);
         //battery has to be critical for code below here to run:
         } else {
             blinkupCycle(dataTable, function(){
