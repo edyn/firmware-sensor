@@ -676,6 +676,7 @@ function onConnectedSendData(state, dataToPass, callback = function(argument){re
     if (state == SERVER_CONNECTED) {
         server.log("Sending Data To Agent");
         sendData(dataToPass,callback);
+        //TODO: add battery critical check
         if(!batteryLowCheck(dataToPass)){
             //After sending data go to sleep without requesting instructions:
             deepSleepForTime(lowBatterySleepTime * 60.0);
@@ -815,7 +816,7 @@ function main(){
         });
 
         if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
-            connectAndCallback(onConnectedSendData , TIMEOUT_SERVER_S, dataTable, function(dataTable){
+            connectAndCallback(onConnectedSendData, TIMEOUT_SERVER_S, dataTable, function(dataTable){
                 blinkupCycle(dataTable, onConnectedRequestInstructions)
             }, true);
         //battery has to be critical for code below here to run:
@@ -835,7 +836,7 @@ function main(){
         logglyError({
             "error" : error,
             "function" : "main",
-            "message" : "Main error! Could be in initializations, send data,  blinkupcycle, requestinstructions or other."
+            "message" : "Main error! Could be in initializations, send data, blinkupcycle, requestinstructions or other."
         });
         deepSleepForTime(errorSleepTime * 60.0);
     }
