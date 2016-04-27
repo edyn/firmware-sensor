@@ -481,7 +481,7 @@ function collectData(){
 }
 
 //Send data to agent
-function sendData(dataToSend, callback){
+function sendData(dataToSend, callback = function(data){}){
     server.log("send data function")
     agent.send("sendData", dataToSend);
     callback(dataToSend);
