@@ -713,7 +713,9 @@ function onConnectedRequestInstructions(dataToPass){
             }
         } else {
             //The below statement works as a "timeout" for receive instructions
-            imp.wakeup(receiveInstructionsWaitTimer, function(){deepSleepForTime(valveCloseMaxSleepTime * 60.0)});
+            imp.wakeup(receiveInstructionsWaitTimer, function(){
+                deepSleepForTime(valveCloseMaxSleepTime * 60.0)
+            });
             server.log("Requesting Instructions From Agent");
             requestInstructions();
             return
