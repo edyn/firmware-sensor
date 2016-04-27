@@ -618,7 +618,7 @@ function receiveInstructions(instructions, dataToPass){
         }
         //if it's still in the 'responsive' timer state, sleep for sleepminimum
         //regardless of valve state
-        if(firstXSecondsCheck){
+        if(firstXSecondsCheck()){
             deepSleepForTime(sleepMinimum * 60.0);
             return
         }
