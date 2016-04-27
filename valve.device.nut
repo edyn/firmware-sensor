@@ -730,8 +730,10 @@ function onConnectedRequestInstructions(dataToPass){
         return
     }
 }
-
-function connectAndCallback(callback, timeout, dataToPass, secondCallback = false, optionalSecondCallback = null) {
+function doNothing(argumentOne = null, argumentTwo = null, argumentThree = null){
+    return null
+};
+function connectAndCallback(callback, timeout, dataToPass, secondCallback = doNothing, optionalSecondCallback = false) {
     // Check if we're connected before calling server.connect()
     // to avoid race condition
     if (server.isconnected()) {
