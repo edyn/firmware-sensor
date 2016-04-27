@@ -534,7 +534,7 @@ function receiveInstructions(instructions, dataToPass){
     server.log(instructions.nextCheckIn);
     server.log(instructions.iteration);
     //TODO: switch the variable name change to stateChange
-    local vakveStateChange = false;
+    local valveStateChange = false;
     local sleepMinimum = minimum(valveOpenMaxSleepTime,instructions.nextCheckIn);
 
     //check iterator vs instructions.iteration if instructions tell it to open but the iterator is frozen, don't open
