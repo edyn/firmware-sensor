@@ -360,19 +360,6 @@ function deepSleepForTime(inputTime){
         return
     }
 }
-
-
-
-
-
-
-///////////////////////////////////////////////////// Above is good, Below is meh
-
-
-
-
-
-
 //checking if there's any reason to not ask for instructions
 function checkIgnoreReasons(dataTable){
 
