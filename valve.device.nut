@@ -663,6 +663,7 @@ function receiveInstructions(instructions, dataToPass){
             "function" : "receiveInstructions (sleep determination)",
             "message" : "the logic to determine if the valve for sleep or not is throwing an error"
         });
+        server.log("errorSleepTime" + errorSleepTime)
         deepSleepForTime(errorSleepTime * 60.0);
         return
     }
