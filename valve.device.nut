@@ -739,7 +739,9 @@ function connectAndCallback(callback, timeout, dataToPass, secondCallback = fals
         if(!optionalSecondCallback){
             callback(SERVER_CONNECTED, dataToPass);
         } else {
-            callback(SERVER_CONNECTED, dataToPass, function(secondCallbackData){secondCallback(secondCallbackData)})
+            callback(SERVER_CONNECTED, dataToPass, function(secondCallbackData){
+                secondCallback(secondCallbackData)
+            });
         }
     } 
     else {
@@ -750,7 +752,9 @@ function connectAndCallback(callback, timeout, dataToPass, secondCallback = fals
             }, timeout);   
         } else {
             server.connect(function (connectStatus){
-                callback(SERVER_CONNECTED, dataToPass, function(secondCallbackData){secondCallback(secondCallbackData)})
+                callback(SERVER_CONNECTED, dataToPass, function(secondCallbackData){
+                    secondCallback(secondCallbackData)
+                });
             }, timeout);       
         }
     }
