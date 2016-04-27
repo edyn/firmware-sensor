@@ -3,7 +3,7 @@ server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 unitTesting <- false;
 const errorSleepTime = 20.0; //minutes (arbitrary)
 const logglyConnectTimeout = 20.0; //seconds
-const responsiveTimer = 1200.0; // 1200 seconds = 20 minutes
+const FIRST_X_SECONDS_TIMER = 1200.0; // 1200 seconds = 20 minutes
 const sleepOnErrorTime = 3600.0;
 const valveOpenMaxSleepTime = 1.0; //minutes
 const valveCloseMaxSleepTime = 20.0;
@@ -23,6 +23,11 @@ blinkupTimer <- 90;
 watchDogTimeOut <- 130; //Equals 90 second blinkup + 30 second connect + 10 seconds of whatever else
 watchDogSleepTime <- 20.0;//arbitrarily chosen to be 20 minutes
 batteryAveragingPointNumber <- 20;
+
+//General TODOs:
+//rename valveState to valveOpen to be clear what the boolean means
+//change constantNames to CONSTANT_NAMES
+
 
 /**************
 Valve Functions
@@ -107,7 +112,7 @@ function calculateBatteryEMA(newDataPoint){
 
 //WakeReason Function
 
-function onWakeup(){
+function checkWakeupType(){
     local branching=0;
     switch(wakeReason){
         //branching = 0 cases:
@@ -373,6 +378,9 @@ function checkIgnoreReasons(dataTable){
             /////////////////////////////////////////
             //Cold boot, button press, blinkup
 
+
+            //TODO: move valve close outside of this function
+            //TODO: make if(nv.valveState){close();} a function called something like ifOpenThenClose
             //coldboot
             case WAKEREASON_POWER_ON:
                 if(nv.valveState){
@@ -456,7 +464,7 @@ function checkIgnoreReasons(dataTable){
         logglyError({
             "error" : error,
             "function" : "checkIgnoreReasons",
-            "message" : "something in the function must have invalid arguments"
+            "message" : "something in the function probably has invalid arguments"
         });
         deepSleepForTime(sleepOnErrorTime);
         return true
@@ -488,6 +496,7 @@ function sendData(dataToSend, callback = function(data){}){
 }
 
 function disobey(message, dataToPass){
+    //TODO: rename 'disoobeyAndSend' to be clear that it also sends data
     try{
         server.log("disobeying because " + message);
         dataToPass.disobeyReason <- message;
@@ -513,13 +522,19 @@ function minimum(a,b){
     }
 }
 
+function firstXSecondsCheck(){
+    return (time() - nv.wakeTime < FIRST_X_SECONDS_TIMER);
+}
+
 function receiveInstructions(instructions, dataToPass){
+    //TODO: rename something more indicative of what this function does, since it doens't JUST receive instructions
     server.log("received New Instructions");
     local sleepUntil = 0;
     server.log(instructions.open);
     server.log(instructions.nextCheckIn);
     server.log(instructions.iteration);
-    local change = false;
+    //TODO: switch the variable name change to stateChange
+    local vakveStateChange = false;
     local sleepMinimum = minimum(valveOpenMaxSleepTime,instructions.nextCheckIn);
 
     //check iterator vs instructions.iteration if instructions tell it to open but the iterator is frozen, don't open
@@ -537,7 +552,7 @@ function receiveInstructions(instructions, dataToPass){
             }
             server.log("Not opening due to iteration error.")
             if(!unitTesting){
-                if(time() - nv.wakeTime < responsiveTimer){
+                if(firstXSecondsCheck()){
                     deepSleepForTime(sleepMinimum * 60.0);
                 } else{
                     deepSleepForTime(valveCloseMaxSleepTime * 60.0);   
@@ -567,18 +582,18 @@ function receiveInstructions(instructions, dataToPass){
         //or valve is closed and instructions say to open
         if(instructions.open == true && nv.valveState == false){
             //sleep to ensure we don't open/close valve too quickly
-            imp.sleep(0.5);
+            imp.sleep(0.1);
             agent.send("valveStateChange" , {valveOpen = true});
             open();
-            change = true;
+            valveStateChange = true;
             server.log("opening Valve");
         }
         //if valve is open and instructions say to close
         else if (instructions.open == false && nv.valveState == true){
-            imp.sleep(0.5);
+            imp.sleep(0.1);
             agent.send("valveStateChange" , {valveOpen = false});
             close();
-            change = true;
+            valveStateChange = true;
             server.log("closing valve");
         }
     }
@@ -597,13 +612,13 @@ function receiveInstructions(instructions, dataToPass){
     }
     try{
         //If the valve changes state, let the backend know
-        if(change == true){
+        if(valveStateChange){
             //TODO: change this to just take a second reading and send it instead
             agent.send("valveStateChange" , {valveOpen = nv.valveState});
         }
         //if it's still in the 'responsive' timer state, sleep for sleepminimum
         //regardless of valve state
-        if(time() - nv.wakeTime < responsiveTimer){
+        if(firstXSecondsCheck){
             deepSleepForTime(sleepMinimum * 60.0);
             return
         }
@@ -671,7 +686,10 @@ function requestInstructions(){
     agent.send("requestInstructions", [])
 }
 
-function onConnectedSendData(state, dataToPass, callback = function(argument){return null}) {
+function doNothing(argumentOne = null, argumentTwo = null, argumentThree = null){
+    return null
+};
+function onConnectedSendData(state, dataToPass, callback = doNothing) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
         server.log("Sending Data To Agent");
@@ -705,7 +723,7 @@ function onConnectedRequestInstructions(dataToPass){
             if(!batteryLowCheck(dataToPass)){
                 deepSleepForTime(lowBatterySleepTime * 60.0);
                 return
-            } else if(time() - nv.wakeTime < responsiveTimer) {
+            } else if(firstXSecondsCheck()) {
                 deepSleepForTime(valveOpenMaxSleepTime * 60.0);
                 return
             } else {
@@ -776,9 +794,10 @@ function batteryCriticalCheck(dataTable){
 }
 
 function blinkupCycle(dataTable, callback){
+    //just a note that this is going to be heavily modified/replaced completely
     //If onWakeup() returns 0, go into 'blinkup phase' 
     server.log("blinkupcycle")
-    if(!onWakeup()){
+    if(!checkWakeupType()){
         //this is going to be changed in the manual watering PR, which should come pretty soon
         imp.sleep(blinkupTimer);
     }
@@ -804,7 +823,7 @@ function main(){
                 close();
             }
         });
-        if(!onWakeup()){
+        if(!checkWakeupType()){
             close();
         }
         local dataTable = collectData();
@@ -814,7 +833,7 @@ function main(){
         agent.on("receiveInstructions", function(instructions){
             receiveInstructions(instructions, dataTable)
         });
-
+        //We want to sleep if the battery is critical, but on these wakereasons the imp connects automatically anyways, so we might as well send data
         if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
             connectAndCallback(onConnectedSendData, TIMEOUT_SERVER_S, dataTable, function(dataTable){
                 blinkupCycle(dataTable, onConnectedRequestInstructions)
