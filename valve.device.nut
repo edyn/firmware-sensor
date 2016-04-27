@@ -669,7 +669,7 @@ function receiveInstructions(instructions, dataToPass){
 }
 
 function batteryLowCheck(dataToPass){
-    if(dataToPass.meanBattery < batteryLow){
+    if(dataToPass.batteryMean < batteryLow){
         //if the battery is low and valve is open, close the valve
         if(nv.valveState == true){
              close();
@@ -769,7 +769,7 @@ function connectAndCallback(callback, timeout, dataToPass, secondCallback = fals
 }
 
 function batteryCriticalCheck(dataTable){
-    if(dataTable.meanBattery < batteryCritical){
+    if(dataTable.batteryMean < batteryCritical){
         //HIGHLY unlikely, pretty much impossible:
         if(nv.valveState == true){
             close();
@@ -815,7 +815,7 @@ function main(){
         local dataTable = collectData();
         agent.on("receiveInstructions", function(instructions){receiveInstructions(instructions, dataTable)});
         nv.lastEMA = calculateBatteryEMA(dataTable.batteryVoltage);
-        dataTable.meanBattery <- nv.lastEMA;
+        dataTable.batteryMean <- nv.lastEMA;
         dataTable.ignore <- checkIgnoreReasons(dataTable);
 
         if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
