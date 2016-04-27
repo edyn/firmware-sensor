@@ -527,7 +527,7 @@ function receiveInstructions(instructions, dataToPass){
     try{
         if(instructions.open == true && nv.iteration >= instructions.iteration){
 
-            //ADD A DISOBEY
+            //TODO: ADD A DISOBEY
 
             //This is embedded within the above if statement to prevent redundant close()s
             if(nv.valveState == true){
@@ -675,7 +675,7 @@ function onConnectedSendData(state, dataToPass, callback = function(argument){re
     // If we're connected...
     if (state == SERVER_CONNECTED) {
         server.log("Sending Data To Agent");
-        sendData(dataToPass,function (data){callback(data)});
+        sendData(dataToPass,callback);
         if(!batteryLowCheck(dataToPass)){
             //After sending data go to sleep without requesting instructions:
             deepSleepForTime(lowBatterySleepTime * 60.0);
@@ -708,7 +708,7 @@ function onConnectedRequestInstructions(dataToPass){
                 deepSleepForTime(valveOpenMaxSleepTime * 60.0);
                 return
             } else {
-                deepSleepForTime(valveCloseMaxSleepTime * 20.0);
+                deepSleepForTime(valveCloseMaxSleepTime * 60.0);
                 return
             }
         } else {
