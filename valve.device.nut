@@ -487,7 +487,7 @@ function receiveInstructions(instructions, dataToPass){
                 break
             //This should be dealt with MUCH earlier, but in case it slipped through:
             case WAKEREASON_SQUIRREL_ERROR:
-                nv.iteration = iteration;
+                nv.iteration = instructions.iteration;
                 //sleep for an hour
                 deepSleepForTime(sleepOnErrorTime);
                 return
