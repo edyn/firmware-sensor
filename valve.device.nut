@@ -487,7 +487,7 @@ function receiveInstructions(instructions, dataToPass){
                 break
             //This should be dealt with MUCH earlier, but in case it slipped through:
             case WAKEREASON_SQUIRREL_ERROR:
-                nv.iteration = iteration;
+                nv.iteration = instructions.iteration;
                 //sleep for an hour
                 deepSleepForTime(sleepOnErrorTime);
                 return
@@ -643,7 +643,7 @@ function receiveInstructions(instructions, dataToPass){
 }
 
 function batteryLowCheck(dataToPass){
-    if(dataToPass.meanBattery < batteryLow){
+    if(dataToPass.batteryMean < batteryLow){
         //if the battery is low and valve is open, close the valve
         if(nv.valveState == true){
              close();
@@ -704,7 +704,7 @@ function connectAndSend(callback, timeout, dataToPass) {
 }
 
 function batteryCriticalCheck(dataTable){
-    if(dataTable.meanBattery < batteryCritical){
+    if(dataTable.batteryMean < batteryCritical){
         //HIGHLY unlikely, pretty much impossible:
         if(nv.valveState == true){
             close();
@@ -743,7 +743,7 @@ function main(){
         }
         local dataTable = collectData();
         nv.lastEMA = calculateBatteryEMA(dataTable.batteryVoltage);
-        dataTable.meanBattery <- nv.lastEMA;
+        dataTable.batteryMean <- nv.lastEMA;
         //it's worth it for us to know battery level on these wakereasons
         //they all connect to wifi before doing anything else anyways
         if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
