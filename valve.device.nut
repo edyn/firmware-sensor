@@ -643,7 +643,7 @@ function receiveInstructions(instructions, dataToPass){
 }
 
 function batteryLowCheck(dataToPass){
-    if(dataToPass.batteryMean < batteryLow){
+    if(dataToPass.meanBattery < batteryLow){
         //if the battery is low and valve is open, close the valve
         if(nv.valveState == true){
              close();
@@ -704,7 +704,7 @@ function connectAndSend(callback, timeout, dataToPass) {
 }
 
 function batteryCriticalCheck(dataTable){
-    if(dataTable.batteryMean < batteryCritical){
+    if(dataTable.meanBattery < batteryCritical){
         //HIGHLY unlikely, pretty much impossible:
         if(nv.valveState == true){
             close();
@@ -743,7 +743,7 @@ function main(){
         }
         local dataTable = collectData();
         nv.lastEMA = calculateBatteryEMA(dataTable.batteryVoltage);
-        dataTable.batteryMean <- nv.lastEMA;
+        dataTable.meanBattery <- nv.lastEMA;
         //it's worth it for us to know battery level on these wakereasons
         //they all connect to wifi before doing anything else anyways
         if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
