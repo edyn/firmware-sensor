@@ -1,9 +1,9 @@
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 unitTesting <- false;
-const errorSleepTime = 20.0; //minutes (arbitrary)
+const errorSleepTime = 60.0; //minutes (arbitrary)
 const logglyConnectTimeout = 20.0; //seconds
-const responsiveTimer = 1200.0; // 1200 seconds = 20 minutes
+const FIRST_X_SECONDS_TIMER = 1200.0; // 1200 seconds = 20 minutes
 const sleepOnErrorTime = 3600.0;
 const valveOpenMaxSleepTime = 1.0; //minutes
 const valveCloseMaxSleepTime = 20.0;
@@ -15,7 +15,8 @@ const batteryLow = 3.20;
 const lowBatterySleepTime = 60 //minutes = 1 hour
 const batteryCritical = 3.10;
 const criticalBatterySleepTime = 360; 
-const receiveInstructionsWaitTimer = 30; 
+const receiveInstructionsWaitTimer = 30;
+const noWifiSleepTime = 60.0; 
 wakeReason <- hardware.wakereason();
 mostRecentDeepSleepCall <- 0;
 macAddress <- imp.getmacaddress();
@@ -23,6 +24,11 @@ blinkupTimer <- 90;
 watchDogTimeOut <- 130; //Equals 90 second blinkup + 30 second connect + 10 seconds of whatever else
 watchDogSleepTime <- 20.0;//arbitrarily chosen to be 20 minutes
 batteryAveragingPointNumber <- 20;
+
+//General TODOs:
+//rename valveState to valveOpen to be clear what the boolean means
+//change constantNames to CONSTANT_NAMES
+
 
 /**************
 Valve Functions
@@ -107,7 +113,7 @@ function calculateBatteryEMA(newDataPoint){
 
 //WakeReason Function
 
-function onWakeup(){
+function checkWakeupType(){
     local branching=0;
     switch(wakeReason){
         //branching = 0 cases:
@@ -248,7 +254,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
         if(nv.valveState == true){
             close();
         }
-        deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+        deepSleepForTime(noWifiSleepTime * 60.0);
         return
     }
 }
@@ -360,6 +366,111 @@ function deepSleepForTime(inputTime){
         return
     }
 }
+//checking if there's any reason to not ask for instructions
+function checkIgnoreReasons(dataTable){
+
+    //ignore because of wakereason:
+
+    try{
+        switch(wakeReason){
+
+            /////////////////////////////////////////
+            //disobey opens, deep sleep for minimum//
+            /////////////////////////////////////////
+            //Cold boot, button press, blinkup
+
+
+            //TODO: move valve close outside of this function
+            //TODO: make if(nv.valveState){close();} a function called something like ifOpenThenClose
+            //coldboot
+            case WAKEREASON_POWER_ON:
+                if(nv.valveState){
+                    close();
+                } 
+                return true
+                //break for good measure?
+                break
+            //button press; same as cold boot except you should also note the time:
+            case WAKEREASON_PIN1:
+                if(nv.valveState){
+                    close();
+                }                
+                nv.wakeTime = time();
+                return true
+                break    
+            //blinkup same as cold boot
+            case WAKEREASON_BLINKUP:
+                if(nv.valveState){
+                    close();
+                }
+                return true
+                break
+
+            ////////////////////
+            //Normal Operation//
+            ////////////////////
+            //Wake from timer, OS update, firmware update all allow watering
+
+            case WAKEREASON_TIMER:
+                break
+            case WAKEREASON_NEW_SQUIRREL:
+                break
+            case WAKEREASON_NEW_FIRMWARE:
+                break
+
+            /////////////////////////////
+            //unlikely/impossible cases//
+            /////////////////////////////
+            //snooze, hardware reset, software reset, squirrel error, null
+            //behave normally? I guess?
+            //TODO: add loggly to ALL of these:
+
+            case WAKEREASON_SNOOZE:
+                break
+            case WAKEREASON_HW_RESET:
+                break
+            case WAKEREASON_SW_RESET:
+                break
+            //This should be dealt with MUCH earlier, but in case it slipped through:
+            case WAKEREASON_SQUIRREL_ERROR:
+                if(nv.valveState){
+                    close();
+                }
+                return true
+                break
+            //Below this should NEVER happen, but is there to be safe
+            case null:
+                server.log("Bad Wakereason");
+                break
+            //deafult to behave normally
+            default:
+                break
+        }
+
+        //low battery check
+
+        if(!batteryLowCheck(dataTable)){
+            if(nv.valveState){
+                close();
+            }
+            return true
+        }
+        //no reason to ignore:
+        return false
+
+    } catch(error) {
+        if(nv.valveState){
+            close();
+        }
+        logglyError({
+            "error" : error,
+            "function" : "checkIgnoreReasons",
+            "message" : "something in the function probably has invalid arguments"
+        });
+        deepSleepForTime(sleepOnErrorTime);
+        return true
+    }
+}
 
 function collectData(){
     //TODO: add directly to chargingtable instead of having two tables combine
@@ -379,11 +490,14 @@ function collectData(){
 }
 
 //Send data to agent
-function sendData(dataToSend){
+function sendData(dataToSend, callback = function(data){}){
+    server.log("send data function")
     agent.send("sendData", dataToSend);
+    callback(dataToSend);
 }
 
 function disobey(message, dataToPass){
+    //TODO: rename 'disoobeyAndSend' to be clear that it also sends data
     try{
         server.log("disobeying because " + message);
         dataToPass.disobeyReason <- message;
@@ -409,115 +523,26 @@ function minimum(a,b){
     }
 }
 
+function firstXSecondsCheck(){
+    return (time() - nv.wakeTime < FIRST_X_SECONDS_TIMER);
+}
+
 function receiveInstructions(instructions, dataToPass){
+    //TODO: rename something more indicative of what this function does, since it doens't JUST receive instructions
     server.log("received New Instructions");
     local sleepUntil = 0;
     server.log(instructions.open);
     server.log(instructions.nextCheckIn);
     server.log(instructions.iteration);
-    local change = false;
+    //TODO: switch the variable name change to stateChange
+    local valveStateChange = false;
     local sleepMinimum = minimum(valveOpenMaxSleepTime,instructions.nextCheckIn);
-    //if neither of the below statements 
-    //TODO: battery check before opening
-    try{
-        switch(wakeReason){
-
-            /////////////////////////////////////////
-            //disobey opens, deep sleep for minimum//
-            /////////////////////////////////////////
-            //Cold boot, button press, blinkup
-
-            //coldboot
-            case WAKEREASON_POWER_ON: 
-                nv.iteration = instructions.iteration;
-                if(instructions.open == true){
-                    //disobey does nothing right now
-                    disobey("Not opening because of cold boot", dataToPass);
-                }
-                deepSleepForTime(sleepMinimum * 60.0);
-                return
-                //break for good measure?
-                break
-            //button press; same as cold boot except you should also note the time:
-            case WAKEREASON_PIN1:                
-                nv.iteration = instructions.iteration;
-                nv.wakeTime = time();
-                if(instructions.open == true){
-                    //disobey does nothing right now
-                    disobey("Not opening because of button press", dataToPass);
-                }
-                deepSleepForTime(sleepMinimum * 60.0);
-                return
-                break    
-            //blinkup same as cold boot
-            case WAKEREASON_BLINKUP:
-                nv.iteration = instructions.iteration;
-                if(instructions.open == true){
-                    //disobey does nothing right now
-                    disobey("Not opening because of blinkup", dataToPass);
-                }
-                deepSleepForTime(sleepMinimum * 60.0);
-                return
-                break
-
-            ////////////////////
-            //Normal Operation//
-            ////////////////////
-            //Wake from timer, OS update, firmware update
-
-            case WAKEREASON_TIMER:
-                break
-            case WAKEREASON_NEW_SQUIRREL:
-                break
-            case WAKEREASON_NEW_FIRMWARE:
-                break
-
-            /////////////////////////////
-            //unlikely/impossible cases//
-            /////////////////////////////
-            //snooze, hardware reset, software reset, squirrel error, null
-            //behave normally? I guess?
-            //TODO: add loggly to ALL of these:
-
-            case WAKEREASON_SNOOZE:
-                break
-            case WAKEREASON_HW_RESET:
-                break
-            case WAKEREASON_SW_RESET:
-                break
-            //This should be dealt with MUCH earlier, but in case it slipped through:
-            case WAKEREASON_SQUIRREL_ERROR:
-                nv.iteration = instructions.iteration;
-                //sleep for an hour
-                deepSleepForTime(sleepOnErrorTime);
-                return
-                break
-            //Below this should NEVER happen, but is there to be safe
-            case null:
-                server.log("Bad Wakereason");
-                break
-            //deafult to behave normally
-            default:
-                break
-        }
-    } catch(error) {
-        //TODO: make sure this is handled how we want:
-        if(nv.valveState){
-            close();
-        }
-        logglyError({
-            "error" : error,
-            "function" : "receiveInstructions (wakereason switch)",
-            "message" : "something in the wake reason switching behavior is failing"
-        });
-        deepSleepForTime(sleepOnErrorTime);
-        return
-    }
 
     //check iterator vs instructions.iteration if instructions tell it to open but the iterator is frozen, don't open
 
     try{
         if(instructions.open == true && nv.iteration >= instructions.iteration){
+
             //This is embedded within the above if statement to prevent redundant close()s
             if(nv.valveState == true){
                 agent.send("valveStateChange" , {valveOpen = false});
@@ -525,8 +550,10 @@ function receiveInstructions(instructions, dataToPass){
                 server.log("Valve Closing Due to Iteration Failure");
             }
             server.log("Not opening due to iteration error.")
+
+            disobey("Not opening/not remaining opening because of iteration error", dataToPass);
             if(!unitTesting){
-                if(time() - nv.wakeTime < responsiveTimer){
+                if(firstXSecondsCheck()){
                     deepSleepForTime(sleepMinimum * 60.0);
                 } else{
                     deepSleepForTime(valveCloseMaxSleepTime * 60.0);   
@@ -553,21 +580,21 @@ function receiveInstructions(instructions, dataToPass){
     nv.iteration = instructions.iteration;
     //Valve State Changing
     try{
-        //if valve is open and instructions say to close
+        //or valve is closed and instructions say to open
         if(instructions.open == true && nv.valveState == false){
             //sleep to ensure we don't open/close valve too quickly
-            imp.sleep(0.5);
+            imp.sleep(0.1);
             agent.send("valveStateChange" , {valveOpen = true});
             open();
-            change = true;
+            valveStateChange = true;
             server.log("opening Valve");
         }
-        //or valve is closed and instructions say to open
+        //if valve is open and instructions say to close
         else if (instructions.open == false && nv.valveState == true){
-            imp.sleep(0.5);
+            imp.sleep(0.1);
             agent.send("valveStateChange" , {valveOpen = false});
             close();
-            change = true;
+            valveStateChange = true;
             server.log("closing valve");
         }
     }
@@ -586,13 +613,13 @@ function receiveInstructions(instructions, dataToPass){
     }
     try{
         //If the valve changes state, let the backend know
-        if(change == true){
+        if(valveStateChange){
             //TODO: change this to just take a second reading and send it instead
             agent.send("valveStateChange" , {valveOpen = nv.valveState});
         }
         //if it's still in the 'responsive' timer state, sleep for sleepminimum
         //regardless of valve state
-        if(time() - nv.wakeTime < responsiveTimer){
+        if(firstXSecondsCheck()){
             deepSleepForTime(sleepMinimum * 60.0);
             return
         }
@@ -637,6 +664,7 @@ function receiveInstructions(instructions, dataToPass){
             "function" : "receiveInstructions (sleep determination)",
             "message" : "the logic to determine if the valve for sleep or not is throwing an error"
         });
+        server.log("errorSleepTime" + errorSleepTime)
         deepSleepForTime(errorSleepTime * 60.0);
         return
     }
@@ -659,47 +687,98 @@ function requestInstructions(){
     agent.send("requestInstructions", [])
 }
 
-function onConnectedCallback(state, dataToPass) {
+function doNothing(argumentOne = null, argumentTwo = null, argumentThree = null){
+    return null
+};
+function onConnectedSendData(state, dataToPass, callback = doNothing) {
     // If we're connected...
     if (state == SERVER_CONNECTED) {
-        if(batteryLowCheck(dataToPass)){
-            //TODO: No asynchronous functions inside synchronous-appearing functions allowed.
-            //not sure if agent.on works inside functions, but it should?
-            agent.on("receiveInstructions", function(instructions){receiveInstructions(instructions, dataToPass)});
-            //The below statement works as a "timeout" for receive instructions
-            imp.wakeup(receiveInstructionsWaitTimer, function(){deepSleepForTime(valveCloseMaxSleepTime * 60.0)});
-        } else{
-            //don't wait for more instructions, just go back to sleep
+        server.log("Sending Data To Agent");
+        sendData(dataToPass,callback);
+        //TODO: add battery critical check
+        if(!batteryLowCheck(dataToPass)){
+            //After sending data go to sleep without requesting instructions:
             deepSleepForTime(lowBatterySleepTime * 60.0);
         }
-        server.log("sendingData");
-        sendData(dataToPass);
-        requestInstructions();
     } 
     //if we're not connected...
     else {
-        //Valve fails to connect:
         if(nv.valveState == true){
             close();
         }
-        deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+        deepSleepForTime(noWifiSleepTime * 60.0);
         return
     }
 }
 
-
-function connectAndSend(callback, timeout, dataToPass) {
+function onConnectedRequestInstructions(dataToPass){
+    server.log("request instructions")
+    //we should still be connected from when we sent data
+    //if we have a reason to ignore already:
+    if(server.isconnected()){
+        if(dataToPass.ignore){
+            if(nv.valveState){
+                close();
+            }
+            //battery is low
+            if(!batteryLowCheck(dataToPass)){
+                deepSleepForTime(lowBatterySleepTime * 60.0);
+                return
+            } else if(firstXSecondsCheck()) {
+                deepSleepForTime(valveOpenMaxSleepTime * 60.0);
+                return
+            } else {
+                deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+                return
+            }
+        } else {
+            //The below statement works as a "timeout" for receive instructions
+            imp.wakeup(receiveInstructionsWaitTimer, function(){
+                deepSleepForTime(valveCloseMaxSleepTime * 60.0)
+            });
+            server.log("Requesting Instructions From Agent");
+            requestInstructions();
+            return
+        } 
+    //if we're not connected...
+    } else {
+        if(nv.valveState == true){
+            close();
+        }
+        //is this the appropriate amount of time? probably not, should add new variable like noWifiSleepTime
+        deepSleepForTime(noWifiSleepTime * 60.0);
+        return
+    }
+}
+function doNothing(argumentOne = null, argumentTwo = null, argumentThree = null){
+    return null
+};
+function connectAndCallback(callback, timeout, dataToPass, secondCallback = doNothing, optionalSecondCallback = false) {
     // Check if we're connected before calling server.connect()
     // to avoid race condition
     if (server.isconnected()) {
         // We're already connected, so execute the callback
-        callback(SERVER_CONNECTED, dataToPass);
+        if(!optionalSecondCallback){
+            callback(SERVER_CONNECTED, dataToPass);
+        } else {
+            callback(SERVER_CONNECTED, dataToPass, function(secondCallbackData){
+                secondCallback(secondCallbackData)
+            });
+        }
     } 
     else {
         // Otherwise, proceed as normal
-        server.connect(function (connectStatus){
-            callback(connectStatus, dataToPass)
-        }, timeout);
+        if(!optionalSecondCallback){
+            server.connect(function (connectStatus){
+                callback(connectStatus, dataToPass)
+            }, timeout);   
+        } else {
+            server.connect(function (connectStatus){
+                callback(SERVER_CONNECTED, dataToPass, function(secondCallbackData){
+                    secondCallback(secondCallbackData)
+                });
+            }, timeout);       
+        }
     }
 }
 
@@ -709,13 +788,22 @@ function batteryCriticalCheck(dataTable){
         if(nv.valveState == true){
             close();
         }
-        //return the main function; pretty much ensures imp.idle() required for deep sleep
         return false
     } else {
         return true
     }
 }
 
+function blinkupCycle(dataTable, callback){
+    //just a note that this is going to be heavily modified/replaced completely
+    //If onWakeup() returns 0, go into 'blinkup phase' 
+    server.log("blinkupcycle")
+    if(!checkWakeupType()){
+        //this is going to be changed in the manual watering PR, which should come pretty soon
+        imp.sleep(blinkupTimer);
+    }
+    callback(dataTable);
+}
 
 function main(){
     //This will only log if the imp is ALREADY connected:
@@ -736,37 +824,42 @@ function main(){
                 close();
             }
         });
-        //If onWakeup() returns 0, go into 'blinkup phase' 
-        if(!onWakeup()){
-            close()
-            imp.sleep(blinkupTimer)
+        if(!checkWakeupType()){
+            close();
         }
         local dataTable = collectData();
         nv.lastEMA = calculateBatteryEMA(dataTable.batteryVoltage);
         dataTable.batteryMean <- nv.lastEMA;
-        //it's worth it for us to know battery level on these wakereasons
-        //they all connect to wifi before doing anything else anyways
+        dataTable.ignore <- checkIgnoreReasons(dataTable);
+        agent.on("receiveInstructions", function(instructions){
+            receiveInstructions(instructions, dataTable)
+        });
+        //We want to sleep if the battery is critical, but on these wakereasons the imp connects automatically anyways, so we might as well send data
+
         if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
-            connectAndSend(onConnectedCallback , TIMEOUT_SERVER_S, dataTable);
+            connectAndCallback(onConnectedSendData, TIMEOUT_SERVER_S, dataTable, function(dataTable){
+                blinkupCycle(dataTable, onConnectedRequestInstructions)
+            }, true);
+        //battery has to be critical for code below here to run:
         } else {
-            //valve battery is critical, don't even connect to wifi
-            deepSleepForTime(criticalBatterySleepTime * 60.0);
+            blinkupCycle(dataTable, function(){
+                if(nv.valveState){
+                    close();
+                }
+                deepSleepForTime(criticalBatterySleepTime);
+            });
         }
-    //This actually catches a huge amount of potential errors because it covers connectAndSend:
-    } catch(error) {
-        //This will need to have a forced connect:
+    } catch(error){
+        server.log(error)
         if(nv.valveState){
             close();
         }
         logglyError({
             "error" : error,
-            "function" : "initializations and connect",
-            "message" : "INITIALIZATION ERROR! HIGHEST PRIORITY FIX"
-        }, true); //this 'true' is to enable force connect
-        //TODO: this error case can force a connect regardless of battery critical state, you might want to change this in the future!!!
-        deepSleepForTime(criticalBatterySleepTime * 60.0);
-        //return from main pretty much guarantees that it will go to sleep right away
-        return
+            "function" : "main",
+            "message" : "Main error! Could be in initializations, send data, blinkupcycle, requestinstructions or other."
+        });
+        deepSleepForTime(errorSleepTime * 60.0);
     }
 }
 

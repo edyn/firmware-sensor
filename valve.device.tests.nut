@@ -246,7 +246,7 @@ function testValve(){
     //valve closes if it fails to connect:
     open();
     try{
-        onConnectedCallback(0, sampleDataGlobal);
+        onConnectedSendData(0, sampleDataGlobal);
         if(nv.valveState == false){
             logPass("Valve Disconnect");
         }
@@ -349,6 +349,7 @@ function testBatterySafety(){
     local sampleData = collectData();
     try{
         sampleData.batteryVoltage = batteryCritical - 0.1;
+        sampleData.batteryMean <- batteryCritical - 0.1;
         open();
         imp.sleep(0.2);
         if(!batteryCriticalCheck(sampleData)){
@@ -365,7 +366,8 @@ function testBatterySafety(){
         logFail("BatteryCriticalCheck", error);
     }
     try{
-        sampleData.batteryVoltage = batteryLow - 0.1;
+        sampleData.batteryVoltage = batteryCritical - 0.1;
+        sampleData.batteryMean = batteryCritical - 0.1;
         open();
         imp.sleep(0.2);
         batteryLowCheck(sampleData);
@@ -439,7 +441,7 @@ function testErrorBranches(){
     mostRecentDeepSleepCall = 0;
     try{
         receiveInstructions({open = true , nextCheckIn = 0.1, iteration = 1}, sampleDataGlobal);
-        if(!nv.valveState && mostRecentDeepSleepCall == sleepOnErrorTime){
+        if(!nv.valveState && mostRecentDeepSleepCall == errorSleepTime * 60.0){
             logPass("receiveInstructionsErrorA");
         } else {
             logFail("receiveInstructionsErrorA");
@@ -493,6 +495,7 @@ function testErrorBranches(){
         if(!nv.valveState && mostRecentDeepSleepCall == errorSleepTime * 60.0){
             logPass("receiveInstructionsErrorD");
         } else {
+            server.log(mostRecentDeepSleepCall + "  <-this")
             logFail("receiveInstructionsErrorD");
         } 
     } catch(error){
@@ -506,7 +509,7 @@ function testErrorBranches(){
     mostRecentDeepSleepCall = 0;
     try{
         main()
-        if(!nv.valveState && mostRecentDeepSleepCall == criticalBatterySleepTime * 60.0){
+        if(!nv.valveState && mostRecentDeepSleepCall == errorSleepTime * 60.0){
             logPass("mainErrorA");
         } else {
             logFail("mainErrorA");
