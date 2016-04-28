@@ -795,7 +795,7 @@ function batteryCriticalCheck(dataTable){
     }
 }
 
-function checkForPresses(numberPressesOpen = 2, numberPressesClosed = 3, clickTimeout = 5, pollingPeriod = 0.001, coolDown = 0.001, pollFor = 90, dataToSend){
+function checkForPresses(dataToSend = {}, numberPressesOpen = 2, numberPressesClosed = 3, clickTimeout = 5, pollingPeriod = 0.001, coolDown = 0.001, pollFor = 90){
     local beginTime = time();
     local endTime = beginTime + pollFor;
     local lastPoll = 0;
@@ -878,7 +878,7 @@ function blinkupCycle(dataTable, callback){
     server.log("blinkupcycle")
     if(!checkWakeupType()){
         //We can change blinkup cycle name and check for presses name, I'm not married to them
-        checkForPresses();
+        checkForPresses(dataTable);
     }
     callback(dataTable);
 }
