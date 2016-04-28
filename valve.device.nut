@@ -24,6 +24,7 @@ blinkupTimer <- 90;
 watchDogTimeOut <- 130; //Equals 90 second blinkup + 30 second connect + 10 seconds of whatever else
 watchDogSleepTime <- 20.0;//arbitrarily chosen to be 20 minutes
 batteryAveragingPointNumber <- 20;
+watchDogWakeupObject <- false;
 
 //General TODOs:
 //rename valveState to valveOpen to be clear what the boolean means
@@ -799,13 +800,101 @@ function batteryCriticalCheck(dataTable){
     }
 }
 
+function checkForPresses(dataToSend = {}, numberPressesOpen = 3, numberPressesClosed = 4, clickTimeout = 1.5, pollingPeriod = 0.001, coolDown = 0.001, keepStateForMinimumSeconds = 1.0, pollFor = 90){
+    local beginTime = time();
+    local endTime = beginTime + pollFor;
+    local lastPoll = 0;
+    local currentPoll = 0;
+    local cumulativePresses = 0;
+    local continuousPresses = 0;
+    local counter = 0
+    //counterMax is the maximum number of seconds the user is allowed to continuously hold the button down before the valve closes in anticipation of being turned off. (divided by polling frequency)
+    local counterMax = 1.5 / pollingPeriod;
+    local clickingBegin = 0
+    local loopNumber = 0;
+    while(time() < endTime){
+        imp.sleep(pollingPeriod);
+        loopNumber += 1;
+        lastPoll = currentPoll;
+        currentPoll = hardware.pin1.read();
+
+        //holding for close valve/valve off:
+        if(currentPoll == 1 && lastPoll == 1){
+            while(hardware.pin1.read()){
+                counter+=1;
+                if(counter >= counterMax ){
+                    if(nv.valveState){
+                        close();
+                    }
+                }
+                imp.sleep(pollingPeriod);
+            }
+            counter = 0;
+        }
+        /* useful for debugging stuff in the future
+        if(!(loopNumber % 1000)){
+            server.log(cumulativePresses)
+            server.log(" Loop number " + loopNumber + " | loopxpolling: " + (loopNumber * pollingPeriod) + " | clickBegin: " + clickingBegin)
+        }*/
+        //double click timeout, only allow timeout if valve is closed
+        if((loopNumber * pollingPeriod) > (clickingBegin + clickTimeout) && !nv.valveState && cumulativePresses > 0){
+            server.log("reset a")
+            cumulativePresses = 0;
+        }
+        //on rising edge, iterate cumulative presses
+        if(currentPoll == 1 && lastPoll == 0){
+            cumulativePresses += 1;
+            server.log("Current Press: " + cumulativePresses);
+            imp.sleep(coolDown);
+            //on the first press, begin a timer
+            if(cumulativePresses == 1){
+                server.log("new click begin")
+                clickingBegin = loopNumber * pollingPeriod;
+            }
+        }
+
+        //logic to open the valve:
+        if(cumulativePresses >= numberPressesOpen && cumulativePresses < numberPressesClosed && !nv.valveState && server.isconnected()){
+            open();
+            dataToSend.valveState <- true;
+            dataToSend.timestamp <- time();
+            sendData(dataToSend);
+            //reset the watchdog timer
+            setWatchDogTimer();
+            imp.sleep(keepStateForMinimumSeconds);
+            endTime = time() + pollFor;
+        }
+        //logic to close the valve:
+        if(cumulativePresses >= numberPressesClosed && nv.valveState){
+            close();
+            dataToSend.valveState <- false;
+            dataToSend.timestamp <- time();
+            sendData(dataToSend);
+            //reset the watchdog timer
+            setWatchDogTimer();
+            server.log("reset b")
+            cumulativePresses = 0;
+            imp.sleep(keepStateForMinimumSeconds);
+            endTime = time() + pollFor;
+        }
+    }
+    if(nv.valveState){
+        close();
+        if(server.isconnected()){
+            dataToSend.valveState <- false;
+            sendData(dataToSend);
+        }
+    }
+}
+
+
 function blinkupCycle(dataTable, callback){
     //just a note that this is going to be heavily modified/replaced completely
     //If onWakeup() returns 0, go into 'blinkup phase' 
     server.log("blinkupcycle")
     if(!checkWakeupType()){
-        //this is going to be changed in the manual watering PR, which should come pretty soon
-        imp.sleep(blinkupTimer);
+        //We can change blinkup cycle name and check for presses name, I'm not married to them
+        checkForPresses(dataTable);
     }
     callback(dataTable);
 }
@@ -877,7 +966,14 @@ function softwareWatchdogTimer(){
     return
 }
 
+function setWatchDogTimer(){
+    if(watchDogWakeupObject){
+        imp.cancelwakeup(watchDogWakeupObject);
+    }
+    watchDogWakeupObject = imp.wakeup(watchDogTimeOut, softwareWatchdogTimer);
+}
+
 if(!unitTesting){
-    imp.wakeup(watchDogTimeOut, softwareWatchdogTimer);
+    setWatchDogTimer();
     main();
 }
