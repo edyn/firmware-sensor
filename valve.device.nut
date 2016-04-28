@@ -254,7 +254,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
         if(nv.valveState == true){
             close();
         }
-        deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+        deepSleepForTime(noWifiSleepTime * 60.0);
         return
     }
 }
@@ -706,7 +706,7 @@ function onConnectedSendData(state, dataToPass, callback = doNothing) {
         if(nv.valveState == true){
             close();
         }
-        deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+        deepSleepForTime(noWifiSleepTime * 60.0);
         return
     }
 }
@@ -746,7 +746,7 @@ function onConnectedRequestInstructions(dataToPass){
             close();
         }
         //is this the appropriate amount of time? probably not, should add new variable like noWifiSleepTime
-        deepSleepForTime(valveCloseMaxSleepTime * 60.0);
+        deepSleepForTime(noWifiSleepTime * 60.0);
         return
     }
 }
