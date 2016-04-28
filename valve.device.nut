@@ -15,7 +15,8 @@ const batteryLow = 3.20;
 const lowBatterySleepTime = 60 //minutes = 1 hour
 const batteryCritical = 3.10;
 const criticalBatterySleepTime = 360; 
-const receiveInstructionsWaitTimer = 30; 
+const receiveInstructionsWaitTimer = 30;
+const noWifiSleepTime = 60.0; 
 wakeReason <- hardware.wakereason();
 mostRecentDeepSleepCall <- 0;
 macAddress <- imp.getmacaddress();
@@ -778,20 +779,6 @@ function connectAndCallback(callback, timeout, dataToPass, secondCallback = doNo
                 });
             }, timeout);       
         }
-    }
-}
-
-function deepSleepForTimeBatteryCheck(dataTable, inputSleepTime){
-    if(batteyCriticalCheck(dataTable)){
-        server.log("battery critical sleep");
-        deepSleepForTime(criticalBatterySleepTime);
-        return
-    } else if (batteryLowCheck(dataTable){
-        server.log("battery low sleep");
-        deepSleepForTime(lowBatterySleepTime);
-    } else {
-        server.log("regular sleep")
-        deepSleepForTime(minimum(inputSleepTime, valveCloseMaxSleepTime));
     }
 }
 
