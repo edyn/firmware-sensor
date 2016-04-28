@@ -795,7 +795,7 @@ function batteryCriticalCheck(dataTable){
     }
 }
 
-function checkForPresses(numberPressesOpen = 2, numberPressesClosed = 3, clickTimeout = 5, pollingPeriod = 0.001, coolDown = 0.001, pollFor = 90){
+function checkForPresses(numberPressesOpen = 2, numberPressesClosed = 3, clickTimeout = 5, pollingPeriod = 0.001, coolDown = 0.001, pollFor = 90, dataToSend){
     local beginTime = time();
     local endTime = beginTime + pollFor;
     local lastPoll = 0;
@@ -841,8 +841,11 @@ function checkForPresses(numberPressesOpen = 2, numberPressesClosed = 3, clickTi
         }
 
         //logic to open the valve:
-        if(cumulativePresses >= numberPressesOpen && cumulativePresses < numberPressesClosed && !nv.valveState){
+        if(cumulativePresses >= numberPressesOpen && cumulativePresses < numberPressesClosed && !nv.valveState && server.isconnected()){
             open();
+            dataToSend.valveState <- true;
+            dataToSend.timestamp <- time();
+            sendData(dataToSend);
             //reset the watchdog timer
             setWatchDogTimer();
             endTime = time() + pollFor;
@@ -850,6 +853,9 @@ function checkForPresses(numberPressesOpen = 2, numberPressesClosed = 3, clickTi
         //logic to close the valve:
         if(cumulativePresses >= numberPressesClosed && nv.valveState){
             close();
+            dataToSend.valveState <- false;
+            dataToSend.timestamp <- time();
+            sendData(dataToSend);
             //reset the watchdog timer
             setWatchDogTimer();
             cumulativePresses = 0;
@@ -857,7 +863,11 @@ function checkForPresses(numberPressesOpen = 2, numberPressesClosed = 3, clickTi
         }
     }
     if(nv.valveState){
-    close();
+        close();
+        if(server.isconnected()){
+            dataToSend.valveState <- false;
+            sendData(dataToSend);
+        }
     }
 }
 
