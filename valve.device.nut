@@ -795,7 +795,7 @@ function batteryCriticalCheck(dataTable){
     }
 }
 
-function checkForPresses(dataToSend = {}, numberPressesOpen = 2, numberPressesClosed = 3, clickTimeout = 5, pollingPeriod = 0.001, coolDown = 0.001, pollFor = 90){
+function checkForPresses(dataToSend = {}, numberPressesOpen = 3, numberPressesClosed = 4, clickTimeout = 1.5, pollingPeriod = 0.001, coolDown = 0.001, keepStateForMinimumSeconds = 1.0, pollFor = 90){
     local beginTime = time();
     local endTime = beginTime + pollFor;
     local lastPoll = 0;
@@ -805,8 +805,10 @@ function checkForPresses(dataToSend = {}, numberPressesOpen = 2, numberPressesCl
     local counter = 0
     local counterMax = 1.5 / pollingPeriod;
     local clickingBegin = 0
+    local loopNumber = 0;
     while(time() < endTime){
         imp.sleep(pollingPeriod);
+        loopNumber += 1;
         lastPoll = currentPoll;
         currentPoll = hardware.pin1.read();
 
@@ -823,12 +825,16 @@ function checkForPresses(dataToSend = {}, numberPressesOpen = 2, numberPressesCl
             }
             counter = 0;
         }
-
+        /* useful for debugging stuff in the future
+        if(!(loopNumber % 1000)){
+            server.log(cumulativePresses)
+            server.log(" Loop number " + loopNumber + " | loopxpolling: " + (loopNumber * pollingPeriod) + " | clickBegin: " + clickingBegin)
+        }*/
         //double click timeout, only allow timeout if valve is closed
-        if(time() > (clickingBegin + clickTimeout) && !nv.valveState){
+        if((loopNumber * pollingPeriod) > (clickingBegin + clickTimeout) && !nv.valveState && cumulativePresses > 0){
+            server.log("reset a")
             cumulativePresses = 0;
         }
-
         //on rising edge, iterate cumulative presses
         if(currentPoll == 1 && lastPoll == 0){
             cumulativePresses += 1;
@@ -836,7 +842,8 @@ function checkForPresses(dataToSend = {}, numberPressesOpen = 2, numberPressesCl
             imp.sleep(coolDown);
             //on the first press, begin a timer
             if(cumulativePresses == 1){
-                clickingBegin = time();
+                server.log("new click begin")
+                clickingBegin = loopNumber * pollingPeriod;
             }
         }
 
@@ -848,6 +855,7 @@ function checkForPresses(dataToSend = {}, numberPressesOpen = 2, numberPressesCl
             sendData(dataToSend);
             //reset the watchdog timer
             setWatchDogTimer();
+            imp.sleep(keepStateForMinimumSeconds);
             endTime = time() + pollFor;
         }
         //logic to close the valve:
@@ -858,7 +866,9 @@ function checkForPresses(dataToSend = {}, numberPressesOpen = 2, numberPressesCl
             sendData(dataToSend);
             //reset the watchdog timer
             setWatchDogTimer();
+            server.log("reset b")
             cumulativePresses = 0;
+            imp.sleep(keepStateForMinimumSeconds);
             endTime = time() + pollFor;
         }
     }
