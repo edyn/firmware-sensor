@@ -1,7 +1,7 @@
 const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 unitTesting <- false;
-const errorSleepTime = 20.0; //minutes (arbitrary)
+const errorSleepTime = 60.0; //minutes (arbitrary)
 const logglyConnectTimeout = 20.0; //seconds
 const FIRST_X_SECONDS_TIMER = 1200.0; // 1200 seconds = 20 minutes
 const sleepOnErrorTime = 3600.0;
@@ -778,6 +778,20 @@ function connectAndCallback(callback, timeout, dataToPass, secondCallback = doNo
                 });
             }, timeout);       
         }
+    }
+}
+
+function deepSleepForTimeBatteryCheck(dataTable, inputSleepTime){
+    if(batteyCriticalCheck(dataTable)){
+        server.log("battery critical sleep");
+        deepSleepForTime(criticalBatterySleepTime);
+        return
+    } else if (batteryLowCheck(dataTable){
+        server.log("battery low sleep");
+        deepSleepForTime(lowBatterySleepTime);
+    } else {
+        server.log("regular sleep")
+        deepSleepForTime(minimum(inputSleepTime, valveCloseMaxSleepTime));
     }
 }
 
