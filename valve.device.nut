@@ -803,6 +803,7 @@ function checkForPresses(dataToSend = {}, numberPressesOpen = 3, numberPressesCl
     local cumulativePresses = 0;
     local continuousPresses = 0;
     local counter = 0
+    //counterMax is the maximum number of seconds the user is allowed to continuously hold the button down before the valve closes in anticipation of being turned off. (divided by polling frequency)
     local counterMax = 1.5 / pollingPeriod;
     local clickingBegin = 0
     local loopNumber = 0;
