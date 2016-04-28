@@ -835,6 +835,7 @@ function main(){
             receiveInstructions(instructions, dataTable)
         });
         //We want to sleep if the battery is critical, but on these wakereasons the imp connects automatically anyways, so we might as well send data
+
         if(batteryCriticalCheck(dataTable) || wakeReason == WAKEREASON_BLINKUP || wakeReason == WAKEREASON_NEW_FIRMWARE || wakeReason == WAKEREASON_POWER_ON){
             connectAndCallback(onConnectedSendData, TIMEOUT_SERVER_S, dataTable, function(dataTable){
                 blinkupCycle(dataTable, onConnectedRequestInstructions)
