@@ -543,8 +543,6 @@ function receiveInstructions(instructions, dataToPass){
     try{
         if(instructions.open == true && nv.iteration >= instructions.iteration){
 
-            //TODO: ADD A DISOBEY
-
             //This is embedded within the above if statement to prevent redundant close()s
             if(nv.valveState == true){
                 agent.send("valveStateChange" , {valveOpen = false});
@@ -552,6 +550,8 @@ function receiveInstructions(instructions, dataToPass){
                 server.log("Valve Closing Due to Iteration Failure");
             }
             server.log("Not opening due to iteration error.")
+
+            disobey("Not opening/not remaining opening because of iteration error", dataToPass);
             if(!unitTesting){
                 if(firstXSecondsCheck()){
                     deepSleepForTime(sleepMinimum * 60.0);
