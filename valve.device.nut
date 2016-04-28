@@ -492,6 +492,11 @@ function collectData(){
 //Send data to agent
 function sendData(dataToSend, callback = function(data){}){
     server.log("send data function")
+    if("rssi" in dataToSend){
+        if(dataToSend.rssi==0){
+            dataToSend.rssi = imp.rssi();
+        }
+    }
     agent.send("sendData", dataToSend);
     callback(dataToSend);
 }
