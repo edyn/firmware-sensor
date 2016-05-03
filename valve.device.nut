@@ -25,6 +25,7 @@ watchDogTimeOut <- 130; //Equals 90 second blinkup + 30 second connect + 10 seco
 watchDogSleepTime <- 20.0;//arbitrarily chosen to be 20 minutes
 batteryAveragingPointNumber <- 20;
 watchDogWakeupObject <- false;
+failedConnectionsTimerTable=[1,5,20,60];
 
 //General TODOs:
 //rename valveState to valveOpen to be clear what the boolean means
@@ -93,7 +94,7 @@ function close() {
 //we want to try to close the valve on any cold boot.
 //wakeTime is for relevant waketimes; blinkup, cold boot, new os, new firmware
 if ( ! ("nv" in getroottable() && "valveState" in nv)) {
-    nv <- {valveState = false, iteration = 0, wakeTime = time(), averagingIterator = 0, averagingSum = 0.0, lastEMA = 0.0}; 
+    nv <- {valveState = false, iteration = 0, wakeTime = time(), averagingIterator = 0, averagingSum = 0.0, lastEMA = 0.0, failedConnections = 0}; 
     valvePinInit();
     valveConfigure();
     close();
@@ -715,6 +716,14 @@ function onConnectedSendData(state, dataToPass, callback = doNothing) {
         deepSleepForTime(noWifiSleepTime * 60.0);
         return
     }
+}
+
+function deepSleepFailedConnection(){
+    local sleepTimer = failedConnectionsTimerTable[nv.failedConnections];
+    if(nv.failedConnections < failedConnectionsTimerTable.len()){
+        nv.failedConnections += 1;
+    }
+    deepSleepForTime(sleepTimer * 60.0)
 }
 
 function onConnectedRequestInstructions(dataToPass){
