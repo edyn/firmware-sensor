@@ -262,7 +262,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
 }
 
 function logglyLog(logTable = {}, forceConnect = false){
-    if(server.isconnected()){
+    if(checkConnection()){
         logTable.UnitTesting <- unitTesting;
         agent.send("logglyLog", logTable)
     } else if(forceConnect){
@@ -275,7 +275,7 @@ function logglyLog(logTable = {}, forceConnect = false){
 }
 
 function logglyWarn(logTable = {}, forceConnect = false){
-    if(server.isconnected()){
+    if(checkConnection()){
         logTable.UnitTesting <- unitTesting;
         agent.send("logglyWarn", logTable)
     } else if(forceConnect){
@@ -287,7 +287,7 @@ function logglyWarn(logTable = {}, forceConnect = false){
 }
 
 function logglyError(logTable = {}, forceConnect = false){
-    if(server.isconnected()){
+    if(checkConnection()){
         logTable.UnitTesting <- unitTesting;
         agent.send("logglyError", logTable)
     } else if(forceConnect){
@@ -719,18 +719,37 @@ function onConnectedSendData(state, dataToPass, callback = doNothing) {
 }
 
 function deepSleepFailedConnection(){
-    local sleepTimer = failedConnectionsTimerTable[nv.failedConnections];
+    local sleepTimer = 1.0;
+    nv.failedConnections += 1;
     if(nv.failedConnections < failedConnectionsTimerTable.len() - 1){
-        nv.failedConnections += 1;
+        sleepTimer = failedConnectionsTimerTable[nv.failedConnections];
+    } else {
+        sleepTimer = failedConnectionsTimerTable[failedConnectionsTimerTable.len() - 1];
     }
     deepSleepForTime(sleepTimer * 60.0);
+}
+
+function checkConnection(){
+    local isConnected = server.isconnected();
+    if(isConnected){
+        if(nv.failedConnections > 0){
+            logglyLog({
+                "message" : "valve reestablished connection",
+                "Number of failed attempts" : nv.failedConnections
+            });
+            nv.failedConnections = 0;
+        }
+        return true
+    } else {
+        return false
+    }
 }
 
 function onConnectedRequestInstructions(dataToPass){
     server.log("request instructions")
     //we should still be connected from when we sent data
     //if we have a reason to ignore already:
-    if(server.isconnected()){
+    if(checkConnection()){
         if(dataToPass.ignore){
             if(nv.valveState){
                 close();
@@ -771,7 +790,7 @@ function doNothing(argumentOne = null, argumentTwo = null, argumentThree = null)
 function connectAndCallback(callback, timeout, dataToPass, secondCallback = doNothing, optionalSecondCallback = false) {
     // Check if we're connected before calling server.connect()
     // to avoid race condition
-    if (server.isconnected()) {
+    if (checkConnection()) {
         // We're already connected, so execute the callback
         if(!optionalSecondCallback){
             callback(SERVER_CONNECTED, dataToPass);
@@ -863,7 +882,7 @@ function checkForPresses(dataToSend = {}, numberPressesOpen = 3, numberPressesCl
         }
 
         //logic to open the valve:
-        if(cumulativePresses >= numberPressesOpen && cumulativePresses < numberPressesClosed && !nv.valveState && server.isconnected()){
+        if(cumulativePresses >= numberPressesOpen && cumulativePresses < numberPressesClosed && !nv.valveState && checkConnection()){
             open();
             dataToSend.valveState <- true;
             dataToSend.timestamp <- time();
@@ -889,7 +908,7 @@ function checkForPresses(dataToSend = {}, numberPressesOpen = 3, numberPressesCl
     }
     if(nv.valveState){
         close();
-        if(server.isconnected()){
+        if(checkConnection()){
             dataToSend.valveState <- false;
             sendData(dataToSend);
         }
@@ -967,7 +986,7 @@ function main(){
 }
 
 function softwareWatchdogTimer(){
-    if(server.isconnected()){
+    if(checkConnection()){
         //TODO: make this loggly:
         server.log("WATCHDOG TIMER TOOK OVER! SOMETHING WENT BAD!")
     }
