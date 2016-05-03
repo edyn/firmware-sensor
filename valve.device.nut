@@ -256,7 +256,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
         if(nv.valveState == true){
             close();
         }
-        deepSleepForTime(noWifiSleepTime * 60.0);
+        deepSleepFailedConnection();
         return
     }
 }
@@ -713,7 +713,7 @@ function onConnectedSendData(state, dataToPass, callback = doNothing) {
         if(nv.valveState == true){
             close();
         }
-        deepSleepForTime(noWifiSleepTime * 60.0);
+        deepSleepFailedConnection();
         return
     }
 }
@@ -723,7 +723,7 @@ function deepSleepFailedConnection(){
     if(nv.failedConnections < failedConnectionsTimerTable.len()){
         nv.failedConnections += 1;
     }
-    deepSleepForTime(sleepTimer * 60.0)
+    deepSleepForTime(sleepTimer * 60.0);
 }
 
 function onConnectedRequestInstructions(dataToPass){
@@ -761,7 +761,7 @@ function onConnectedRequestInstructions(dataToPass){
             close();
         }
         //is this the appropriate amount of time? probably not, should add new variable like noWifiSleepTime
-        deepSleepForTime(noWifiSleepTime * 60.0);
+        deepSleepFailedConnection();
         return
     }
 }
