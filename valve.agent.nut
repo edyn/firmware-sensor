@@ -17,6 +17,7 @@ pathForValveState <- "valveState.json"
 pathForValveNextAction <- "valves/v1/valves-now/" + macAgentSide + ".json"
 pathForValveData <- "http://api.valve.prod.edyn.com/readings/" + macAgentSide
 const WAKEREASON_SQUIRREL_ERROR = 5;
+const WAKEREASON_SW_RESET = 2
 bearerAuth <- "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzY29wZXMiOlsicHVibGljIiwidmFsdmU6YWdlbnQiXSwiaWF0IjoxNDU1NzM4MjY4LCJzdWIiOiJhcHA6dmFsdmUtYWdlbnQifQ.-BKIywHrpbtNo2xuYhcZ-4w5itBFQMM0KHQZmXcYgcM";
 //This is the FW bandaid that retries if a required field for valve instructions is missing
 //sample error message that would trigger this: the index 'nextCheckIn' does not exist (line 76)
@@ -93,7 +94,12 @@ function sendDataFromDevice(data) {
     if("wakeReason" in data){
         if(data.wakeReason == WAKEREASON_SQUIRREL_ERROR){//Waking from squirrel runtime error
             loggly.error({
-                "error" : "Valve waking from error"
+                "error" : "Valve waking from squirrel error"
+            });
+        }
+        else if(data.wakeReason == WAKEREASON_SW_RESET){//Waking from squirrel runtime error
+            loggly.error({
+                "error" : "Valve waking from SW reset"
             });
         }
     }  
