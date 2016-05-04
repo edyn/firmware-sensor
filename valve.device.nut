@@ -729,14 +729,22 @@ function deepSleepFailedConnection(){
     deepSleepForTime(sleepTimer * 60.0);
 }
 
+//this function exists so that check connection doesn't call logglylog, which calls check connection
+function checkConnectionLogglyLog(numberFailed){
+    if(server.isconnected()){
+        logTable.UnitTesting <- unitTesting;
+        agent.send("logglyLog",{
+                "message" : "valve reestablished connection",
+                "Number of failed attempts" : nv.failedConnections
+        });
+    } 
+}
 function checkConnection(){
     local isConnected = server.isconnected();
     if(isConnected){
         if(nv.failedConnections > 0){
-            logglyLog({
-                "message" : "valve reestablished connection",
-                "Number of failed attempts" : nv.failedConnections
-            });
+            server.log("succeeded in connecting after failing " + nv.failedConnections + "times");
+            checkConnectionLogglyLog(nv.failedConnections);
             nv.failedConnections = 0;
         }
         return true
