@@ -730,9 +730,8 @@ function deepSleepFailedConnection(){
 }
 
 //this function exists so that check connection doesn't call logglylog, which calls check connection
-function checkConnectionLogglyLog(numberFailed){
+function checkConnectionLogglyLog(numberFailed = 0){
     if(server.isconnected()){
-        logTable.UnitTesting <- unitTesting;
         agent.send("logglyLog",{
                 "message" : "valve reestablished connection",
                 "Number of failed attempts" : nv.failedConnections
