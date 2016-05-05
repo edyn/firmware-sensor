@@ -8,6 +8,8 @@ GlobalTest <- 1
 fullResSet <- false
 THEMACADDRESSAGENTSIDE<-"unknownMacAddress"
 
+
+
 // Send data to the readings API
 function send_data_json_node(data) {
   server.log(http.jsonencode(data));
@@ -444,94 +446,6 @@ device.on("data", function(data) {
 
 });
 
-// Invoked when the device calls agent.send("location", ...)
-device.on("location", function(data) {
-
-  server.log("Received location information");
-  server.log(http.jsonencode(data));
-  // Load the settings table in from permanent storage
-  local settings = server.load();
-  server.log(http.jsonencode(settings));
-  
-  // If we have some settings saved
-  if (settings.len() == 4) {
-    server.log("New SSID is " + data.ssid);
-    server.log("Old SSID is " + settings.ssid);
-    
-    // If this is a new SSID
-    if (settings.ssid != data.ssid) {
-      local url = "https://maps.googleapis.com/maps/api/browserlocation/json?browser=electric-imp&sensor=false";
-  
-      foreach (network in data.loc) {
-        url += ("&wifi=mac:" + addColons(network.bssid) + "|ss:" + network.rssi);
-      }
-      server.log(url);
-  
-      locPrefs <- {};
-      locPrefs.ssid <- data.ssid;
-      locPrefs.device <- data.device;
-
-      // If this is the first time we've received location data
-  
-      local request = http.get(url);
-      local response = request.sendsync();
-
-      if (response.statuscode == 200) {
-        // server.log(response.body);
-        local googleData = http.jsondecode(response.body);
-        // server.log(googleData);
-        server.log(googleData["location"].lat);
-        server.log(googleData["location"].lng);
-    
-        locPrefs.lat <- googleData["location"].lat;
-        locPrefs.lng <- googleData["location"].lng;
-        server.save(locPrefs);
-        // local dataToSendApi = {};
-        send_loc_data(locPrefs);
-      } 
-    }
-    
-    else {
-      // If we were already using this SSID
-      server.log("We already know the lat and lng for this device: lat,lng = " + settings.lat + "," + settings.lng);
-    }
-  }
-
-  // If we don't have some settings saved
-  // Assume this is a new SSID
-  else {
-    server.log("No existing SSID saved on the agent.");
-    local url = "https://maps.googleapis.com/maps/api/browserlocation/json?browser=electric-imp&sensor=false";
-  
-    foreach (network in data.loc) {
-      url += ("&wifi=mac:" + addColons(network.bssid) + "|ss:" + network.rssi);
-    }
-    server.log(url);
-  
-    locPrefs <- {};
-    locPrefs.ssid <- data.ssid;
-    locPrefs.device <- data.device;
-
-    // If this is the first time we've received location data
-  
-    local request = http.get(url);
-    local response = request.sendsync();
-
-    if (response.statuscode == 200) {
-      // server.log(response.body);
-      local googleData = http.jsondecode(response.body);
-      // server.log(googleData);
-      server.log(googleData["location"].lat);
-      server.log(googleData["location"].lng);
-    
-      locPrefs.lat <- googleData["location"].lat;
-      locPrefs.lng <- googleData["location"].lng;
-      server.save(locPrefs);
-      send_loc_data(locPrefs);
-    }
-  }
-  
-});
 
 function addColons(bssid) {
   local result = bssid.slice(0, 2);
