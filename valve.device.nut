@@ -25,6 +25,7 @@ watchDogTimeOut <- 130; //Equals 90 second blinkup + 30 second connect + 10 seco
 watchDogSleepTime <- 20.0;//arbitrarily chosen to be 20 minutes
 batteryAveragingPointNumber <- 20;
 watchDogWakeupObject <- false;
+failedConnectionsTimerTable <- [1,2,4,8,16,24,60];
 
 //General TODOs:
 //rename valveState to valveOpen to be clear what the boolean means
@@ -93,7 +94,7 @@ function close() {
 //we want to try to close the valve on any cold boot.
 //wakeTime is for relevant waketimes; blinkup, cold boot, new os, new firmware
 if ( ! ("nv" in getroottable() && "valveState" in nv)) {
-    nv <- {valveState = false, iteration = 0, wakeTime = time(), averagingIterator = 0, averagingSum = 0.0, lastEMA = 0.0}; 
+    nv <- {valveState = false, iteration = 0, wakeTime = time(), averagingIterator = 0, averagingSum = 0.0, lastEMA = 0.0, failedConnections = 0}; 
     valvePinInit();
     valveConfigure();
     close();
@@ -255,13 +256,13 @@ function forcedLogglyConnect(state, logTable, logLevel){
         if(nv.valveState == true){
             close();
         }
-        deepSleepForTime(noWifiSleepTime * 60.0);
+        deepSleepFailedConnection();
         return
     }
 }
 
 function logglyLog(logTable = {}, forceConnect = false){
-    if(server.isconnected()){
+    if(checkConnection()){
         logTable.UnitTesting <- unitTesting;
         agent.send("logglyLog", logTable)
     } else if(forceConnect){
@@ -274,7 +275,7 @@ function logglyLog(logTable = {}, forceConnect = false){
 }
 
 function logglyWarn(logTable = {}, forceConnect = false){
-    if(server.isconnected()){
+    if(checkConnection()){
         logTable.UnitTesting <- unitTesting;
         agent.send("logglyWarn", logTable)
     } else if(forceConnect){
@@ -286,7 +287,7 @@ function logglyWarn(logTable = {}, forceConnect = false){
 }
 
 function logglyError(logTable = {}, forceConnect = false){
-    if(server.isconnected()){
+    if(checkConnection()){
         logTable.UnitTesting <- unitTesting;
         agent.send("logglyError", logTable)
     } else if(forceConnect){
@@ -712,8 +713,42 @@ function onConnectedSendData(state, dataToPass, callback = doNothing) {
         if(nv.valveState == true){
             close();
         }
-        deepSleepForTime(noWifiSleepTime * 60.0);
+        deepSleepFailedConnection();
         return
+    }
+}
+
+function deepSleepFailedConnection(){
+    local sleepTimer = 1.0;
+    nv.failedConnections += 1;
+    if(nv.failedConnections < failedConnectionsTimerTable.len() - 1){
+        sleepTimer = failedConnectionsTimerTable[nv.failedConnections];
+    } else {
+        sleepTimer = failedConnectionsTimerTable[failedConnectionsTimerTable.len() - 1];
+    }
+    deepSleepForTime(sleepTimer * 60.0);
+}
+
+//this function exists so that check connection doesn't call logglylog, which calls check connection
+function checkConnectionLogglyLog(numberFailed = 0){
+    if(server.isconnected()){
+        agent.send("logglyLog",{
+                "message" : "valve reestablished connection",
+                "Number of failed attempts" : nv.failedConnections
+        });
+    } 
+}
+function checkConnection(){
+    local isConnected = server.isconnected();
+    if(isConnected){
+        if(nv.failedConnections > 0){
+            server.log("succeeded in connecting after failing " + nv.failedConnections + "times");
+            checkConnectionLogglyLog(nv.failedConnections);
+            nv.failedConnections = 0;
+        }
+        return true
+    } else {
+        return false
     }
 }
 
@@ -721,7 +756,7 @@ function onConnectedRequestInstructions(dataToPass){
     server.log("request instructions")
     //we should still be connected from when we sent data
     //if we have a reason to ignore already:
-    if(server.isconnected()){
+    if(checkConnection()){
         if(dataToPass.ignore){
             if(nv.valveState){
                 close();
@@ -752,7 +787,7 @@ function onConnectedRequestInstructions(dataToPass){
             close();
         }
         //is this the appropriate amount of time? probably not, should add new variable like noWifiSleepTime
-        deepSleepForTime(noWifiSleepTime * 60.0);
+        deepSleepFailedConnection();
         return
     }
 }
@@ -762,7 +797,7 @@ function doNothing(argumentOne = null, argumentTwo = null, argumentThree = null)
 function connectAndCallback(callback, timeout, dataToPass, secondCallback = doNothing, optionalSecondCallback = false) {
     // Check if we're connected before calling server.connect()
     // to avoid race condition
-    if (server.isconnected()) {
+    if (checkConnection()) {
         // We're already connected, so execute the callback
         if(!optionalSecondCallback){
             callback(SERVER_CONNECTED, dataToPass);
@@ -854,7 +889,7 @@ function checkForPresses(dataToSend = {}, numberPressesOpen = 3, numberPressesCl
         }
 
         //logic to open the valve:
-        if(cumulativePresses >= numberPressesOpen && cumulativePresses < numberPressesClosed && !nv.valveState && server.isconnected()){
+        if(cumulativePresses >= numberPressesOpen && cumulativePresses < numberPressesClosed && !nv.valveState && checkConnection()){
             open();
             dataToSend.valveState <- true;
             dataToSend.timestamp <- time();
@@ -880,7 +915,7 @@ function checkForPresses(dataToSend = {}, numberPressesOpen = 3, numberPressesCl
     }
     if(nv.valveState){
         close();
-        if(server.isconnected()){
+        if(checkConnection()){
             dataToSend.valveState <- false;
             sendData(dataToSend);
         }
@@ -958,7 +993,7 @@ function main(){
 }
 
 function softwareWatchdogTimer(){
-    if(server.isconnected()){
+    if(checkConnection()){
         //TODO: make this loggly:
         server.log("WATCHDOG TIMER TOOK OVER! SOMETHING WENT BAD!")
     }
