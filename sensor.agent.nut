@@ -477,22 +477,6 @@ device.onconnect(function() {
         fullResSet=false
     }
   
-  
-  // If no preferences have been saved, settings will be empty
-  if (settings.len() == 4) {
-    // Settings table has all the values we expected,
-    // so set the locPrefs to the loaded table
-    server.log("Device connected - We already know the lat and lng for this device: lat,lng = " + settings.lat + "," + settings.lng);
-    
-  }
-  
-  else {
-    // Settings table doesn't have all the values we expected,
-    // so figure out the locPrefs and save as a table
-    device.send("location_request", {test = "t"});
-
-  }
-});
 
 // device.send("location_request", {test = "t"});
 // server.log("Initiated location information request");
