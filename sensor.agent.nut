@@ -8,27 +8,6 @@ GlobalTest <- 1
 fullResSet <- false
 THEMACADDRESSAGENTSIDE<-"unknownMacAddress"
 
-// Send data to Edyn server
-function send_data_json(data) {
-  // local soil_url = "https://edyn.com/api/v1/readings?" + "impee_id=" + data.device;
-//  local soil_url = "http://edynbackendpythonstag.elasticbeanstalk.com/api/readings/";
-  local soil_url = "http://edynbackendpythondev.elasticbeanstalk.com/api/readings/";
-  // local soil_url = "http://Soil-IQ-stag-zhipffkaue.elasticbeanstalk.com/api/readings/";
-  local req = http.post(soil_url, {"Content-Type":"application/json", "User-Agent":"Imp"}, http.jsonencode(data));
-  local res = req.sendsync();
-  if (res.statuscode != 200) {
-    // TODO: retry?
-    // server.log("error sending message: " + res.body);
-    server.log("MySQL API status code: " + res.statuscode);
-    // server.log("error sending message: " + res.body.slice(0,40));
-    server.log("Error sending message to MySQL database.");
-  } else {
-    server.log("Data sent successfully to MySQL database.");
-  }
-}
-
-
-
 // Send data to the readings API
 function send_data_json_node(data) {
   server.log(http.jsonencode(data));
@@ -62,14 +41,6 @@ function processResponse(incomingDataTable) {
   }
 }
 
-// Send location of device
-function send_loc_data(data) {
-  server.log(http.jsonencode(data));
-  local message = http.jsonencode(data);
-  local readings_url = "https://api.edyn.com/devicelocation/";
-  local req = http.post(readings_url, {"Content-Type":"application/json", "User-Agent":"Imp", "X-Api-Key":"FEIMfjweiovm90283y3#*U)#@URvm"}, message);
-  req.sendasync(processResponse);
-}
 
 // Invoked when the device calls agent.send("data", ...)
 device.on("data", function(data) {
@@ -630,72 +601,6 @@ function httpPostWrapper (url, headers, string) {
   local response = request.sendsync();
   return response;
 }
-
-// create a request handler
-http.onrequest(function(request, response){
-  // parse the url form encoded data into a table
-//   local data = http.urldecode(request.body);
-//   server.log(data);
-  
-//   foreach (point in data) {
-//    server.log(point);
-//  }
-  local settings = server.load();
-  // check if particular keys are in the parsed table
-  if ("uid" in request.query && "action" in request.query) {
-    server.log("uid " + request.query.uid);
-    server.log("action " + request.query.action);
-    if (request.query.action == "pair") {
-      server.log("should pair");
-      //http://edynbackendnodedev.elasticbeanstalk.com/users/:id/devices
-      //https://api.edyn.com/users/:id/devices
-      // local url = "http://edynbackendnodedev.elasticbeanstalk.com/users/";
-      local url = "https://api.edyn.com/users/" + request.query.uid + "/devices";
-      local headers = {}
-      headers["X-Api-Key"] <- "FEIMfjweiovm90283y3#*U)#@URvm"
-      headers["Content-Type"] <- "application/json"
-      local stringToSend = "";
-      server.log(settings.len())
-      // if we have all the settings we should expect from the device
-      if (settings.len() == 4) {
-        server.log("Loading real device uuid");
-        stringToSend = "{\"uuid\": \"" + settings.device + "\"}";
-        server.log(url);
-        server.log(headers["X-Api-Key"]);
-        server.log(headers["Content-Type"]);
-        server.log(stringToSend);
-        httpPostWrapper(url,headers,stringToSend);
-      }
-      else {
-        server.log("No uuid saved from device");
-        // stringToSend = "{\"uuid\": " + "\"20000c2a690226d1\"" + "}";
-        server.log("Error");
-      }
-      
-    }
-  }
-    
-  // send response to whoever hit the agent url
-  if (settings.len() == 4) {
-    response.send(200, settings.device);
-  } else {
-    response.send(500, "Error");
-  }
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 //Full res related stuff:
 device.on("fullRes",function(data)
