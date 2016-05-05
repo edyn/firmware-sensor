@@ -25,7 +25,7 @@ watchDogTimeOut <- 130; //Equals 90 second blinkup + 30 second connect + 10 seco
 watchDogSleepTime <- 20.0;//arbitrarily chosen to be 20 minutes
 batteryAveragingPointNumber <- 20;
 watchDogWakeupObject <- false;
-failedConnectionsTimerTable <- [1,5,20,60];
+failedConnectionsTimerTable <- [1,2,4,8,16,24,60];
 
 //General TODOs:
 //rename valveState to valveOpen to be clear what the boolean means
