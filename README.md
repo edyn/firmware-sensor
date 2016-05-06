@@ -1,5 +1,5 @@
 # firmware
-Code running on the Edyn sensor and the Edyn valve
+Code running on the Edyn sensor
 
 Getting Started
 ===============
