@@ -4,12 +4,11 @@
 // Imp Agent code runs on a server in the Imp Cloud. 
 // It forwards data from the Imp Device to the Edyn server.
 ////////////////////////////////////////////////////////////
+#require "Firebase.class.nut:1.0.0"
 GlobalTest <- 1
 fullResSet <- false
 THEMACADDRESSAGENTSIDE<-"unknownMacAddress"
 
-
-#require "Firebase.class.nut:1.0.0"
 firebase <- Firebase("fiery-heat-4911", "Z8weueFHsGRl7TOEEbWrVgak6Ua1RuIC12mF9PEG");
 
 
@@ -474,7 +473,7 @@ device.onconnect(function() {
         server.log("Full Res Set To False")
         fullResSet=false
     }
-  
+}) 
 
 // device.send("location_request", {test = "t"});
 // server.log("Initiated location information request");
