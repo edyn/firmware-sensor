@@ -91,7 +91,7 @@ device.on("data", function(data) {
     newPoint.electrical_conductivity <- point.m;
     newPoint.light <- point.l;
     newPoint.capacitance<-point.c;
-    
+    newPoint.rssi <- point.r;
     server.log("Agent CAPACITANCE:")
     server.log(point.c)
     server.log(newPoint.capacitance)
@@ -275,7 +275,7 @@ device.on("data", function(data) {
     newPoint.electrical_conductivity <- point.m;
     newPoint.light <- point.l;
     newPoint.capacitance <- point.c;
-    
+    newPoint.rssi <- point.r;
     if("testResults" in point){
       if(typeof(point.testResults)=="array"){
         for(local i=0; i<point.testResults.len(); i++){
