@@ -960,39 +960,6 @@ function send_data(status) {
   }
 }
 
-// Callback for server status changes.
-function send_loc(status) {
-  if (status == SERVER_CONNECTED) {
-    if (debug == true) server.log("Called send_loc function");
-    // ok: send data
-    // server.log(imp.scanwifinetworks());
-    agent.send("location", {
-      device = hardware.getdeviceid(),
-      loc = imp.scanwifinetworks(),
-      ssid = imp.getssid()
-    });
-    local success = server.flush(TIMEOUT_SERVER_S);
-    if (success) {
-    }
-    
-    else {
-      if (debug == true) server.log("Error: Server connected, but no location success.");
-    }
-  }
-  else {
-    if (debug == true) server.log("Tried to connect to server to send location but failed.");
-    power.enter_deep_sleep_failed("Sleeping after failing to connect to server for sending location.");
-  }
-  
-  if (ship_and_store == true) {
-    power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-  }
-  else {
-    // Sleep until next sensor sampling
-    power.enter_deep_sleep_running("Finished sending JSON data.");
-  }
-}
-
 function blinkAll(duration, count = 1) {
   while (count > 0) {
     count -= 1;
@@ -1172,11 +1139,6 @@ function regularOperation()
       ///
       // Event handlers
       ///
-      agent.on("location_request", function(data) {
-        if (debug == true) server.log("Agent requested location information.");
-        connect(send_loc, TIMEOUT_SERVER_S);
-      });
-    
       // Register the disconnect handler
       server.onunexpecteddisconnect(disconnectHandler);
 
@@ -1322,7 +1284,7 @@ function regularOperation()
         powerManager.suspendCharging();
         local batvol = source.voltage();
         //uncomment this sleep to get the light reading value change:
-        //imp.sleep(0.1);
+        imp.sleep(0.1);
         if(runTest)
         {
             nv.data.push({
