@@ -66,7 +66,8 @@ function send_data_json_node(data) {
   };
   local req = http.post(readings_url, headers, http.jsonencode(data));
   local res = req.sendsync();
-  if (res.statuscode != 200) {
+  //failed send to backend
+  if (res.statuscode < 200 || res.statuscode > 203) {
     // TODO: retry?
     // server.log("error sending message: " + res.body);
     server.log("Postgres API status code: " + res.statuscode);
@@ -80,7 +81,7 @@ function send_data_json_node(data) {
   }
 }
 
-//this function appears unused.
+//this function appears to be unused
 function processResponse(incomingDataTable) {
   // This is the completed-request callback function.
   if (incomingDataTable.statuscode != 200) {
