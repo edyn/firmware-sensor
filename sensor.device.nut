@@ -750,7 +750,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
 
 function logglyLog(logTable = {}, forceConnect = false){
   try{
-    if(checkConnection()){
+    if(server.isconnected()){
         //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
         //logTable.UnitTesting <- unitTesting;
         agent.send("logglyLog", logTable)
@@ -762,13 +762,13 @@ function logglyLog(logTable = {}, forceConnect = false){
         }, logglyConnectTimeout);
     }
   } catch (error) {
-    server.log("Loggly Log Error");
+    server.log("Loggly Log Error: " + error);
   }
 }
 
 function logglyWarn(logTable = {}, forceConnect = false){
   try{
-    if(checkConnection()){
+    if(server.isconnected()){
         //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
         //logTable.UnitTesting <- unitTesting;
         agent.send("logglyWarn", logTable)
@@ -779,14 +779,14 @@ function logglyWarn(logTable = {}, forceConnect = false){
         }, logglyConnectTimeout);
     }
   } catch (error) {
-    server.log("Loggly Warn Error")
+    server.log("Loggly Warn Error: " + error)
   }
 }
 
 //TODO: make server logging optional part of logglyerror
 function logglyError(logTable = {}, forceConnect = false){
   try{
-    if(checkConnection()){
+    if(server.isconnected()){
         //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
         //logTable.UnitTesting <- unitTesting;
         agent.send("logglyError", logTable)
@@ -797,7 +797,7 @@ function logglyError(logTable = {}, forceConnect = false){
         }, logglyConnectTimeout);
     }
   } catch (error) {
-    server.log("Loggly Error encountered an error")
+    server.log("Loggly Error encountered an error: " + error)
   }
 }
 
