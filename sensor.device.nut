@@ -1112,7 +1112,6 @@ function startControlFlow()
               "Error" : "Waking From Squirrel Runtime Error"
             }, true);
             break
-            break
             
         //unlikely/impossible cases, but still 1
         case WAKEREASON_SNOOZE:
