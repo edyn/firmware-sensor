@@ -10,13 +10,19 @@ fullResSet <- false
 THEMACADDRESSAGENTSIDE<-"unknownMacAddress"
 
 firebase <- Firebase("fiery-heat-4911", "Z8weueFHsGRl7TOEEbWrVgak6Ua1RuIC12mF9PEG");
+bearerAuth <- "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzY29wZXMiOlsicHVibGljIiwidmFsdmU6YWdlbnQiXSwiaWF0IjoxNDU1NzM4MjY4LCJzdWIiOiJhcHA6dmFsdmUtYWdlbnQifQ.-BKIywHrpbtNo2xuYhcZ-4w5itBFQMM0KHQZmXcYgcM";
 
 
 // Send data to the readings API
 function send_data_json_node(data) {
   server.log(http.jsonencode(data));
-  local readings_url = "https://readings.edyn.com/readings/";
-  local req = http.post(readings_url, {"Content-Type":"application/json", "User-Agent":"Imp", "X-Api-Key":"FEIMfjweiovm90283y3#*U)#@URvm"}, http.jsonencode(data));
+  local readings_url = "http://api.sensor.prod.edyn.com/readings/";
+  local headers = {
+    "Content-Type":"application/json",
+    "User-Agent":"Imp",
+    "Authorization" : bearerAuth
+  };
+  local req = http.post(readings_url, headers, http.jsonencode(data));
   local res = req.sendsync();
   if (res.statuscode != 200) {
     // TODO: retry?
