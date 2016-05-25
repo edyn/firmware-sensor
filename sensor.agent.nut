@@ -6,6 +6,7 @@
 ////////////////////////////////////////////////////////////
 #require "Firebase.class.nut:1.0.0"
 #require "Loggly.class.nut:1.0.1"
+macAgentSide <- imp.configparams.deviceid;
 
 GlobalTest <- 1
 fullResSet <- false
@@ -47,6 +48,12 @@ device.on("logglyLog", deviceLogglyLog);
 device.on("logglyWarn", deviceLogglyWarn);
 device.on("logglyError", deviceLogglyErr);
 
+function failedSendTable(targetURL, statuscode){
+  local outputTable = {};
+  outputTable.statusCode <- statuscode;
+  //Use this to build table with information we want on failed http requests.
+
+}
 
 // Send data to the readings API
 function send_data_json_node(data) {
@@ -66,11 +73,14 @@ function send_data_json_node(data) {
     server.log(res.body);
     // server.log("error sending message: " + res.body.slice(0,40));
     server.log("Error sending message to Postgres database.");
+    local logglyWarnTable = failedSendTable(res.statuscode);
+    deviceLogglyWarn(readings_url, logglyWarnTable);
   } else {
     server.log("Data sent successfully to Postgres database.");
   }
 }
 
+//this function appears unused.
 function processResponse(incomingDataTable) {
   // This is the completed-request callback function.
   if (incomingDataTable.statuscode != 200) {
@@ -80,6 +90,8 @@ function processResponse(incomingDataTable) {
     // server.log(res.body);
     // server.log("error sending message: " + res.body.slice(0,40));
     server.log("Error saving device location in DB.");
+    local logglyWarnTable = failedSendTable(res.statuscode);
+    deviceLogglyWarn(logglyWarnTable);
   }
   else {
     server.log("Device location saved in DB successfully.");
