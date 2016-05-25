@@ -825,6 +825,7 @@ function logDeviceOnline()
             
         case WAKEREASON_SW_RESET:
             reasonString = "A software reset took place"
+            //This DOES try to force connection
             logglyError({
               "Error" : "Waking From Software Reset (OS level Error, could be memory related)"
             });
@@ -844,9 +845,10 @@ function logDeviceOnline()
             
         case WAKEREASON_SQUIRREL_ERROR:
             reasonString = "Squirrel runtime error"
+            //This DOES try to force connection
             logglyError({
               "Error" : "Waking From Squirrel Runtime Error"
-            });
+            }, true);
             break
         
         case WAKEREASON_NEW_FIRMWARE:
@@ -1496,7 +1498,8 @@ function main() {
     else if (control==5)
     {        
         if(server.isconnected())
-        {
+        {   
+            LogglyLog({"message: " : "New Blinkup"});
             blueLed.configure()
             #blueLed.blink(2,2)
             server.log("Is connected")
