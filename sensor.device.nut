@@ -749,6 +749,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
 }
 
 function logglyLog(logTable = {}, forceConnect = false){
+  try{
     if(checkConnection()){
         //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
         //logTable.UnitTesting <- unitTesting;
@@ -760,9 +761,13 @@ function logglyLog(logTable = {}, forceConnect = false){
             forcedLogglyConnect(connectStatus, logTable, "logglyLog");
         }, logglyConnectTimeout);
     }
+  } catch (error) {
+    server.log("Loggly Log Error");
+  }
 }
 
 function logglyWarn(logTable = {}, forceConnect = false){
+  try{
     if(checkConnection()){
         //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
         //logTable.UnitTesting <- unitTesting;
@@ -773,10 +778,14 @@ function logglyWarn(logTable = {}, forceConnect = false){
             forcedLogglyConnect(connectStatus, logTable, "logglyWarn");
         }, logglyConnectTimeout);
     }
+  } catch (error) {
+    server.log("Loggly Warn Error")
+  }
 }
 
 //TODO: make server logging optional part of logglyerror
 function logglyError(logTable = {}, forceConnect = false){
+  try{
     if(checkConnection()){
         //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
         //logTable.UnitTesting <- unitTesting;
@@ -787,6 +796,9 @@ function logglyError(logTable = {}, forceConnect = false){
             forcedLogglyConnect(connectStatus, logTable, "logglyError");
         }, logglyConnectTimeout);
     }
+  } catch (error) {
+    server.log("Loggly Error encountered an error")
+  }
 }
 
 
@@ -813,6 +825,9 @@ function logDeviceOnline()
             
         case WAKEREASON_SW_RESET:
             reasonString = "A software reset took place"
+            logglyError({
+              "Error" : "Waking From Software Reset (OS level Error, could be memory related)"
+            });
             break
             
         case WAKEREASON_TIMER:
@@ -829,6 +844,9 @@ function logDeviceOnline()
             
         case WAKEREASON_SQUIRREL_ERROR:
             reasonString = "Squirrel runtime error"
+            logglyError({
+              "Error" : "Waking From Squirrel Runtime Error"
+            });
             break
         
         case WAKEREASON_NEW_FIRMWARE:
