@@ -5,12 +5,47 @@
 // It forwards data from the Imp Device to the Edyn server.
 ////////////////////////////////////////////////////////////
 #require "Firebase.class.nut:1.0.0"
+#require "Loggly.class.nut:1.0.1"
+
 GlobalTest <- 1
 fullResSet <- false
 THEMACADDRESSAGENTSIDE<-"unknownMacAddress"
 
 firebase <- Firebase("fiery-heat-4911", "Z8weueFHsGRl7TOEEbWrVgak6Ua1RuIC12mF9PEG");
 bearerAuth <- "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzY29wZXMiOlsicHVibGljIiwidmFsdmU6YWdlbnQiXSwiaWF0IjoxNDU1NzM4MjY4LCJzdWIiOiJhcHA6dmFsdmUtYWdlbnQifQ.-BKIywHrpbtNo2xuYhcZ-4w5itBFQMM0KHQZmXcYgcM";
+
+logglyKey <- "1890ff8f-0c0a-4ca0-b2f4-74f8f3ea469b"
+loggly <- Loggly(logglyKey, { 
+    "tags" : "valveLogs",
+    "timeout" : 60,
+    "limit" : 20 //arbitrary 
+});
+
+//Loggly Functions
+function deviceLogglyLog(logTable){
+    logTable.macAddress <- macAgentSide;
+    logTable.sourceGroup <- "Firmware";
+    logTable.env <- "Sensor_Loggly";
+    loggly.log(logTable);
+}
+
+function deviceLogglyWarn(logTable){
+    logTable.macAddress <- macAgentSide;
+    logTable.sourceGroup <- "Firmware";
+    logTable.env <- "Sensor_Loggly";
+    loggly.warn(logTable);
+}
+
+function deviceLogglyErr(logTable){
+    logTable.macAddress <- macAgentSide;
+    logTable.sourceGroup <- "Firmware";
+    logTable.env <- "Sensor_Loggly";
+    loggly.error(logTable);
+}
+
+device.on("logglyLog", deviceLogglyLog);
+device.on("logglyWarn", deviceLogglyWarn);
+device.on("logglyError", deviceLogglyErr);
 
 
 // Send data to the readings API
