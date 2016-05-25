@@ -31,6 +31,8 @@ const POLL_ITERATION_MAX = 5; // maximum number of iterations for sensor polling
 const NV_ENTRIES_MAX = 19; // maximum NV entry space is about 55, based on testing
 const TZ_OFFSET = -25200; // 7 hours for PDT
 const blinkupTime = 90;
+//Loggly Timeout Variable:
+const logglyConnectTimeout = 20;
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
@@ -714,6 +716,80 @@ class power {
 ///
 // Functions
 ///
+
+//Loggly Functions
+function forcedLogglyConnect(state, logTable, logLevel){
+    try{
+        // If we're connected...
+        if (state == SERVER_CONNECTED) {
+            agent.send(logLevel, logTable);
+            return
+        } 
+        //if we're not connected...
+        else {
+            //Valve fails to connect:
+            if(nv.valveState == true){
+                close();
+            }
+            deepSleepFailedConnection();
+            return
+        }
+    } catch (error) {
+        server.log(error)
+        if(nv.valveState){
+            close();
+        }
+        logglyError({
+            "error" : error,
+            "function" : "forcedLogglyConnect",
+            "message" : "failure when trying to force device to connect and send to loggly"
+        });
+        deepSleepForTime(ERROR_SLEEP_TIME * 60.0);
+    }
+}
+
+function logglyLog(logTable = {}, forceConnect = false){
+    if(checkConnection()){
+        //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
+        //logTable.UnitTesting <- unitTesting;
+        agent.send("logglyLog", logTable)
+    } else if(forceConnect){
+        //connect and send loggly stuff
+        //really no reason we'd ever force a connect for a regular log...
+        server.connect(function (connectStatus){
+            forcedLogglyConnect(connectStatus, logTable, "logglyLog");
+        }, logglyConnectTimeout);
+    }
+}
+
+function logglyWarn(logTable = {}, forceConnect = false){
+    if(checkConnection()){
+        //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
+        //logTable.UnitTesting <- unitTesting;
+        agent.send("logglyWarn", logTable)
+    } else if(forceConnect){
+        //connect and send loggly stuff
+        server.connect(function (connectStatus){
+            forcedLogglyConnect(connectStatus, logTable, "logglyWarn");
+        }, logglyConnectTimeout);
+    }
+}
+
+//TODO: make server logging optional part of logglyerror
+function logglyError(logTable = {}, forceConnect = false){
+    if(checkConnection()){
+        //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
+        //logTable.UnitTesting <- unitTesting;
+        agent.send("logglyError", logTable)
+    } else if(forceConnect){
+        //connect and send loggly stuff
+        server.connect(function (connectStatus){
+            forcedLogglyConnect(connectStatus, logTable, "logglyError");
+        }, logglyConnectTimeout);
+    }
+}
+
+
 function log(s) {
   local now = time() + TZ_OFFSET;
   s = format("%02d:%02d:%02d - %s",date(now).hour, date(now).min, date(now).sec, s);
