@@ -48,10 +48,13 @@ device.on("logglyLog", deviceLogglyLog);
 device.on("logglyWarn", deviceLogglyWarn);
 device.on("logglyError", deviceLogglyErr);
 
-function failedSendTable(targetURL, statuscode){
+function failedSendTable(targetURL, body, statuscode){
   local outputTable = {};
+  outputTable.url <- targetURL;
+  outputTable.body <- http.jsondecode(body);
   outputTable.statusCode <- statuscode;
   //Use this to build table with information we want on failed http requests.
+  return outputTable
 
 }
 
@@ -69,13 +72,9 @@ function send_data_json_node(data) {
   //failed send to backend
   if (res.statuscode < 200 || res.statuscode > 203) {
     // TODO: retry?
-    // server.log("error sending message: " + res.body);
-    server.log("Postgres API status code: " + res.statuscode);
-    server.log(res.body);
-    // server.log("error sending message: " + res.body.slice(0,40));
     server.log("Error sending message to Postgres database.");
-    local logglyWarnTable = failedSendTable(res.statuscode);
-    deviceLogglyWarn(readings_url, logglyWarnTable);
+    local logglyWarnTable = failedSendTable(readings_url, res.body, res.statuscode);
+    deviceLogglyWarn(logglyWarnTable);
   } else {
     server.log("Data sent successfully to Postgres database.");
   }
