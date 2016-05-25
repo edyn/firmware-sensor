@@ -997,7 +997,6 @@ function send_data(status) {
 
     local success = server.flush(TIMEOUT_SERVER_S);
 
-    alwsiegbawegiuwbe = aweg
     if (success) {
       // update last sent data (even on failure, so the next send attempt is not immediate)
       nv.data_sent = nv.data.top();
