@@ -825,10 +825,6 @@ function logDeviceOnline()
             
         case WAKEREASON_SW_RESET:
             reasonString = "A software reset took place"
-            //This DOES try to force connection
-            logglyError({
-              "Error" : "Waking From Software Reset (OS level Error, could be memory related)"
-            });
             break
             
         case WAKEREASON_TIMER:
@@ -845,11 +841,6 @@ function logDeviceOnline()
             
         case WAKEREASON_SQUIRREL_ERROR:
             reasonString = "Squirrel runtime error"
-            //This DOES try to force connection
-            logglyError({
-              "Error" : "Waking From Squirrel Runtime Error"
-            }, true);
-            break
         
         case WAKEREASON_NEW_FIRMWARE:
             reasonString = "impOS update"
@@ -1005,6 +996,8 @@ function send_data(status) {
     }); // TODO: send error codes
 
     local success = server.flush(TIMEOUT_SERVER_S);
+
+    alwsiegbawegiuwbe = aweg
     if (success) {
       // update last sent data (even on failure, so the next send attempt is not immediate)
       nv.data_sent = nv.data.top();
@@ -1101,6 +1094,10 @@ function startControlFlow()
             break
         case WAKEREASON_SW_RESET:
             branching=1;
+            //This DOES try to force connection
+            logglyError({
+              "Error" : "Waking From Software Reset (OS level Error, could be memory related)"
+            });
             break
         case WAKEREASON_NEW_SQUIRREL:
             branching=1;
@@ -1110,6 +1107,11 @@ function startControlFlow()
             break
         case WAKEREASON_SQUIRREL_ERROR:
             branching=2;
+            //This DOES try to force connection
+            logglyError({
+              "Error" : "Waking From Squirrel Runtime Error"
+            }, true);
+            break
             break
             
         //unlikely/impossible cases, but still 1
