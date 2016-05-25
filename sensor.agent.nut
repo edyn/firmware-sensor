@@ -16,19 +16,20 @@ bearerAuth <- "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzY29wZXMiOlsicHVib
 // Send data to the readings API
 function send_data_json_node(data) {
   server.log(http.jsonencode(data));
-  local readings_url = "http://api.sensor.prod.edyn.com/readings/";
+  local readings_url = "http://api.sensor.prod.edyn.com/readings";
   local headers = {
     "Content-Type":"application/json",
     "User-Agent":"Imp",
-    "Authorization" : bearerAuth
+    "Authorization" : bearerAuth,
+    "X-Api-Key":"staging-electric-imp-api-key"
   };
   local req = http.post(readings_url, headers, http.jsonencode(data));
   local res = req.sendsync();
+  server.log("Postgres API status code: " + res.statuscode);
   if (res.statuscode != 200) {
     // TODO: retry?
     // server.log("error sending message: " + res.body);
-    server.log("Postgres API status code: " + res.statuscode);
-    server.log(res.body);
+    server.log("response body:" + res.body);
     // server.log("error sending message: " + res.body.slice(0,40));
     server.log("Error sending message to Postgres database.");
   } else {
