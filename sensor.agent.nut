@@ -5,6 +5,9 @@
 // It forwards data from the Imp Device to the Edyn server.
 ////////////////////////////////////////////////////////////
 #require "Firebase.class.nut:1.0.0"
+#require "Loggly.class.nut:1.0.1"
+macAgentSide <- imp.configparams.deviceid;
+
 GlobalTest <- 1
 fullResSet <- false
 THEMACADDRESSAGENTSIDE<-"unknownMacAddress"
@@ -12,6 +15,48 @@ THEMACADDRESSAGENTSIDE<-"unknownMacAddress"
 firebase <- Firebase("fiery-heat-4911", "Z8weueFHsGRl7TOEEbWrVgak6Ua1RuIC12mF9PEG");
 bearerAuth <- "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzY29wZXMiOlsicHVibGljIiwidmFsdmU6YWdlbnQiXSwiaWF0IjoxNDU1NzM4MjY4LCJzdWIiOiJhcHA6dmFsdmUtYWdlbnQifQ.-BKIywHrpbtNo2xuYhcZ-4w5itBFQMM0KHQZmXcYgcM";
 
+logglyKey <- "1890ff8f-0c0a-4ca0-b2f4-74f8f3ea469b"
+loggly <- Loggly(logglyKey, { 
+    "tags" : "valveLogs",
+    "timeout" : 60,
+    "limit" : 20 //arbitrary 
+});
+
+//Loggly Functions
+function deviceLogglyLog(logTable){
+    logTable.macAddress <- macAgentSide;
+    logTable.sourceGroup <- "Firmware";
+    logTable.env <- "Sensor_Loggly";
+    loggly.log(logTable);
+}
+
+function deviceLogglyWarn(logTable){
+    logTable.macAddress <- macAgentSide;
+    logTable.sourceGroup <- "Firmware";
+    logTable.env <- "Sensor_Loggly";
+    loggly.warn(logTable);
+}
+
+function deviceLogglyErr(logTable){
+    logTable.macAddress <- macAgentSide;
+    logTable.sourceGroup <- "Firmware";
+    logTable.env <- "Sensor_Loggly";
+    loggly.error(logTable);
+}
+
+device.on("logglyLog", deviceLogglyLog);
+device.on("logglyWarn", deviceLogglyWarn);
+device.on("logglyError", deviceLogglyErr);
+
+function failedSendTable(targetURL, body, statuscode){
+  local outputTable = {};
+  outputTable.url <- targetURL;
+  outputTable.body <- http.jsondecode(body);
+  outputTable.statusCode <- statuscode;
+  //Use this to build table with information we want on failed http requests.
+  return outputTable
+
+}
 
 // Send data to the readings API
 function send_data_json_node(data) {
@@ -25,18 +70,18 @@ function send_data_json_node(data) {
   };
   local req = http.post(readings_url, headers, http.jsonencode(data));
   local res = req.sendsync();
-  server.log("Postgres API status code: " + res.statuscode);
-  if (res.statuscode != 200) {
+  //failed send to backend
+  if (res.statuscode < 200 || res.statuscode > 203) {
     // TODO: retry?
-    // server.log("error sending message: " + res.body);
-    server.log("response body:" + res.body);
-    // server.log("error sending message: " + res.body.slice(0,40));
     server.log("Error sending message to Postgres database.");
+    local logglyWarnTable = failedSendTable(readings_url, res.body, res.statuscode);
+    deviceLogglyWarn(logglyWarnTable);
   } else {
     server.log("Data sent successfully to Postgres database.");
   }
 }
 
+//this function appears to be unused
 function processResponse(incomingDataTable) {
   // This is the completed-request callback function.
   if (incomingDataTable.statuscode != 200) {
@@ -46,6 +91,8 @@ function processResponse(incomingDataTable) {
     // server.log(res.body);
     // server.log("error sending message: " + res.body.slice(0,40));
     server.log("Error saving device location in DB.");
+    local logglyWarnTable = failedSendTable(res.statuscode);
+    deviceLogglyWarn(logglyWarnTable);
   }
   else {
     server.log("Device location saved in DB successfully.");
