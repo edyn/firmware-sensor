@@ -889,6 +889,7 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 function send_data(status) {
   // update last sent data (even on failure, so the next send attempt is not immediate)
   local power_manager_data=[];
+  local nvDataSize = nv.data.len();
   nv.data_sent = nv.data.top();
   
   if (status == SERVER_CONNECTED) {
@@ -902,6 +903,12 @@ function send_data(status) {
     power_manager_data.append(powerManager.reg_4);
     power_manager_data.append(powerManager.reg_5);
     if (debug == true) server.log("Connected to server.");
+    //if RSSI is 0, check it again
+    if(nvDataSize > 0){
+      if(nv.data[nvDataSize - 1].r == 0){
+        nv.data[nvDataSize - 1].r = imp.rssi();
+      }
+    }
     agent.send("data", {
       device = hardware.getdeviceid(),
       data = nv.data,
@@ -1307,7 +1314,8 @@ function regularOperation()
               l = solar.voltage(),
               m = lastLastReading*(3.0/65536.0),
               b = source.voltage(),
-              c = timeDiffTwo*(1.0/samplerHzA)
+              c = timeDiffTwo*(1.0/samplerHzA),
+              r = imp.rssi()
               });
               //server.log("DEVICE SIDE CAPACITANCE:"+nv.data.top().c);
         }        
