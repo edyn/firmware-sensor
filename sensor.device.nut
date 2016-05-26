@@ -1082,7 +1082,8 @@ function interruptPin() {
         //Let me know if this explanation is unclear because it's very important that if I die tomorrow somebody understands this
       if((date().time-intertime)>1)
       {
-          imp.sleep(10)
+          //we might be able to remove this sleep all together
+          imp.sleep(1)
         blinkupFor(blinkupTime)
           if (debug == true){
             server.log("Button pressed");
@@ -1380,7 +1381,8 @@ function main() {
     {
         if(server.isconnected())
         {
-            imp.sleep(10)
+            //might be able to remove this sleep all together
+            imp.sleep(1)
             regularOperation()
         }
         
@@ -1407,21 +1409,21 @@ function main() {
       interruptPin();
       
     }//end control 3
+    //control 5 is blinkup
     else if (control==5)
     {        
+        //TODO: review how blinkup is handled, it's pretty weird
         if(server.isconnected())
         {
             blueLed.configure()
-            #blueLed.blink(2,2)
+            //blueLed.blink(2,2)
             server.log("Is connected")
             regularOperation()
-            imp.sleep(10)
         }
         else
         {
             blueLed.configure()
-            blueLed.blink(1,4)
-            imp.sleep(10)
+            //blueLed.blink(1,4)
             server.log("not connected")
             blinkupFor(blinkupTime)
         }
