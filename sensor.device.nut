@@ -1416,14 +1416,14 @@ function main() {
         if(server.isconnected())
         {
             blueLed.configure()
-            #blueLed.blink(2,2)
+            //blueLed.blink(2,2)
             server.log("Is connected")
             regularOperation()
         }
         else
         {
             blueLed.configure()
-            blueLed.blink(1,4)
+            //blueLed.blink(1,4)
             server.log("not connected")
             blinkupFor(blinkupTime)
         }
