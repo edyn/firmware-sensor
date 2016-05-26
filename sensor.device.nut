@@ -976,6 +976,7 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 function send_data(status) {
   // update last sent data (even on failure, so the next send attempt is not immediate)
   local power_manager_data=[];
+  local nvDataSize = nv.data.len();
   nv.data_sent = nv.data.top();
   
   if (status == SERVER_CONNECTED) {
@@ -989,6 +990,12 @@ function send_data(status) {
     power_manager_data.append(powerManager.reg_4);
     power_manager_data.append(powerManager.reg_5);
     if (debug == true) server.log("Connected to server.");
+    //if RSSI is 0, check it again
+    if(nvDataSize > 0){
+      if(nv.data[nvDataSize - 1].r == 0){
+        nv.data[nvDataSize - 1].r = imp.rssi();
+      }
+    }
     agent.send("data", {
       device = hardware.getdeviceid(),
       data = nv.data,
@@ -1171,7 +1178,8 @@ function interruptPin() {
         //Let me know if this explanation is unclear because it's very important that if I die tomorrow somebody understands this
       if((date().time-intertime)>1)
       {
-          imp.sleep(10)
+          //we might be able to remove this sleep all together
+          imp.sleep(1)
         blinkupFor(blinkupTime)
           if (debug == true){
             server.log("Button pressed");
@@ -1402,7 +1410,8 @@ function regularOperation()
               l = solar.voltage(),
               m = lastLastReading*(3.0/65536.0),
               b = source.voltage(),
-              c = timeDiffTwo*(1.0/samplerHzA)
+              c = timeDiffTwo*(1.0/samplerHzA),
+              r = imp.rssi()
               });
               //server.log("DEVICE SIDE CAPACITANCE:"+nv.data.top().c);
         }        
@@ -1468,7 +1477,8 @@ function main() {
     {
         if(server.isconnected())
         {
-            imp.sleep(10)
+            //might be able to remove this sleep all together
+            imp.sleep(1)
             regularOperation()
         }
         
@@ -1495,22 +1505,22 @@ function main() {
       interruptPin();
       
     }//end control 3
+    //control 5 is blinkup
     else if (control==5)
     {        
+        //TODO: review how blinkup is handled, it's pretty weird
         if(server.isconnected())
         {   
             LogglyLog({"message: " : "New Blinkup"});
             blueLed.configure()
-            #blueLed.blink(2,2)
+            //blueLed.blink(2,2)
             server.log("Is connected")
             regularOperation()
-            imp.sleep(10)
         }
         else
         {
             blueLed.configure()
-            blueLed.blink(1,4)
-            imp.sleep(10)
+            //blueLed.blink(1,4)
             server.log("not connected")
             blinkupFor(blinkupTime)
         }

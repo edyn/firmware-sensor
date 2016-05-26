@@ -61,11 +61,12 @@ function failedSendTable(targetURL, body, statuscode){
 // Send data to the readings API
 function send_data_json_node(data) {
   server.log(http.jsonencode(data));
-  local readings_url = "http://api.sensor.prod.edyn.com/readings/";
+  local readings_url = "http://api.sensor.prod.edyn.com/readings";
   local headers = {
     "Content-Type":"application/json",
     "User-Agent":"Imp",
-    "Authorization" : bearerAuth
+    "Authorization" : bearerAuth,
+    "X-Api-Key":"staging-electric-imp-api-key"
   };
   local req = http.post(readings_url, headers, http.jsonencode(data));
   local res = req.sendsync();
@@ -144,6 +145,7 @@ device.on("data", function(data) {
     newPoint.electrical_conductivity <- point.m;
     newPoint.light <- point.l;
     newPoint.capacitance<-point.c;
+    newPoint.rssi <- point.r;
     server.log("Agent CAPACITANCE:")
     server.log(point.c)
     server.log(newPoint.capacitance)
@@ -327,6 +329,7 @@ device.on("data", function(data) {
     newPoint.electrical_conductivity <- point.m;
     newPoint.light <- point.l;
     newPoint.capacitance <- point.c;
+    newPoint.rssi <- point.r;
     if("testResults" in point){
       if(typeof(point.testResults)=="array"){
         for(local i=0; i<point.testResults.len(); i++){
