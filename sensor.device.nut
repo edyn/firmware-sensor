@@ -726,7 +726,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
             return
         } 
         else {
-            power.enter_deep_sleep_failed();
+            power.enter_deep_sleep_failed("Forced Loggly Connect Failed");
             return
         }
     } catch (error) {
@@ -736,7 +736,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
             "function" : "forcedLogglyConnect",
             "message" : "failure when trying to force device to connect and send to loggly"
         });
-        power.enter_deep_sleep_failed();
+        power.enter_deep_sleep_failed("Error in forced loggly connect");
     }
 }
 
