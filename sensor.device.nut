@@ -701,7 +701,7 @@ class power {
             server.sleepfor(INTERVAL_SLEEP_FAILED_S);
         }
         else{
-            server.sleepfor(INTERVAL_SLEEP_SHIP_STORE_S);
+            server.sleepfor(INTERVAL_SLEEP_FAILED_S);
         }
         
       });
@@ -725,26 +725,18 @@ function forcedLogglyConnect(state, logTable, logLevel){
             agent.send(logLevel, logTable);
             return
         } 
-        //if we're not connected...
         else {
-            //Valve fails to connect:
-            if(nv.valveState == true){
-                close();
-            }
-            deepSleepFailedConnection();
+            power.enter_deep_sleep_failed();
             return
         }
     } catch (error) {
         server.log(error)
-        if(nv.valveState){
-            close();
-        }
         logglyError({
             "error" : error,
             "function" : "forcedLogglyConnect",
             "message" : "failure when trying to force device to connect and send to loggly"
         });
-        deepSleepForTime(ERROR_SLEEP_TIME * 60.0);
+        power.enter_deep_sleep_failed();
     }
 }
 
