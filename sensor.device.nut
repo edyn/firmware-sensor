@@ -22,7 +22,7 @@ const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 
 const INTERVAL_SENSOR_SAMPLE_S = 600; // sample sensors this often
-const INTERVAL_SLEEP_FAILED_S = 3600; // sample sensors this often
+const INTERVAL_SLEEP_FAILED_S = 600; // sample sensors this often
 // const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
 const INTERVAL_SLEEP_SHIP_STORE_S = 2419198;
 const POLL_ITERATION_MAX = 5; // maximum number of iterations for sensor polling loop
