@@ -31,6 +31,8 @@ const POLL_ITERATION_MAX = 5; // maximum number of iterations for sensor polling
 const NV_ENTRIES_MAX = 19; // maximum NV entry space is about 55, based on testing
 const TZ_OFFSET = -25200; // 7 hours for PDT
 const blinkupTime = 90;
+//Loggly Timeout Variable:
+const logglyConnectTimeout = 20;
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
@@ -714,6 +716,92 @@ class power {
 ///
 // Functions
 ///
+
+//Loggly Functions
+function forcedLogglyConnect(state, logTable, logLevel){
+    try{
+        // If we're connected...
+        if (state == SERVER_CONNECTED) {
+            agent.send(logLevel, logTable);
+            return
+        } 
+        //if we're not connected...
+        else {
+            //Valve fails to connect:
+            if(nv.valveState == true){
+                close();
+            }
+            deepSleepFailedConnection();
+            return
+        }
+    } catch (error) {
+        server.log(error)
+        if(nv.valveState){
+            close();
+        }
+        logglyError({
+            "error" : error,
+            "function" : "forcedLogglyConnect",
+            "message" : "failure when trying to force device to connect and send to loggly"
+        });
+        deepSleepForTime(ERROR_SLEEP_TIME * 60.0);
+    }
+}
+
+function logglyLog(logTable = {}, forceConnect = false){
+  try{
+    if(server.isconnected()){
+        //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
+        //logTable.UnitTesting <- unitTesting;
+        agent.send("logglyLog", logTable)
+    } else if(forceConnect){
+        //connect and send loggly stuff
+        //really no reason we'd ever force a connect for a regular log...
+        server.connect(function (connectStatus){
+            forcedLogglyConnect(connectStatus, logTable, "logglyLog");
+        }, logglyConnectTimeout);
+    }
+  } catch (error) {
+    server.log("Loggly Log Error: " + error);
+  }
+}
+
+function logglyWarn(logTable = {}, forceConnect = false){
+  try{
+    if(server.isconnected()){
+        //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
+        //logTable.UnitTesting <- unitTesting;
+        agent.send("logglyWarn", logTable)
+    } else if(forceConnect){
+        //connect and send loggly stuff
+        server.connect(function (connectStatus){
+            forcedLogglyConnect(connectStatus, logTable, "logglyWarn");
+        }, logglyConnectTimeout);
+    }
+  } catch (error) {
+    server.log("Loggly Warn Error: " + error)
+  }
+}
+
+//TODO: make server logging optional part of logglyerror
+function logglyError(logTable = {}, forceConnect = false){
+  try{
+    if(server.isconnected()){
+        //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
+        //logTable.UnitTesting <- unitTesting;
+        agent.send("logglyError", logTable)
+    } else if(forceConnect){
+        //connect and send loggly stuff
+        server.connect(function (connectStatus){
+            forcedLogglyConnect(connectStatus, logTable, "logglyError");
+        }, logglyConnectTimeout);
+    }
+  } catch (error) {
+    server.log("Loggly Error encountered an error: " + error)
+  }
+}
+
+
 function log(s) {
   local now = time() + TZ_OFFSET;
   s = format("%02d:%02d:%02d - %s",date(now).hour, date(now).min, date(now).sec, s);
@@ -753,7 +841,6 @@ function logDeviceOnline()
             
         case WAKEREASON_SQUIRREL_ERROR:
             reasonString = "Squirrel runtime error"
-            break
         
         case WAKEREASON_NEW_FIRMWARE:
             reasonString = "impOS update"
@@ -889,6 +976,7 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 function send_data(status) {
   // update last sent data (even on failure, so the next send attempt is not immediate)
   local power_manager_data=[];
+  local nvDataSize = nv.data.len();
   nv.data_sent = nv.data.top();
   
   if (status == SERVER_CONNECTED) {
@@ -902,6 +990,12 @@ function send_data(status) {
     power_manager_data.append(powerManager.reg_4);
     power_manager_data.append(powerManager.reg_5);
     if (debug == true) server.log("Connected to server.");
+    //if RSSI is 0, check it again
+    if(nvDataSize > 0){
+      if(nv.data[nvDataSize - 1].r == 0){
+        nv.data[nvDataSize - 1].r = imp.rssi();
+      }
+    }
     agent.send("data", {
       device = hardware.getdeviceid(),
       data = nv.data,
@@ -909,6 +1003,7 @@ function send_data(status) {
     }); // TODO: send error codes
 
     local success = server.flush(TIMEOUT_SERVER_S);
+
     if (success) {
       // update last sent data (even on failure, so the next send attempt is not immediate)
       nv.data_sent = nv.data.top();
@@ -951,39 +1046,6 @@ function send_data(status) {
         server.log(sendFullRead)
         server.log("NOT FULL RES")
   }
-  if (ship_and_store == true) {
-    power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-  }
-  else {
-    // Sleep until next sensor sampling
-    power.enter_deep_sleep_running("Finished sending JSON data.");
-  }
-}
-
-// Callback for server status changes.
-function send_loc(status) {
-  if (status == SERVER_CONNECTED) {
-    if (debug == true) server.log("Called send_loc function");
-    // ok: send data
-    // server.log(imp.scanwifinetworks());
-    agent.send("location", {
-      device = hardware.getdeviceid(),
-      loc = imp.scanwifinetworks(),
-      ssid = imp.getssid()
-    });
-    local success = server.flush(TIMEOUT_SERVER_S);
-    if (success) {
-    }
-    
-    else {
-      if (debug == true) server.log("Error: Server connected, but no location success.");
-    }
-  }
-  else {
-    if (debug == true) server.log("Tried to connect to server to send location but failed.");
-    power.enter_deep_sleep_failed("Sleeping after failing to connect to server for sending location.");
-  }
-  
   if (ship_and_store == true) {
     power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
   }
@@ -1038,6 +1100,10 @@ function startControlFlow()
             break
         case WAKEREASON_SW_RESET:
             branching=1;
+            //This DOES try to force connection
+            logglyError({
+              "Error" : "Waking From Software Reset (OS level Error, could be memory related)"
+            });
             break
         case WAKEREASON_NEW_SQUIRREL:
             branching=1;
@@ -1047,6 +1113,10 @@ function startControlFlow()
             break
         case WAKEREASON_SQUIRREL_ERROR:
             branching=2;
+            //This DOES try to force connection
+            logglyError({
+              "Error" : "Waking From Squirrel Runtime Error"
+            }, true);
             break
             
         //unlikely/impossible cases, but still 1
@@ -1108,7 +1178,8 @@ function interruptPin() {
         //Let me know if this explanation is unclear because it's very important that if I die tomorrow somebody understands this
       if((date().time-intertime)>1)
       {
-          imp.sleep(10)
+          //we might be able to remove this sleep all together
+          imp.sleep(1)
         blinkupFor(blinkupTime)
           if (debug == true){
             server.log("Button pressed");
@@ -1172,11 +1243,6 @@ function regularOperation()
       ///
       // Event handlers
       ///
-      agent.on("location_request", function(data) {
-        if (debug == true) server.log("Agent requested location information.");
-        connect(send_loc, TIMEOUT_SERVER_S);
-      });
-    
       // Register the disconnect handler
       server.onunexpecteddisconnect(disconnectHandler);
 
@@ -1322,7 +1388,7 @@ function regularOperation()
         powerManager.suspendCharging();
         local batvol = source.voltage();
         //uncomment this sleep to get the light reading value change:
-        //imp.sleep(0.1);
+        imp.sleep(0.1);
         if(runTest)
         {
             nv.data.push({
@@ -1344,7 +1410,8 @@ function regularOperation()
               l = solar.voltage(),
               m = lastLastReading*(3.0/65536.0),
               b = source.voltage(),
-              c = timeDiffTwo*(1.0/samplerHzA)
+              c = timeDiffTwo*(1.0/samplerHzA),
+              r = imp.rssi()
               });
               //server.log("DEVICE SIDE CAPACITANCE:"+nv.data.top().c);
         }        
@@ -1410,7 +1477,8 @@ function main() {
     {
         if(server.isconnected())
         {
-            imp.sleep(10)
+            //might be able to remove this sleep all together
+            imp.sleep(1)
             regularOperation()
         }
         
@@ -1437,21 +1505,22 @@ function main() {
       interruptPin();
       
     }//end control 3
+    //control 5 is blinkup
     else if (control==5)
     {        
+        //TODO: review how blinkup is handled, it's pretty weird
         if(server.isconnected())
-        {
+        {   
+            LogglyLog({"message: " : "New Blinkup"});
             blueLed.configure()
-            #blueLed.blink(2,2)
+            //blueLed.blink(2,2)
             server.log("Is connected")
             regularOperation()
-            imp.sleep(10)
         }
         else
         {
             blueLed.configure()
-            blueLed.blink(1,4)
-            imp.sleep(10)
+            //blueLed.blink(1,4)
             server.log("not connected")
             blinkupFor(blinkupTime)
         }
