@@ -91,7 +91,7 @@ function send_data_json_node(data) {
     // TODO: retry?
     server.log("Error sending message to Postgres database.");
     local logglyWarnTable = failedSendTable(readings_url, res.body, res.statuscode);
-    deviceLogglyWarn(logglyWarnTable);
+    logglyLog(logglyWarnTable, "Warning");
   } else {
     server.log("Data sent successfully to Postgres database.");
   }
@@ -108,7 +108,7 @@ function processResponse(incomingDataTable) {
     // server.log("error sending message: " + res.body.slice(0,40));
     server.log("Error saving device location in DB.");
     local logglyWarnTable = failedSendTable(res.statuscode);
-    deviceLogglyWarn(logglyWarnTable);
+    logglyLog(logglyWarnTable, "Warning");
   }
   else {
     server.log("Device location saved in DB successfully.");
