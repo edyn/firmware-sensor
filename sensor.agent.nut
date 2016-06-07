@@ -22,25 +22,26 @@ loggly <- Loggly(logglyKey, {
     "limit" : 20 //arbitrary 
 });
 
+function addLogglyDefault(logTable){
+  logTable.macAddress <- macAgentSide;
+  logTable.sourceGroup <- "Firmware";
+  logTable.env <- "Sensor_Loggly";
+  return logTable
+}
+
 //Loggly Functions
 function deviceLogglyLog(logTable){
-    logTable.macAddress <- macAgentSide;
-    logTable.sourceGroup <- "Firmware";
-    logTable.env <- "Sensor_Loggly";
+    logTable = addLogglyDefault(logTable);
     loggly.log(logTable);
 }
 
 function deviceLogglyWarn(logTable){
-    logTable.macAddress <- macAgentSide;
-    logTable.sourceGroup <- "Firmware";
-    logTable.env <- "Sensor_Loggly";
+    logTable = addLogglyDefault(logTable);
     loggly.warn(logTable);
 }
 
 function deviceLogglyErr(logTable){
-    logTable.macAddress <- macAgentSide;
-    logTable.sourceGroup <- "Firmware";
-    logTable.env <- "Sensor_Loggly";
+    logTable = addLogglyDefault(logTable);
     loggly.error(logTable);
 }
 
