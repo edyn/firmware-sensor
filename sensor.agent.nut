@@ -55,7 +55,7 @@ function logglyLog(logTable, level){
 }
 
 //put the agent url on loggly. This will happen WHENEVER the agent is restarted
-logglyLog({"agentURL" : http.agenturl()});
+logglyLog({"agentURL" : http.agenturl()}, "Log");
 
 device.on("logglyLog", 
   function(logTable){logglyLog(logTable, "Log")}
