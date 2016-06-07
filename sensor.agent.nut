@@ -29,25 +29,40 @@ function addLogglyDefault(logTable){
   return logTable
 }
 
-//Loggly Functions
-function deviceLogglyLog(logTable){
-    logTable = addLogglyDefault(logTable);
-    loggly.log(logTable);
+function logglyLog(logTable, level){
+  try{
+    //if it's not a table, don't try anything
+    if(typeOf(logTable) != {}){
+      loggly.warn({"SensorAgentWarning" : "LogglyLog passed data other than a table"})
+    } else {
+      //add defaults to the table
+      logTable = addLogglyDefault(logTable);
+      //log based on the log level
+      if(level == "Log"){
+        loggly.log(logTable);
+      } else if (level == "Warning"){
+        loggly.warn(logTable);
+      } else if (level == "Error"){
+        loggly.error(logTable);
+      } else {
+        loggly.warning({"SensorAgentWarning" : "Invalid level passed to logglyLog"});
+        loggly.error(logTable);
+      }
+    }
+  } catch(error) {
+    server.log("Loggly Log encountered an error!");
+  }
 }
 
-function deviceLogglyWarn(logTable){
-    logTable = addLogglyDefault(logTable);
-    loggly.warn(logTable);
-}
-
-function deviceLogglyErr(logTable){
-    logTable = addLogglyDefault(logTable);
-    loggly.error(logTable);
-}
-
-device.on("logglyLog", deviceLogglyLog);
-device.on("logglyWarn", deviceLogglyWarn);
-device.on("logglyError", deviceLogglyErr);
+device.on("logglyLog", 
+  function(logTable){logglyLog(logTable, "Log")}
+);
+device.on("logglyWarn", 
+  function(logTable){logglyLog(logTable, "Warning")}
+);
+device.on("logglyError", 
+  function(logTable){logglyLog(logTable, "Error")}
+);
 
 function failedSendTable(targetURL, body, statuscode){
   local outputTable = {};
