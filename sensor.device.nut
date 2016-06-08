@@ -92,7 +92,7 @@ agent.on("fullRes",function(data){
 
 // create non-volatile storage if it doesn't exist
 if (!("nv" in getroottable() && "data" in nv)) {
-  nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00], PMRegC=[0x00,0x00], pastConnect=false, storedErrors = [], consecutiveErrors = 0};   
+  nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00], PMRegC=[0x00,0x00], pastConnect=false, storedErrors = [], consecutiveErrors = 0, wakingFromError = false};   
 }
 
 function deepSleepOnError(){
@@ -126,6 +126,21 @@ function pushError(errorTable){
   } catch(error) {
     server.log("error in pushError: " + error)
     deepSleepOnError();
+  }
+}
+
+function sendStoredErrors(){
+  local numberOfStoredErrors = nv.storedErrors.len();
+  if(!server.isconnected() || !nv.storedErrors.len()){
+    return
+  } else {
+    for (local x = 0; x < numberOfStoredErrors; x++){
+      logglyError(nv.storedErrors[x]);
+    } 
+    //if we succeed in sending all the errors, clear the table
+    if(server.flush(20)){
+      nv.storedErrors = [];
+    }
   }
 }
 
