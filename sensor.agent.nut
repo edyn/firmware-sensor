@@ -32,9 +32,10 @@ function addLogglyDefault(logTable){
 function logglyLog(logTable, level){
   try{
     //if it's not a table, don't try anything
-    if(typeOf(logTable) != {}){
+    if(type(logTable) != type({})){
       loggly.warn({"SensorAgentWarning" : "LogglyLog passed data other than a table"})
     } else {
+      server.log(type(logTable))
       //add defaults to the table
       logTable = addLogglyDefault(logTable);
       //log based on the log level
@@ -50,7 +51,7 @@ function logglyLog(logTable, level){
       }
     }
   } catch(error) {
-    server.log("Loggly Log encountered an error!");
+    server.log("Loggly Log encountered an error! " + error);
   }
 }
 
