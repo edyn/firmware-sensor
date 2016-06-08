@@ -34,6 +34,7 @@ const TZ_OFFSET = -25200; // 7 hours for PDT
 const blinkupTime = 90;
 //Loggly Timeout Variable:
 const logglyConnectTimeout = 20;
+const storedErrorsMax = 3;
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
@@ -112,6 +113,19 @@ function deepSleepOnError(){
     imp.onidle(function() {
       server.sleepfor(INTERVAL_SLEEP_FAILED_S); //seconds, NOT minutes
     });
+  }
+}
+
+function pushError(errorTable){
+  try{
+    if(nv.storedErrors.len() < storedErrorsMax){
+      nv.storedErrors.append(errorTable);
+    } else if (nv.storedErrors.len() == storedErrorsMax) {
+      nv.storedErrors.append({"sensor_error" : "more than " + storedErrorsMax + " stored."});
+    }
+  } catch(error) {
+    server.log("error in pushError: " + error)
+    deepSleepOnError();
   }
 }
 
