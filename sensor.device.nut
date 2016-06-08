@@ -23,6 +23,7 @@ server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 
 const INTERVAL_SENSOR_SAMPLE_S = 600; // sample sensors this often
 const INTERVAL_SLEEP_FAILED_S = 600; // sample sensors this often
+errorTimerTable <- [1,2,4,8,16,24,60]; //minutes
 // const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
 const INTERVAL_SLEEP_SHIP_STORE_S = 2419198;
 const POLL_ITERATION_MAX = 5; // maximum number of iterations for sensor polling loop
@@ -90,11 +91,28 @@ agent.on("fullRes",function(data){
 
 // create non-volatile storage if it doesn't exist
 if (!("nv" in getroottable() && "data" in nv)) {
-  nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false};   
+  nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00], PMRegC=[0x00,0x00], pastConnect=false, storedErrors = [], consecutiveErrors = 0};   
 }
 
 function deepSleepOnError(){
-
+  try{
+    local sleepTimer = 10.0; //init to something other than 0 just incase
+    if(nv.consecutiveErrors < errorTimerTable.len())
+      sleepTimer = erroTimerTable[nv.consecutiveErrors];
+    } else{
+      //sleep for the longest time available in errorTimerTable:
+      sleepTimer =  errorTimerTable[errorTimerTable.len()-1]; 
+    }
+    nv.consecutiveErrors = nv.consecutiveErrors + 1;
+    imp.onidle(function() {
+      server.sleepfor(sleepTimer * 60.0);//minutes, NOT seconds
+    });
+  } catch (error) {
+    server.log("deepSleepOnError : " + error);
+    imp.onidle(function() {
+      server.sleepfor(INTERVAL_SLEEP_FAILED_S); //seconds, NOT minutes
+    });
+  }
 }
 
 //Needs to be moved to the proper location
