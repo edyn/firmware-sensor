@@ -118,6 +118,18 @@ function deepSleepOnFailedConnection(){
   }
 }
 
+function checkConnection(){
+  if(server.isconnected()){
+    if(nv.consecutiveFailedConnections > 0){
+      logglyLog({"sensorMessage" : "successfully connected after " + nv.consecutiveFailedConnections + "failed connections"});
+      nv.consecutiveFailedConnections = 0;
+    }
+    return true
+  } else {
+    return false
+  }
+}
+
 //Needs to be moved to the proper location
 function configCapSense()
 {
