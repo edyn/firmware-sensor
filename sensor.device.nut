@@ -767,7 +767,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
             return
         } 
         else {
-            power.enter_deep_sleep_failed("Forced Loggly Connect Failed");
+            deepSleepOnFailedConnection();
             return
         }
     } catch (error) {
@@ -777,7 +777,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
             "function" : "forcedLogglyConnect",
             "message" : "failure when trying to force device to connect and send to loggly"
         });
-        power.enter_deep_sleep_failed("Error in forced loggly connect");
+        deepSleepOnFailedConnection();
     }
 }
 
@@ -902,7 +902,7 @@ function onConnectedTimeout(state) {
     // Otherwise, do something else
     // power.enter_deep_sleep_ship_store("Conservatively going into ship and store mode after failing to connect to server.");
     if (debug == true) server.log("Gave a chance to blink up, then tried to connect to server but failed.");
-    power.enter_deep_sleep_failed("Sleeping after failing to connect to server after a button press.");
+    deepSleepOnFailedConnection();
   }
 }
 
@@ -1052,8 +1052,7 @@ function send_data(status) {
   
   else {
     if (debug == true) server.log("Tried to connect to server to send data but failed.");
-    power.enter_deep_sleep_failed("Sleeping after failing to connect to server for sending data.");
-  }
+    deepSleepOnFailedConnection();
   if(sendFullRead)
   {
       server.log("FULL RES BABY")
@@ -1227,13 +1226,13 @@ function interruptPin() {
           hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
           wakeCallHandle(60.0,function()
           {
-            power.enter_deep_sleep_failed("Has Never Connected");
+            deepSleepOnFailedConnection();
           });
         }
         else
         {
             //connected before: no disadvantage to deep sleep
-            power.enter_deep_sleep_running("HasConnectedBefore");
+            deepSleepOnFailedConnection();
         }
     }//end of try
     catch(error)
@@ -1561,7 +1560,7 @@ function main() {
 function disconnectHandler(reason) {
   if (reason != SERVER_CONNECTED){
     if (debug == true) server.log("Unexpectedly lost wifi connection.");
-    power.enter_deep_sleep_failed("Unexpectedly lost wifi connection.");
+    deepSleepOnFailedConnection();
   }
 }
 
@@ -1590,7 +1589,7 @@ function wakeCallHandle(time=null,func=null)
 ///
 function WatchDog()
 {
-    power.enter_deep_sleep_failed("watchdog")
+    deepSleepOnFailedConnection();
 }
 WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
 main();
