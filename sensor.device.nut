@@ -910,7 +910,7 @@ function connect(callback, timeout) {
   // Check if we're connected before calling server.connect()
   // to avoid race condition
   
-  if (server.isconnected()) {
+  if (checkConnection()) {
     if (debug == true) server.log("Server connected");
     // We're already connected, so execute the callback
     nv.pastConnect=true;
@@ -1503,7 +1503,7 @@ function main() {
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
     if(control==1)
     {
-        if(server.isconnected())
+        if(checkConnection())
         {
             //might be able to remove this sleep all together
             imp.sleep(1)
@@ -1537,7 +1537,7 @@ function main() {
     else if (control==5)
     {        
         //TODO: review how blinkup is handled, it's pretty weird
-        if(server.isconnected())
+        if(checkConnection())
         {   
             LogglyLog({"message: " : "New Blinkup"});
             blueLed.configure()
