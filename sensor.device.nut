@@ -908,6 +908,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
         } 
         else {
             power.enter_deep_sleep_failed("Forced Loggly Connect Failed");
+            pushError(logTable);
             return
         }
     } catch (error) {
@@ -963,11 +964,15 @@ function logglyError(logTable = {}, forceConnect = false){
         //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
         //logTable.UnitTesting <- unitTesting;
         agent.send("logglyError", logTable)
-    } else if(forceConnect){
+    } else {
+      if(forceConnect){
         //connect and send loggly stuff
         server.connect(function (connectStatus){
             forcedLogglyConnect(connectStatus, logTable, "logglyError");
         }, logglyConnectTimeout);
+      } else {
+        pushError(logTable);
+      }
     }
   } catch (error) {
     server.log("Loggly Error encountered an error: " + error)
