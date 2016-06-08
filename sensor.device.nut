@@ -33,6 +33,7 @@ const TZ_OFFSET = -25200; // 7 hours for PDT
 const blinkupTime = 90;
 //Loggly Timeout Variable:
 const logglyConnectTimeout = 20;
+failedConnectionsTimerTable <- [1,2,4,8,16,24,60]; 
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
@@ -88,6 +89,34 @@ agent.on("fullRes",function(data){
     })
 })
 
+// create non-volatile storage if it doesn't exist
+if (!("nv" in getroottable() && "data" in nv)) {
+  nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false, consecutiveFailedConnections = 0};   
+}
+
+function deepSleepOnFailedConnection(){
+  try{
+    local sleepTimer = 10.0;
+    if (nv.consecutiveFailedConnections < failedConnectionsTimerTable.len()){
+      sleepTimer = failedConnectionsTimerTable[failedConnectionsTimerTable.len()];
+    } else {
+      //clip to the maximum sleep time
+      sleepTimer = failedConnectionsTimerTable[failedConnectionsTimerTable.len() - 1];
+    }
+    nv.consecutiveFailedConnections++;
+    imp.onidle(function() {
+      server.sleepfor(sleepTimer * 60.0); //minutes
+    });
+  } catch(error){
+    server.log("deepSleepOnFailedConnection Error");
+    logglyError({
+      "sensor_error" : error,
+      "function" : "deepSleepOnFailedconnection"
+    });
+    //this function comes from a separate feature branch:
+    deepSleepOnError();
+  }
+}
 
 //Needs to be moved to the proper location
 function configCapSense()
@@ -1448,11 +1477,6 @@ function regularOperation()
 
 
 function main() {
-    
-    // create non-volatile storage if it doesn't exist
-    if (!("nv" in getroottable() && "data" in nv)) {
-        nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false};   
-    }
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
 
     if(control==0)
