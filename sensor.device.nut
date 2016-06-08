@@ -143,8 +143,14 @@ function sendStoredErrors(){
   if(!server.isconnected() || !nv.storedErrors.len()){
     return
   } else {
+    //do a "safe" version of reporting
     for (local x = 0; x < numberOfStoredErrors; x++){
-      logglyError(nv.storedErrors[x]);
+      server.log(nv.storedErrors[x]);
+    } 
+    //then try logglyError
+    for (local x = 0; x < numberOfStoredErrors; x++){
+      //use agent send rather than logglyError() so it doesn't push the same errors twice
+      agent.send("logglyError", nv.storedErrors[x]);
     } 
     //if we succeed in sending all the errors, clear the table
     if(server.flush(20)){
@@ -1211,6 +1217,7 @@ function send_data(status) {
     nv.data_sent = nv.data.top();
     
     if (status == SERVER_CONNECTED) {
+      sendStoredErrors();
       // ok: send data
       // server.log(imp.scanwifinetworks());
       //
@@ -1735,6 +1742,8 @@ function regularOperation(){
 function main() {
   try{ 
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
+    //check to see if we are waking from an error
+    handleErrorWakeup();
 
     if(control==0)
     {
