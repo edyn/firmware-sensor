@@ -104,6 +104,7 @@ function deepSleepOnError(){
       //sleep for the longest time available in errorTimerTable:
       sleepTimer =  errorTimerTable[errorTimerTable.len()-1]; 
     }
+    nv.wakingFromError = true;
     nv.consecutiveErrors = nv.consecutiveErrors + 1;
     imp.onidle(function() {
       server.sleepfor(sleepTimer * 60.0);//minutes, NOT seconds
@@ -113,6 +114,14 @@ function deepSleepOnError(){
     imp.onidle(function() {
       server.sleepfor(INTERVAL_SLEEP_FAILED_S); //seconds, NOT minutes
     });
+  }
+}
+
+function handleErrorWakeup(){
+  if(nv.wakingFromError){
+    nv.wakingFromError = false;
+  } else {
+    nv.consecutiveErrors = 0;
   }
 }
 
