@@ -61,7 +61,7 @@ function failedSendTable(targetURL, body, statuscode){
 // Send data to the readings API
 function send_data_json_node(data) {
   server.log(http.jsonencode(data));
-  local readings_url = "http://api.sensor.prod.edyn.com/readings";
+  local readings_url = "https://api.sensor.prod.edyn.com/readings";
   local headers = {
     "Content-Type":"application/json",
     "User-Agent":"Imp",
