@@ -22,31 +22,51 @@ loggly <- Loggly(logglyKey, {
     "limit" : 20 //arbitrary 
 });
 
-//Loggly Functions
-function deviceLogglyLog(logTable){
-    logTable.macAddress <- macAgentSide;
-    logTable.sourceGroup <- "Firmware";
-    logTable.env <- "Sensor_Loggly";
-    loggly.log(logTable);
+function addLogglyDefault(logTable){
+  logTable.macAddress <- macAgentSide;
+  logTable.sourceGroup <- "Firmware";
+  logTable.env <- "Sensor_Loggly";
+  return logTable
 }
 
-function deviceLogglyWarn(logTable){
-    logTable.macAddress <- macAgentSide;
-    logTable.sourceGroup <- "Firmware";
-    logTable.env <- "Sensor_Loggly";
-    loggly.warn(logTable);
+function logglyLog(logTable, level){
+  try{
+    //if it's not a table, don't try anything
+    if(type(logTable) != type({})){
+      loggly.warn({"SensorAgentWarning" : "LogglyLog passed data other than a table"})
+    } else {
+      server.log(type(logTable))
+      //add defaults to the table
+      logTable = addLogglyDefault(logTable);
+      //log based on the log level
+      if(level == "Log"){
+        loggly.log(logTable);
+      } else if (level == "Warning"){
+        loggly.warn(logTable);
+      } else if (level == "Error"){
+        loggly.error(logTable);
+      } else {
+        loggly.warning({"SensorAgentWarning" : "Invalid level passed to logglyLog"});
+        loggly.error(logTable);
+      }
+    }
+  } catch(error) {
+    server.log("Loggly Log encountered an error! " + error);
+  }
 }
 
-function deviceLogglyErr(logTable){
-    logTable.macAddress <- macAgentSide;
-    logTable.sourceGroup <- "Firmware";
-    logTable.env <- "Sensor_Loggly";
-    loggly.error(logTable);
-}
+//put the agent url on loggly. This will happen WHENEVER the agent is restarted
+logglyLog({"agentURL" : http.agenturl()}, "Log");
 
-device.on("logglyLog", deviceLogglyLog);
-device.on("logglyWarn", deviceLogglyWarn);
-device.on("logglyError", deviceLogglyErr);
+device.on("logglyLog", 
+  function(logTable){logglyLog(logTable, "Log")}
+);
+device.on("logglyWarn", 
+  function(logTable){logglyLog(logTable, "Warning")}
+);
+device.on("logglyError", 
+  function(logTable){logglyLog(logTable, "Error")}
+);
 
 function failedSendTable(targetURL, body, statuscode){
   local outputTable = {};
@@ -61,7 +81,7 @@ function failedSendTable(targetURL, body, statuscode){
 // Send data to the readings API
 function send_data_json_node(data) {
   server.log(http.jsonencode(data));
-  local readings_url = "http://api.sensor.prod.edyn.com/readings";
+  local readings_url = "https://api.sensor.prod.edyn.com/readings";
   local headers = {
     "Content-Type":"application/json",
     "User-Agent":"Imp",
@@ -75,7 +95,7 @@ function send_data_json_node(data) {
     // TODO: retry?
     server.log("Error sending message to Postgres database.");
     local logglyWarnTable = failedSendTable(readings_url, res.body, res.statuscode);
-    deviceLogglyWarn(logglyWarnTable);
+    logglyLog(logglyWarnTable, "Warning");
   } else {
     server.log("Data sent successfully to Postgres database.");
   }
@@ -92,7 +112,7 @@ function processResponse(incomingDataTable) {
     // server.log("error sending message: " + res.body.slice(0,40));
     server.log("Error saving device location in DB.");
     local logglyWarnTable = failedSendTable(res.statuscode);
-    deviceLogglyWarn(logglyWarnTable);
+    logglyLog(logglyWarnTable, "Warning");
   }
   else {
     server.log("Device location saved in DB successfully.");
