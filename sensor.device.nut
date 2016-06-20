@@ -1053,6 +1053,7 @@ function send_data(status) {
   else {
     if (debug == true) server.log("Tried to connect to server to send data but failed.");
     deepSleepOnFailedConnection();
+  }
   if(sendFullRead)
   {
       server.log("FULL RES BABY")
