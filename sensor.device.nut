@@ -773,7 +773,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
     } catch (error) {
         server.log(error)
         logglyError({
-            "error" : error,
+            "sensorError" : error,
             "function" : "forcedLogglyConnect",
             "message" : "failure when trying to force device to connect and send to loggly"
         });
@@ -1134,7 +1134,7 @@ function startControlFlow()
             branching=1;
             //This DOES try to force connection
             logglyError({
-              "Error" : "Waking From Software Reset (OS level Error, could be memory related)"
+              "sensorError" : "Waking From Software Reset (OS level Error, could be memory related)"
             });
             break
         case WAKEREASON_NEW_SQUIRREL:
@@ -1147,7 +1147,7 @@ function startControlFlow()
             branching=2;
             //This DOES try to force connection
             logglyError({
-              "Error" : "Waking From Squirrel Runtime Error"
+              "sensorError" : "Waking From Squirrel Runtime Error"
             }, true);
             break
             
@@ -1538,7 +1538,7 @@ function main() {
         //TODO: review how blinkup is handled, it's pretty weird
         if(checkConnection())
         {   
-            LogglyLog({"message: " : "New Blinkup"});
+            logglyLog({"message: " : "New Blinkup"});
             blueLed.configure()
             //blueLed.blink(2,2)
             server.log("Is connected")
