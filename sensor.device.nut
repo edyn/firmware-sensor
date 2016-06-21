@@ -33,6 +33,7 @@ const TZ_OFFSET = -25200; // 7 hours for PDT
 const blinkupTime = 90;
 //Loggly Timeout Variable:
 const logglyConnectTimeout = 20;
+failedConnectionsTimerTable <- [1,2,4,8,16,24,60]; 
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
@@ -88,6 +89,123 @@ agent.on("fullRes",function(data){
     })
 })
 
+// create non-volatile storage if it doesn't exist
+if (!("nv" in getroottable() && "data" in nv)) {
+  nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false, consecutiveFailedConnections = 0};   
+}
+
+
+//Loggly Functions
+function forcedLogglyConnect(state, logTable, logLevel){
+    try{
+        // If we're connected...
+        if (state == SERVER_CONNECTED) {
+            agent.send(logLevel, logTable);
+            return
+        } 
+        else {
+            deepSleepOnFailedConnection();
+            return
+        }
+    } catch (error) {
+        server.log(error)
+        logglyError({
+            "sensorError" : error,
+            "function" : "forcedLogglyConnect",
+            "message" : "failure when trying to force device to connect and send to loggly"
+        });
+        deepSleepOnFailedConnection();
+    }
+}
+
+function logglyLog(logTable = {}, forceConnect = false){
+  try{
+    if(server.isconnected()){
+        //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
+        //logTable.UnitTesting <- unitTesting;
+        agent.send("logglyLog", logTable)
+    } else if(forceConnect){
+        //connect and send loggly stuff
+        //really no reason we'd ever force a connect for a regular log...
+        server.connect(function (connectStatus){
+            forcedLogglyConnect(connectStatus, logTable, "logglyLog");
+        }, logglyConnectTimeout);
+    }
+  } catch (error) {
+    server.log("Loggly Log Error: " + error);
+  }
+}
+
+function logglyWarn(logTable = {}, forceConnect = false){
+  try{
+    if(server.isconnected()){
+        //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
+        //logTable.UnitTesting <- unitTesting;
+        agent.send("logglyWarn", logTable)
+    } else if(forceConnect){
+        //connect and send loggly stuff
+        server.connect(function (connectStatus){
+            forcedLogglyConnect(connectStatus, logTable, "logglyWarn");
+        }, logglyConnectTimeout);
+    }
+  } catch (error) {
+    server.log("Loggly Warn Error: " + error)
+  }
+}
+
+//TODO: make server logging optional part of logglyerror
+function logglyError(logTable = {}, forceConnect = false){
+  try{
+    if(server.isconnected()){
+        //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
+        //logTable.UnitTesting <- unitTesting;
+        agent.send("logglyError", logTable)
+    } else if(forceConnect){
+        //connect and send loggly stuff
+        server.connect(function (connectStatus){
+            forcedLogglyConnect(connectStatus, logTable, "logglyError");
+        }, logglyConnectTimeout);
+    }
+  } catch (error) {
+    server.log("Loggly Error encountered an error: " + error)
+  }
+}
+
+function deepSleepOnFailedConnection(){
+  try{
+    local sleepTimer = 10.0;
+    if (nv.consecutiveFailedConnections < failedConnectionsTimerTable.len()){
+      sleepTimer = failedConnectionsTimerTable[failedConnectionsTimerTable.len()];
+    } else {
+      //clip to the maximum sleep time
+      sleepTimer = failedConnectionsTimerTable[failedConnectionsTimerTable.len() - 1];
+    }
+    nv.consecutiveFailedConnections++;
+    imp.onidle(function() {
+      server.sleepfor(sleepTimer * 60.0); //minutes
+    });
+  } catch(error){
+    server.log("deepSleepOnFailedConnection Error");
+    logglyError({
+      "sensor_error" : error,
+      "function" : "deepSleepOnFailedconnection"
+    });
+    //this function comes from a separate feature branch:
+    deepSleepOnError();
+  }
+}
+
+function checkConnection(){
+  if(server.isconnected()){
+    if(nv.consecutiveFailedConnections > 0){
+      logglyLog({"sensorMessage" : "successfully connected after " + nv.consecutiveFailedConnections + "failed connections"});
+      nv.consecutiveFailedConnections = 0;
+    }
+    return true
+  } else {
+    return false
+  }
+}
 
 //Needs to be moved to the proper location
 function configCapSense()
@@ -717,81 +835,6 @@ class power {
 // Functions
 ///
 
-//Loggly Functions
-function forcedLogglyConnect(state, logTable, logLevel){
-    try{
-        // If we're connected...
-        if (state == SERVER_CONNECTED) {
-            agent.send(logLevel, logTable);
-            return
-        } 
-        else {
-            power.enter_deep_sleep_failed("Forced Loggly Connect Failed");
-            return
-        }
-    } catch (error) {
-        server.log(error)
-        logglyError({
-            "sensorError" : error,
-            "function" : "forcedLogglyConnect",
-            "message" : "failure when trying to force device to connect and send to loggly"
-        });
-        power.enter_deep_sleep_failed("Error in forced loggly connect");
-    }
-}
-
-function logglyLog(logTable = {}, forceConnect = false){
-  try{
-    if(server.isconnected()){
-        //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
-        //logTable.UnitTesting <- unitTesting;
-        agent.send("logglyLog", logTable)
-    } else if(forceConnect){
-        //connect and send loggly stuff
-        //really no reason we'd ever force a connect for a regular log...
-        server.connect(function (connectStatus){
-            forcedLogglyConnect(connectStatus, logTable, "logglyLog");
-        }, logglyConnectTimeout);
-    }
-  } catch (error) {
-    server.log("Loggly Log Error: " + error);
-  }
-}
-
-function logglyWarn(logTable = {}, forceConnect = false){
-  try{
-    if(server.isconnected()){
-        //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
-        //logTable.UnitTesting <- unitTesting;
-        agent.send("logglyWarn", logTable)
-    } else if(forceConnect){
-        //connect and send loggly stuff
-        server.connect(function (connectStatus){
-            forcedLogglyConnect(connectStatus, logTable, "logglyWarn");
-        }, logglyConnectTimeout);
-    }
-  } catch (error) {
-    server.log("Loggly Warn Error: " + error)
-  }
-}
-
-//TODO: make server logging optional part of logglyerror
-function logglyError(logTable = {}, forceConnect = false){
-  try{
-    if(server.isconnected()){
-        //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
-        //logTable.UnitTesting <- unitTesting;
-        agent.send("logglyError", logTable)
-    } else if(forceConnect){
-        //connect and send loggly stuff
-        server.connect(function (connectStatus){
-            forcedLogglyConnect(connectStatus, logTable, "logglyError");
-        }, logglyConnectTimeout);
-    }
-  } catch (error) {
-    server.log("Loggly Error encountered an error: " + error)
-  }
-}
 
 
 function log(s) {
@@ -861,7 +904,7 @@ function onConnectedTimeout(state) {
     // Otherwise, do something else
     // power.enter_deep_sleep_ship_store("Conservatively going into ship and store mode after failing to connect to server.");
     if (debug == true) server.log("Gave a chance to blink up, then tried to connect to server but failed.");
-    power.enter_deep_sleep_failed("Sleeping after failing to connect to server after a button press.");
+    deepSleepOnFailedConnection();
   }
 }
 
@@ -869,7 +912,7 @@ function connect(callback, timeout) {
   // Check if we're connected before calling server.connect()
   // to avoid race condition
   
-  if (server.isconnected()) {
+  if (checkConnection()) {
     if (debug == true) server.log("Server connected");
     // We're already connected, so execute the callback
     nv.pastConnect=true;
@@ -1011,7 +1054,7 @@ function send_data(status) {
   
   else {
     if (debug == true) server.log("Tried to connect to server to send data but failed.");
-    power.enter_deep_sleep_failed("Sleeping after failing to connect to server for sending data.");
+    deepSleepOnFailedConnection();
   }
   if(sendFullRead)
   {
@@ -1186,13 +1229,13 @@ function interruptPin() {
           hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
           wakeCallHandle(60.0,function()
           {
-            power.enter_deep_sleep_failed("Has Never Connected");
+            deepSleepOnFailedConnection();
           });
         }
         else
         {
             //connected before: no disadvantage to deep sleep
-            power.enter_deep_sleep_running("HasConnectedBefore");
+            deepSleepOnFailedConnection();
         }
     }//end of try
     catch(error)
@@ -1448,11 +1491,6 @@ function regularOperation()
 
 
 function main() {
-    
-    // create non-volatile storage if it doesn't exist
-    if (!("nv" in getroottable() && "data" in nv)) {
-        nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false};   
-    }
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
 
     if(control==0)
@@ -1467,7 +1505,7 @@ function main() {
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
     if(control==1)
     {
-        if(server.isconnected())
+        if(checkConnection())
         {
             //might be able to remove this sleep all together
             imp.sleep(1)
@@ -1501,7 +1539,7 @@ function main() {
     else if (control==5)
     {        
         //TODO: review how blinkup is handled, it's pretty weird
-        if(server.isconnected())
+        if(checkConnection())
         {   
             logglyLog({"message: " : "New Blinkup"});
             blueLed.configure()
@@ -1525,7 +1563,7 @@ function main() {
 function disconnectHandler(reason) {
   if (reason != SERVER_CONNECTED){
     if (debug == true) server.log("Unexpectedly lost wifi connection.");
-    power.enter_deep_sleep_failed("Unexpectedly lost wifi connection.");
+    deepSleepOnFailedConnection();
   }
 }
 
@@ -1554,7 +1592,7 @@ function wakeCallHandle(time=null,func=null)
 ///
 function WatchDog()
 {
-    power.enter_deep_sleep_failed("watchdog")
+    deepSleepOnFailedConnection();
 }
 WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
 main();
