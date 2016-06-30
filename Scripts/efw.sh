@@ -1,0 +1,1 @@
+Python /Users/dustinfranco/edyn/firmware-$1/Scripts/efw_python.py "$*"
