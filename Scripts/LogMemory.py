@@ -6,7 +6,7 @@ from os import remove, close
 import os
 
 mypath=os.path.dirname(os.path.abspath(__file__))
-agentFile=mypath+"/valve.device.nut"
+agentFile=mypath+"/sensor.device.nut"
 
 
 def replace(file_path, pattern, subst):
@@ -23,5 +23,5 @@ def replace(file_path, pattern, subst):
     move(abs_path, file_path)
 
 def enableMemoryLog():
-    replace(agentFile,'return','server.log("memory" + imp.getfreememory())\nreturn')
+    replace(agentFile,'return\n','server.log("memory" + imp.getfreememory())\nreturn')
 enableMemoryLog()

@@ -1,2 +1,8 @@
 .DS_Store
 */.DS_Store
+sensor.agent.unit.nut
+sensor.device.unit.nut
+.impconfig
+LastPush/
+Scripts/efw.sh
+efw.sh

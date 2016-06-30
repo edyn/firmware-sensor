@@ -1,0 +1,8 @@
+{
+	"apiKey": "8850735200cb8a02c3d28f39d68424a7",
+	"modelName": "Sensor_0.0.1_Debug_Model",
+	"modelId": "ScllN7NVZpr-",
+	"devices": [],
+	"deviceFile": "sensor.device.nut",
+	"agentFile": "sensor.agent.nut"
+}

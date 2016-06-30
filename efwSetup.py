@@ -39,7 +39,7 @@ def changeEFWTargetPath():
     fwScriptsIndex = currentPath.find("/firmware-");
     currentPath = currentPath[0:fwScriptsIndex]    
     with open (efwPath, 'w') as efwFileOpen:
-        efwFileOpen.write('Python '+ currentPath + '/firmware-valve/Scripts/efw_python.py "$*"')
+        efwFileOpen.write('Python '+ currentPath + '/firmware-$1/Scripts/efw_python.py "$*"')
     copyfile(efwPath, "/usr/local/bin")
 #also blanks out whole imp config:
 def changeEImpAPIKey():
@@ -51,8 +51,8 @@ def changeEImpAPIKey():
         impFile.write('\t"modelName": "",\n')
         impFile.write('\t"modelId": "",\n')
         impFile.write('\t"devices": [],\n')
-        impFile.write('\t"deviceFile": "valve.device.nut",\n')
-        impFile.write('\t"agentFile": "valve.agent.nut"\n')
+        impFile.write('\t"deviceFile": "sensor.device.nut",\n')
+        impFile.write('\t"agentFile": "sensor.agent.nut"\n')
         impFile.write('}')
 
 if(len(sys.argv) > 1):

@@ -1,2 +1,1 @@
-Python /Users/dustinfranco/Edyn/firmware-valve/Scripts/efw_python.py "$*"
-
+Python /Users/dustinfranco/edyn/firmware-$1/Scripts/efw_python.py "$*"
