@@ -104,6 +104,10 @@ function send_data_json_node(data) {
     server.log("Error sending message to Postgres database.");
     local logglyWarnTable = failedSendTable(readings_url, res.body, res.statuscode);
     logglyLog(logglyWarnTable, "Warning");
+    for(local x = 0; x < data.data; x++){
+      server.log("adding data point with timestamp " + data.data[x].timestamp + " to globalDataStore");
+      globalDataStore.append(data.data[x]);
+    }
   } else {
     server.log("Data sent successfully to Postgres database.");
   }
