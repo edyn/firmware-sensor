@@ -311,6 +311,10 @@ device.on("data", function(data) {
     // Commented out while hacking on the new power controller
     send_data_json_node(dataToSendNode);
   } else {//WITH powerdata
+    //SO MUCH DRY
+    //Does this else even happen? it seems like it would throw errors if it did...
+    //explanation: it seems to interpret power data, but it's only happens if powerData isn't present in the reading
+    //I *think* it's here because we transitioned into powerData being it's own table, so this was here for some reason?
     local dataToSend = data;
     local dataToSendNode = {};
     dataToSendNode.uuid <- data.device;
