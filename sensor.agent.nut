@@ -8,7 +8,6 @@
 #require "Loggly.class.nut:1.0.1"
 macAgentSide <- imp.configparams.deviceid;
 
-GlobalTest <- 1
 fullResSet <- false
 THEMACADDRESSAGENTSIDE<-"unknownMacAddress"
 
@@ -21,6 +20,15 @@ loggly <- Loggly(logglyKey, {
     "timeout" : 60,
     "limit" : 20 //arbitrary 
 });
+
+globalDataStore <- [];
+agentSendBackoffTimes <- [0.1, 1.0, 2.0, 4.0, 8.0, 15.0, 30.0, 60.0];
+//agentRetryActive prevents multiple chains of retrySendingDataIfNeeded
+agentRetryActive <- false;
+const FAILED_READINGS_WARNING = 100;
+agentBackoffIndex <- 0;
+
+
 
 function addLogglyDefault(logTable){
   logTable.macAddress <- macAgentSide;
