@@ -8,6 +8,8 @@
 #require "Loggly.class.nut:1.0.1"
 macAgentSide <- imp.configparams.deviceid;
 
+const agentBackendSettingsPassword = "GiftShop405";
+
 
 //High resolution related
 highResFirebase <- "fiery-heat-4911";
@@ -714,6 +716,15 @@ http.onrequest(function (request, response) {
             device.send("fullRes", request.query["fullRes"]);
             fullResSet = true
             server.log("Full Res Set to True")
+        }
+
+        //note that on the sensor the only action you can take is restarting (or high res)
+        if("password" in request.query){
+          if(request.query["password"] == agentBackendSettingsPassword){
+            if("restartAgent" in request.query){
+              server.restart();
+            }
+          }
         }
         // send a response back to whoever made the request
         response.send(200, "OK");
