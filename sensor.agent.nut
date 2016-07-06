@@ -66,6 +66,84 @@ function logglyLog(logTable, level){
   }
 }
 
+function saveBackendSettings(){
+    try{
+        local macToAgentURL = macToAgentFirebase + macAgentSide + ".json?auth=" + macToAgentAuth;
+        local headers = {
+            "User-Agent":"Imp"
+        };
+        local req = http.put(macToAgentURL, headers, http.jsonencode({
+          "readingsApi" : readings_url,
+          "bearerAuth" : bearerAuth,
+          "highResFirebase" : highResFirebase,
+          "highResFirebaseToken" : highResToken,
+          "agent_URL" : http.agenturl()
+        }));
+        local res = req.sendsync();
+        //TODO: make generic handling function for HTTP requests
+        if(res.statuscode != 200){
+            server.log("Failed to save backend settings to firebase")
+            logglyLog(
+                {
+                    "message" : "Failed to save backend settings",
+                    "statuscode" : res.statuscode,
+                    "agentURL" :  http.agenturl()
+                }, "Warning");
+        } else {
+            server.log("Saved backend settings to firebase")
+        }
+    } catch(error) {
+        server.log("error in saveBackendSettings")
+    }
+}
+
+function loadBackendSettings(){
+    try{
+        local macToAgentURL = macToAgentFirebase + macAgentSide + ".json?auth=" + macToAgentAuth;
+        local headers = {
+            "User-Agent":"Imp"
+        };
+        local req = http.get(macToAgentURL, headers);
+        local res = req.sendsync();
+        //TODO: make generic handling function for HTTP requests
+        if(res.statuscode != 200){
+            server.log("Failed to load backend settings " + res.statuscode)
+            logglyLog(
+                {
+                    "message" : "Failed to load backend settings",
+                    "statuscode" :res.statuscode,
+                    "agentURL" :  http.agenturl()
+                }, "Warning");
+        } else {
+            server.log("Loaded backend settings")
+            local bodyResponseTable = http.jsondecode(res.body);
+            if(bodyResponseTable == null){
+              saveBackendSettings();
+            } else {
+              if("readingsApi" in bodyResponseTable){
+                readings_url = bodyResponseTable.readings_URL;
+              } 
+              if("bearerAuth" in bodyResponseTable){
+                bearerAuth = bodyResponseTable.bearerAuth;
+              }
+              if("highResFirebase" in bodyResponseTable){
+                highResFirebase = bodyResponseTable.highResFirebase;
+              }
+              if("highResFirebaseToken" in bodyResponseTable){
+                highResFirebaseToken = bodyResponseTable.highResFirebaseToken;
+              }
+              if("agent_url" in bodyResponseTable){
+                if(bodyResponseTable.agent_URL  != http.agenturl()){
+                  saveBackendSettings();
+                }
+              }
+            }
+        }
+    } catch(error) {
+        server.log("error in loadBackendSettings")
+    }
+}
+
 //put the agent url on loggly. This will happen WHENEVER the agent is restarted
 logglyLog({"agentURL" : http.agenturl()}, "Log");
 
