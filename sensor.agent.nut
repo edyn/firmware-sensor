@@ -8,13 +8,24 @@
 #require "Loggly.class.nut:1.0.1"
 macAgentSide <- imp.configparams.deviceid;
 
+
+//High resolution related
+highResFirebase <- "fiery-heat-4911";
+highResToken <- "Z8weueFHsGRl7TOEEbWrVgak6Ua1RuIC12mF9PEG";
+firebase <- Firebase(highResFirebase, highResToken);
 GlobalTest <- 1
 fullResSet <- false
 THEMACADDRESSAGENTSIDE<-"unknownMacAddress"
 
-firebase <- Firebase("fiery-heat-4911", "Z8weueFHsGRl7TOEEbWrVgak6Ua1RuIC12mF9PEG");
+//backend readings
+readings_url <- "https://api.sensor.prod.edyn.com/readings";
 bearerAuth <- "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzY29wZXMiOlsicHVibGljIiwidmFsdmU6YWdlbnQiXSwiaWF0IjoxNDU1NzM4MjY4LCJzdWIiOiJhcHA6dmFsdmUtYWdlbnQifQ.-BKIywHrpbtNo2xuYhcZ-4w5itBFQMM0KHQZmXcYgcM";
 
+//backend agent-url firebase related
+macToAgentFirebase <- "https://mactoagent.firebaseio.com/";
+macToAgentAuth <- "aMB4B4eVNwl6fUQwHy9OlE5BUcGVUoad8dnn4HCu";
+
+//loggly
 logglyKey <- "1890ff8f-0c0a-4ca0-b2f4-74f8f3ea469b"
 loggly <- Loggly(logglyKey, { 
     "tags" : "valveLogs",
@@ -81,7 +92,6 @@ function failedSendTable(targetURL, body, statuscode){
 // Send data to the readings API
 function send_data_json_node(data) {
   server.log(http.jsonencode(data));
-  local readings_url = "https://api.sensor.prod.edyn.com/readings";
   local headers = {
     "Content-Type":"application/json",
     "User-Agent":"Imp",
