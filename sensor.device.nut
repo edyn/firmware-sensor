@@ -1015,7 +1015,6 @@ function send_data(status) {
   }
   if(sendFullRead)
   {
-      server.log("FULL RES BABY")
       agent.send("fullRes", {
       bend=buffer1,
       tail=buffer2,
