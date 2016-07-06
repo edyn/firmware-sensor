@@ -26,6 +26,7 @@ agentSendBackoffTimes <- [0.1, 1.0, 2.0, 4.0, 8.0, 15.0, 30.0, 60.0];
 //agentRetryActive prevents multiple chains of retrySendingDataIfNeeded
 agentRetryActive <- false;
 const FAILED_READINGS_WARNING = 100;
+readings_url <- "https://api.sensor.prod.edyn.com/readings";
 agentBackoffIndex <- 0;
 
 
@@ -89,7 +90,8 @@ function failedSendTable(targetURL, body, statuscode){
 // Send data to the readings API
 function send_data_json_node(data) {
   server.log(http.jsonencode(data));
-  local readings_url = "https://api.sensor.prod.edyn.com/readings";
+  server.log("THE TYPE")
+  server.log(type(data))
   local headers = {
     "Content-Type":"application/json",
     "User-Agent":"Imp",
@@ -104,9 +106,13 @@ function send_data_json_node(data) {
     server.log("Error sending message to Postgres database.");
     local logglyWarnTable = failedSendTable(readings_url, res.body, res.statuscode);
     logglyLog(logglyWarnTable, "Warning");
-    for(local x = 0; x < data.data; x++){
-      server.log("adding data point with timestamp " + data.data[x].timestamp + " to globalDataStore");
-      globalDataStore.append(data.data[x]);
+    for(local x = 0; x < data.len(); x++){
+      server.log("adding data point with timestamp " + data.timestamp + " to globalDataStore");
+      globalDataStore.append(data[x]);
+    }
+    if(!agentRetryActive){
+      retrySendingDataIfNeeded()
+      agentRetryActive = true;
     }
   } else {
     server.log("Data sent successfully to Postgres database.");
@@ -320,7 +326,7 @@ device.on("data", function(data) {
     server.log("at_input_ilim " + dataToSendNode.data[0].at_input_ilim + ", ovp_active " + dataToSendNode.data[0].ovp_active);
     server.log("input_uvcl_active " + dataToSendNode.data[0].input_uvcl_active + ", disable_input_uvcl " + dataToSendNode.data[0].disable_input_uvcl);
     server.log("ntc_warning " + dataToSendNode.data[0].ntc_warning);
-    // Commented out while hacking on the new power controller
+    // Commented out while hacking on the new power controller\
     send_data_json_node(dataToSendNode);
   } else {//WITH powerdata
     //SO MUCH DRY
@@ -523,7 +529,7 @@ device.on("data", function(data) {
     server.log("at_input_ilim " + dataToSendNode.powerData.at_input_ilim + ", ovp_active " + dataToSendNode.powerData.ovp_active);
     server.log("input_uvcl_active " + dataToSendNode.powerData.input_uvcl_active + ", disable_input_uvcl " + dataToSendNode.powerData.disable_input_uvcl);
     server.log("ntc_warning " + dataToSendNode.powerData.ntc_warning);
-    // Commented out while hacking on the new power controller
+    // Commented out while hacking on the new power controller\
     send_data_json_node(dataToSendNode);
   }
     
@@ -643,7 +649,47 @@ http.onrequest(function (request, response) {
 
 
  
-
+function retrySendingDataIfNeeded(){
+    //globalDataStore.len() is called many times rather than being a single variable because it changes throughout the function.
+    local numberReadings = globalDataStore.len();
+    if(numberReadings){
+        if(numberReadings > FAILED_READINGS_WARNING){
+            server.log("WARNING: " + globalDataStore.len() + " unsent readings!");
+            logglyLog({"warning" : globalDataStore.len() + "unsent readings!"}, "Warning")
+        }
+        local sendDataSuccess = send_data_json_node(globalDataStore);
+        //if send is successful:
+        if(sendDataSuccess < 204 && sendDataSuccess > 199){
+            server.log("readings sent successfully");
+            globalDataStore = [];
+            agentRetryActive = false;
+            //if it's failed before
+            if(agentBackoffIndex > 0){
+                //loggly warning about the send failing
+                logglyLog(
+                    {
+                        "message" : "readings sent successfully after failing " + (agentBackoffIndex + 1) + " times"
+                    }
+                , "Warning");
+                agentBackoffIndex = 0;
+            }
+        } else {
+            server.log("Agent side send readings unsuccessful")    
+            if(agentBackoffIndex < agentSendBackoffTimes.len()){
+                imp.wakeup(agentSendBackoffTimes[agentBackoffIndex] * 60.0, retrySendingDataIfNeeded);
+            } else {
+                imp.wakeup(agentSendBackoffTimes[agentSendBackoffTimes.len() - 1] * 60.0, retrySendingDataIfNeeded);
+            }        
+            agentBackoffIndex += 1;
+            logglyLog(
+                {
+                    "message" : "failed to send readings to backend from agent"
+                }
+            , "Warning"
+            );
+        }
+    }
+}
 
 
 
