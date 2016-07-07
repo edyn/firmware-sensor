@@ -8,16 +8,32 @@
 #require "Loggly.class.nut:1.0.1"
 macAgentSide <- imp.configparams.deviceid;
 
+const agentBackendSettingsPassword = "GiftShop405";
+
+
+//High resolution related
+highResFirebase <- "fiery-heat-4911";
+highResToken <- "Z8weueFHsGRl7TOEEbWrVgak6Ua1RuIC12mF9PEG";
+firebase <- Firebase(highResFirebase, highResToken);
 GlobalTest <- 1
 fullResSet <- false
 THEMACADDRESSAGENTSIDE<-"unknownMacAddress"
 
-firebase <- Firebase("fiery-heat-4911", "Z8weueFHsGRl7TOEEbWrVgak6Ua1RuIC12mF9PEG");
+//backend readings
+readings_url <- "https://api.sensor.prod.edyn.com/readings";
 bearerAuth <- "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzY29wZXMiOlsicHVibGljIiwidmFsdmU6YWdlbnQiXSwiaWF0IjoxNDU1NzM4MjY4LCJzdWIiOiJhcHA6dmFsdmUtYWdlbnQifQ.-BKIywHrpbtNo2xuYhcZ-4w5itBFQMM0KHQZmXcYgcM";
 
+//backend agent-url firebase related
+macToAgentFirebase <- "https://mactoagent.firebaseio.com/";
+macToAgentCurrentConfigPath <- "current-config/";
+macToAgentConfigOverridePath <- "config-override/"
+macToAgentAuth <- "aMB4B4eVNwl6fUQwHy9OlE5BUcGVUoad8dnn4HCu";
+impApiKey <- "staging-electric-imp-api-key";
+
+//loggly
 logglyKey <- "1890ff8f-0c0a-4ca0-b2f4-74f8f3ea469b"
 loggly <- Loggly(logglyKey, { 
-    "tags" : "valveLogs",
+    "tags" : "sensorLogs",
     "timeout" : 60,
     "limit" : 20 //arbitrary 
 });
@@ -55,6 +71,87 @@ function logglyLog(logTable, level){
   }
 }
 
+function recordBackendSettings(){
+    try{
+        local macToAgentURL = macToAgentFirebase + macToAgentCurrentConfigPath + macAgentSide + ".json?auth=" + macToAgentAuth;
+        local headers = {
+            "User-Agent":"Imp"
+        };
+        local req = http.put(macToAgentURL, headers, http.jsonencode({
+          "readingsApi" : readings_url,
+          "bearerAuth" : bearerAuth,
+          "firebase" : highResFirebase,
+          "firebaseToken" : highResToken,
+          "agentURL" : http.agenturl(),
+          "impApiKey" : impApiKey
+        }));
+        local res = req.sendsync();
+        //TODO: make generic handling function for HTTP requests
+        if(res.statuscode < 200 || res.statuscode > 204){
+            server.log("Failed to save backend settings to firebase")
+            logglyLog(
+                {
+                    "message" : "Failed to save backend settings",
+                    "statuscode" : res.statuscode,
+                    "agentURL" :  http.agenturl()
+                }, "Warning");
+        } else {
+            server.log("Saved backend settings to firebase")
+        }
+    } catch(error) {
+        server.log("error in saveBackendSettings: " + error)
+    }
+}
+
+function loadBackendSettings(){
+    try{
+        local macToAgentURL = macToAgentFirebase + macToAgentConfigOverridePath + macAgentSide +".json?auth=" + macToAgentAuth;
+        local headers = {
+            "User-Agent":"Imp"
+        };
+        local req = http.get(macToAgentURL, headers);
+        local res = req.sendsync();
+        //TODO: make generic handling function for HTTP requests
+        if(res.statuscode < 200 || res.statuscode > 204){
+            server.log("Failed to load backend settings " + res.statuscode)
+            logglyLog(
+                {
+                    "message" : "Failed to load backend settings",
+                    "statuscode" :res.statuscode,
+                    "agentURL" :  http.agenturl()
+                }, "Warning");
+        } else {
+            server.log("Loaded backend settings, body:")
+            local bodyResponseTable = http.jsondecode(res.body);
+            server.log(bodyResponseTable)
+            if(bodyResponseTable != null){
+                if("readingsApi" in bodyResponseTable){
+                    server.log("changing readingsApi");
+                    readings_url = bodyResponseTable.readingsApi;
+                }
+                if("bearerAuth" in bodyResponseTable){
+                    server.log("changing bearerAuth");
+                    bearerAuth = bodyResponseTable.bearerAuth;
+                }
+                if("firebase" in bodyResponseTable){
+                    server.log("changing firebase root");
+                    highResFirebase = bodyResponseTable.firebase;
+                }
+                if("firebaseToken" in bodyResponseTable){
+                    server.log("changing firebase token");
+                    highResToken = bodyResponseTable.firebaseToken;
+                }
+                if("impApiKey" in bodyResponseTable){
+                    server.log("changing imp api key");
+                    impApiKey = bodyResponseTable.impApiKey;
+                }
+            }
+        }
+    } catch(error) {
+        server.log("error in loadBackendSettings: " + error)
+    }
+}
+
 //put the agent url on loggly. This will happen WHENEVER the agent is restarted
 logglyLog({"agentURL" : http.agenturl()}, "Log");
 
@@ -78,10 +175,12 @@ function failedSendTable(targetURL, body, statuscode){
 
 }
 
+loadBackendSettings();
+recordBackendSettings();
+
 // Send data to the readings API
 function send_data_json_node(data) {
   server.log(http.jsonencode(data));
-  local readings_url = "https://api.sensor.prod.edyn.com/readings";
   local headers = {
     "Content-Type":"application/json",
     "User-Agent":"Imp",
@@ -617,6 +716,15 @@ http.onrequest(function (request, response) {
             device.send("fullRes", request.query["fullRes"]);
             fullResSet = true
             server.log("Full Res Set to True")
+        }
+
+        //note that on the sensor the only action you can take is restarting (or high res)
+        if("password" in request.query){
+          if(request.query["password"] == agentBackendSettingsPassword){
+            if("restartAgent" in request.query){
+              server.restart();
+            }
+          }
         }
         // send a response back to whoever made the request
         response.send(200, "OK");
