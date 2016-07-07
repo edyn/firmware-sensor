@@ -219,6 +219,93 @@ function processResponse(incomingDataTable) {
 }
 
 
+
+function processAndSendDeviceData(){
+
+}
+
+function processRegularData(){
+
+}
+
+function processPowerData(){
+
+}
+
+function sendReading(){
+
+}
+
+function processVFloat(){
+
+}
+
+function processCurrentLimit(){
+
+}
+
+function processWallILim(){
+
+}
+
+function processTimer(){
+
+}
+
+function processICharge(){
+
+}
+
+function processVFloat(){
+
+}
+
+function processCXSet(){
+
+}
+
+function processChargerStatus(){
+
+}
+
+function processNTCStat(){
+
+}
+
+function processIntegerPowerData(){
+  // newPoint.low_bat <- true;
+    newPoint.low_bat <- (point.r3 & 0x1) != 0x00;
+    
+    // newPoint.ext_pwr_good <- true;
+    newPoint.ext_pwr_good <- (point.r4 & 0x80) != 0x00;
+    
+    // newPoint.wall_sns_good <- true;
+    newPoint.wall_sns_good <- (point.r4 & 0x20) != 0x00;
+    
+    // newPoint.at_input_ilim <- false;
+    newPoint.at_input_ilim <- (point.r4 & 0x10) != 0x00;
+    
+    // newPoint.input_uvcl_active <- false;
+    newPoint.input_uvcl_active <- (point.r4 & 0x8) != 0x00;
+    
+    // newPoint.ovp_active <- false;
+    newPoint.ovp_active <- (point.r4 & 0x4) != 0x00;
+    
+    // newPoint.bad_cell <- false;
+    newPoint.bad_cell <- (point.r4 & 0x1) != 0x00;
+    
+    // SWITCHED THIS TO INTEGER!
+    // newPoint.ntc_val <- 20.0;
+    newPoint.ntc_val <- ((point.r5 & 0xfe) >> 1).tointeger();
+    
+    // newPoint.ntc_warning <- false;
+    newPoint.ntc_warning <- (point.r5 & 0x1) != 0x00;
+}
+
+
+
+//The functions above will replace everything from here
+/*
 // Invoked when the device calls agent.send("data", ...)
 device.on("data", function(data) {
   // data[sd] <- [1, 2];
@@ -455,7 +542,7 @@ device.on("data", function(data) {
         server.log("Test Results " + i + " = " +point.testResults[i])
         }
       }
-      else /*if(typeof(point.testResults)=="string")*/{
+      else {
          server.log(point.testResults)
       }
       //server.log("TestResults:"+typeof(point.testResults))
@@ -616,6 +703,7 @@ device.on("data", function(data) {
 
 });
 
+TO HERE*/ 
 
 function addColons(bssid) {
   local result = bssid.slice(0, 2);
