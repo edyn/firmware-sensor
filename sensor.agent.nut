@@ -73,7 +73,7 @@ function logglyLog(logTable, level){
 
 function recordBackendSettings(){
     try{
-        local macToAgentURL = macToAgentFirebase +  macToAgentCurrentConfigPath + macAgentSide + ".json?auth=" + macToAgentAuth;
+        local macToAgentURL = macToAgentFirebase + macToAgentCurrentConfigPath + macAgentSide + ".json?auth=" + macToAgentAuth;
         local headers = {
             "User-Agent":"Imp"
         };
@@ -105,7 +105,7 @@ function recordBackendSettings(){
 
 function loadBackendSettings(){
     try{
-        local macToAgentURL = macToAgentFirebase +  macToAgentConfigOverridePath + macAgentSide +".json?auth=" + macToAgentAuth;
+        local macToAgentURL = macToAgentFirebase + macToAgentConfigOverridePath + macAgentSide +".json?auth=" + macToAgentAuth;
         local headers = {
             "User-Agent":"Imp"
         };
