@@ -87,7 +87,7 @@ function recordBackendSettings(){
         }));
         local res = req.sendsync();
         //TODO: make generic handling function for HTTP requests
-        if(res.statuscode != 200){
+        if(res.statuscode < 200 || res.statuscode > 204){
             server.log("Failed to save backend settings to firebase")
             logglyLog(
                 {
@@ -112,7 +112,7 @@ function loadBackendSettings(){
         local req = http.get(macToAgentURL, headers);
         local res = req.sendsync();
         //TODO: make generic handling function for HTTP requests
-        if(res.statuscode != 200){
+        if(res.statuscode < 200 || res.statuscode > 204){
             server.log("Failed to load backend settings " + res.statuscode)
             logglyLog(
                 {
