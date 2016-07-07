@@ -33,7 +33,7 @@ impApiKey <- "staging-electric-imp-api-key";
 //loggly
 logglyKey <- "1890ff8f-0c0a-4ca0-b2f4-74f8f3ea469b"
 loggly <- Loggly(logglyKey, { 
-    "tags" : "valveLogs",
+    "tags" : "sensorLogs",
     "timeout" : 60,
     "limit" : 20 //arbitrary 
 });
