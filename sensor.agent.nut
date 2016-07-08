@@ -218,14 +218,28 @@ function processResponse(incomingDataTable) {
   }
 }
 
+device.on("data", processAndSendDeviceData);
 
-
-function processAndSendDeviceData(){
-
+function processAndSendDeviceData(deviceData){
+    try{
+        local payLoadTable = {};
+        payLoadTable.macAddress = //mac agent side
+        payLoadTable.schemaVersion = "0.1";
+        payLoadTable.wakeData = processRegularData(deviceData);
+        //wifiData is a terrible name
+        payLoadTable.wifiData = processPowerData(deviceData);
+        sendReading(payLoadTable);
+    } catch (error) {
+        logglyError({
+            "function" : "processAndSendDeviceData",
+            "message" : "a sub function may have failed",
+            "errorMessage" : error
+        });
+    }
 }
 
 function processRegularData(){
-
+    dataToSendBackend =
 }
 
 function processPowerData(){
@@ -236,11 +250,29 @@ function sendReading(){
 
 }
 
-function processVFloat(){
-
+function processCurrentLimit(){
+    if (input == 0x00) return "100mA Max (USB Low Power)"
+    if (input == 0x01) return "500mA Max (USB High Power)"
+    if (input == 0x02) return "600mA Max"
+    if (input == 0x03) return "700mA Max"
+    if (input == 0x04) return "800mA Max"
+    if (input == 0x05) return "900mA Max (USB 3.0)"
+    if (input == 0x06) return "1000mA Typical"
+    if (input == 0x07) return "1250mA Typical"
+    if (input == 0x08) return "1500mA Typical"
+    if (input == 0x09) return "1750mA Typical"
+    if (input == 0x0A) return "2000mA Typical"
+    if (input == 0x0B) return "2250mA Typical"
+    if (input == 0x0C) return "2500mA Typical"
+    if (input == 0x0D) return "2750mA Typical"
+    if (input == 0x0E) return "3000mA Typical"
+    if (input == 0x0F) return "2.5mA Max (USB Suspend)"
+    if (input == 0x1F) return "SELECT CLPROG1"
+    //default case:
+    return "CurrentLimit Not Found"
 }
 
-function processCurrentLimit(){
+function processVFloat(){
 
 }
 
@@ -272,6 +304,10 @@ function processNTCStat(){
 
 }
 
+function getOrSetLocationSettings(){
+  
+}
+
 function processIntegerPowerData(){
   // newPoint.low_bat <- true;
     newPoint.low_bat <- (point.r3 & 0x1) != 0x00;
@@ -300,6 +336,8 @@ function processIntegerPowerData(){
     
     // newPoint.ntc_warning <- false;
     newPoint.ntc_warning <- (point.r5 & 0x1) != 0x00;
+
+    powerPoint.disable_input_uvcl <- (data.power_data[0] & 0x80) != 0x00;
 }
 
 
