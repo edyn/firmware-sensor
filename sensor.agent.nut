@@ -218,33 +218,6 @@ function processResponse(incomingDataTable) {
   }
 }
 
-device.on("data", processAndSendDeviceData);
-
-function processAndSendDeviceData(deviceData){
-    try{
-        local payLoadTable = {};
-        payLoadTable.macAddress = //mac agent side
-        payLoadTable.schemaVersion = "0.1";
-        payLoadTable.wakeData = processRegularData(deviceData);
-        //wifiData is a terrible name
-        payLoadTable.wifiData = processPowerData(deviceData);
-        sendReading(payLoadTable);
-    } catch (error) {
-        logglyError({
-            "function" : "processAndSendDeviceData",
-            "message" : "a sub function may have failed",
-            "errorMessage" : error
-        });
-    }
-}
-
-function processRegularData(){
-
-}
-
-function sendReading(){
-
-}
 
 //AKA wall_i_lim:
 function processCurrentLimit(input){
@@ -368,6 +341,34 @@ function processPowerData(inputPowerDataRegisters){
     return returnTable;
 }
 
+
+function processRegularData(){
+
+}
+
+function sendReading(){
+
+}
+
+function processAndSendDeviceData(deviceData){
+    try{
+        local payLoadTable = {};
+        payLoadTable.macAddress = //mac agent side
+        payLoadTable.schemaVersion = "0.1";
+        payLoadTable.wakeData = processRegularData(deviceData);
+        //wifiData is a terrible name
+        payLoadTable.wifiData = processPowerData(deviceData);
+        sendReading(payLoadTable);
+    } catch (error) {
+        logglyError({
+            "function" : "processAndSendDeviceData",
+            "message" : "a sub function may have failed",
+            "errorMessage" : error
+        });
+    }
+}
+
+device.on("data", processAndSendDeviceData);
 
 
 //The functions above will replace everything from here
