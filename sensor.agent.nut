@@ -38,6 +38,8 @@ loggly <- Loggly(logglyKey, {
     "limit" : 20 //arbitrary 
 });
 
+const SCHEMA_VERSION = "0.1"
+
 function addLogglyDefault(logTable){
   logTable.macAddress <- macAgentSide;
   logTable.sourceGroup <- "Firmware";
@@ -341,6 +343,16 @@ function processPowerData(inputPowerDataRegisters){
     return returnTable;
 }
 
+function processWifiData(inputDeviceData){
+    local returnTable = {};
+    local powerData = processPowerData(inputDeviceData.powerData);
+    local versionData = processVersionData(inputDeviceData);
+    returnTable = powerData;
+    returnTable.firmwareVersion <- versionData.firmwareVersion;
+    returnTable.hardwareVersion <- versionData.hardwareVersion;
+    returnTable.osVersion <- versionData.osVersion;
+    return returnTable;
+}
 
 function processRegularData(){
 
@@ -352,12 +364,15 @@ function sendReading(){
 
 function processAndSendDeviceData(deviceData){
     try{
+        //construct the table
         local payLoadTable = {};
-        payLoadTable.macAddress = //mac agent side
-        payLoadTable.schemaVersion = "0.1";
-        payLoadTable.wakeData = processRegularData(deviceData);
+        payLoadTable.macAddress <- macAgentSide;
+        payLoadTable.schemaVersion <- SCHEMA_VERSION;
+        //wake data is an array of tables [{},{},{}]
+        payLoadTable.wakeData <- processRegularData(deviceData);
         //wifiData is a terrible name
-        payLoadTable.wifiData = processPowerData(deviceData);
+        //also wifiData is a single table, a more appropriate name might be powerData or ltcData or powerManagerData
+        payLoadTable.wifiData = processWifiData(deviceData);
         sendReading(payLoadTable);
     } catch (error) {
         logglyError({
