@@ -30,6 +30,12 @@ macToAgentConfigOverridePath <- "config-override/"
 macToAgentAuth <- "aMB4B4eVNwl6fUQwHy9OlE5BUcGVUoad8dnn4HCu";
 impApiKey <- "staging-electric-imp-api-key";
 
+//needs to change depending on actual hardware version
+const HARDWARE_VERSION = "0.0.2";
+//no real rules about when this needs to change yet
+const FIRMWARE_VERSION = "0.0.1";
+
+
 //loggly
 logglyKey <- "1890ff8f-0c0a-4ca0-b2f4-74f8f3ea469b"
 loggly <- Loggly(logglyKey, { 
@@ -343,10 +349,19 @@ function processPowerData(inputPowerDataRegisters){
     return returnTable;
 }
 
+//this should be sent only in a single table from the device, like powerData
+function processVersionData(inputVersionTable){
+    local versionTable = {};
+    versionTable.osVersion <- inputVersionTable.osVersion;
+    versionTable.hardwareVersion <- inputVersionTable.hardwareVersion;
+    versionTable.firmwareVersion <- inputVersionTable.firmwareVersion;
+    return versionTable;
+}
+
 function processWifiData(inputDeviceData){
     local returnTable = {};
     local powerData = processPowerData(inputDeviceData.powerData);
-    local versionData = processVersionData(inputDeviceData);
+    local versionData = processVersionData();
     returnTable = powerData;
     returnTable.firmwareVersion <- versionData.firmwareVersion;
     returnTable.hardwareVersion <- versionData.hardwareVersion;
