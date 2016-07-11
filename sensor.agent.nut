@@ -239,10 +239,6 @@ function processAndSendDeviceData(deviceData){
 }
 
 function processRegularData(){
-    dataToSendBackend =
-}
-
-function processPowerData(){
 
 }
 
@@ -250,94 +246,126 @@ function sendReading(){
 
 }
 
-function processCurrentLimit(){
-    if (input == 0x00) return "100mA Max (USB Low Power)"
-    if (input == 0x01) return "500mA Max (USB High Power)"
-    if (input == 0x02) return "600mA Max"
-    if (input == 0x03) return "700mA Max"
-    if (input == 0x04) return "800mA Max"
-    if (input == 0x05) return "900mA Max (USB 3.0)"
-    if (input == 0x06) return "1000mA Typical"
-    if (input == 0x07) return "1250mA Typical"
-    if (input == 0x08) return "1500mA Typical"
-    if (input == 0x09) return "1750mA Typical"
-    if (input == 0x0A) return "2000mA Typical"
-    if (input == 0x0B) return "2250mA Typical"
-    if (input == 0x0C) return "2500mA Typical"
-    if (input == 0x0D) return "2750mA Typical"
-    if (input == 0x0E) return "3000mA Typical"
-    if (input == 0x0F) return "2.5mA Max (USB Suspend)"
-    if (input == 0x1F) return "SELECT CLPROG1"
-    //default case:
-    return "CurrentLimit Not Found"
+//AKA wall_i_lim:
+function processCurrentLimit(input){
+  //input used to be data.power_data[1]
+    input = (input & 0x1f);
+    if (input == 0x00) return "100mA Max (USB Low Power)";
+    if (input == 0x01) return "500mA Max (USB High Power)";
+    if (input == 0x02) return "600mA Max";
+    if (input == 0x03) return "700mA Max";
+    if (input == 0x04) return "800mA Max";
+    if (input == 0x05) return "900mA Max (USB 3.0)";
+    if (input == 0x06) return "1000mA Typical";
+    if (input == 0x07) return "1250mA Typical";
+    if (input == 0x08) return "1500mA Typical";
+    if (input == 0x09) return "1750mA Typical";
+    if (input == 0x0A) return "2000mA Typical";
+    if (input == 0x0B) return "2250mA Typical";
+    if (input == 0x0C) return "2500mA Typical";
+    if (input == 0x0D) return "2750mA Typical";
+    if (input == 0x0E) return "3000mA Typical";
+    if (input == 0x0F) return "2.5mA Max (USB Suspend)";
+    if (input == 0x1F) return "SELECT CLPROG1";
+    //TODO: add loggly warning here
+    return "CurrentLimit Not Found";
 }
 
-function processVFloat(){
-
+function processVFloat(input){
+    //input was data.power_data[2]
+    local vFloat = (input & 0xc) >> 2;
+    if (vFloat == 0x0) return 3.45;
+    if (vFloat == 0x1) return 3.55;
+    if (vFloat == 0x2) return 3.60;
+    if (vFloat == 0x3) return 3.80;
+    return -1.0;
 }
 
-function processWallILim(){
-
+function processTimer(input){
+    //input was data.power_data[1]
+    // In minutes, different than data sheet
+    local timer = (input & 0x60) >> 5;
+    if (timer == 0x0) return 60;
+    if (timer == 0x1) return 240;
+    if (timer == 0x2) return 15;
+    if (timer == 0x3) return 30;
+    //TODO: add loggly warning here
+    return -1;
 }
 
-function processTimer(){
-
+function processICharge(input){
+    //input used to be data.power_data[2]
+    local iCharge = ((input & 0xf0) >> 4).tofloat();
+    local convertedICharge = ((iCharge-1)*6.25)+12.5
+    if (convertedICharge < 12.49) convertedICharge = 0.0;
+    return convertedICharge
 }
 
-function processICharge(){
-
+function processCXSet(input){
+    //input was data.power_data[2]
+    local cxSet = (input & 0x3);
+    if (cxSet == 0x0) return 10;
+    if (cxSet == 0x1) return 20;
+    if (cxSet == 0x2) return 2;
+    if (cxSet == 0x3) return 5;
+    //TODO: add loggly warning here
+    return -1;
 }
 
-function processVFloat(){
-
+function processChargerStatus(input){
+    //input used to be data.power_data[3]
+    local chargerStatus = (input & 0xe0) >> 5;
+    if (chargerStatus == 0x0) return "Charger Off";
+    if (chargerStatus == 0x1) return "Low Battery Voltage";
+    if (chargerStatus == 0x2) return "Constant Current";
+    if (chargerStatus == 0x3) return "Constant Voltage, VPROG>VC/X";
+    if (chargerStatus == 0x4) return "Constant Voltage, VPROG<VC/X";
+    if (chargerStatus == 0x6) return "NTC TOO COLD, Charging Paused";
+    if (chargerStatus == 0x7) return "NTC HOT FAULT, Charging Paused";
+    //TODO: add loggly warning here
+    return "chargerStatus Not Found";
 }
 
-function processCXSet(){
-
+function processNTCStat(input){
+  //input used to be data.power_data[3]
+    local ntcStat = (input & 0x6) >> 1;
+    if (ntc_stat == 0x0) return "NTC Normal";
+    if (ntc_stat == 0x1) return "NTC_TOO_COLD";
+    if (ntc_stat == 0x3) return "NTC_HOT_FAULT";
+    return "NTC BUGGED OUT";
 }
 
-function processChargerStatus(){
-
-}
-
-function processNTCStat(){
-
+function processInputUVCL(input){
+    //returns a bool
+    //input used to be data.power_data[0]
+    return (input & 0x80) != 0x00;
 }
 
 function getOrSetLocationSettings(){
-  
+    
 }
 
-function processIntegerPowerData(){
-  // newPoint.low_bat <- true;
-    newPoint.low_bat <- (point.r3 & 0x1) != 0x00;
-    
-    // newPoint.ext_pwr_good <- true;
-    newPoint.ext_pwr_good <- (point.r4 & 0x80) != 0x00;
-    
-    // newPoint.wall_sns_good <- true;
-    newPoint.wall_sns_good <- (point.r4 & 0x20) != 0x00;
-    
-    // newPoint.at_input_ilim <- false;
-    newPoint.at_input_ilim <- (point.r4 & 0x10) != 0x00;
-    
-    // newPoint.input_uvcl_active <- false;
-    newPoint.input_uvcl_active <- (point.r4 & 0x8) != 0x00;
-    
-    // newPoint.ovp_active <- false;
-    newPoint.ovp_active <- (point.r4 & 0x4) != 0x00;
-    
-    // newPoint.bad_cell <- false;
-    newPoint.bad_cell <- (point.r4 & 0x1) != 0x00;
-    
-    // SWITCHED THIS TO INTEGER!
-    // newPoint.ntc_val <- 20.0;
-    newPoint.ntc_val <- ((point.r5 & 0xfe) >> 1).tointeger();
-    
-    // newPoint.ntc_warning <- false;
-    newPoint.ntc_warning <- (point.r5 & 0x1) != 0x00;
+function processPowerData(inputPowerDataRegisters){
+    local returnDataTable = {};
 
-    powerPoint.disable_input_uvcl <- (data.power_data[0] & 0x80) != 0x00;
+    returnDataTable.disable_input_uvcl <- processInputUVCL(inputPowerDataRegisters[0]);
+    returnDataTable.wall_i_lim <- processCurrentLimit(inputPowerDataRegisters[1]);
+    returnDataTable.timer <- processTimer(inputPowerDataRegisters[1]);
+    returnDataTable.i_charge <- processICharge(inputPowerDataRegisters[2]);
+    returnDataTable.v_float <- processVFloat(inputPowerDataRegisters[2]);
+    returnDataTable.c_x_set <- processCXSet(inputPowerDataRegisters[2]);
+    returnDataTable.charger_status <- processChargerStatus(inputPowerDataRegisters[3]);
+    returnDataTable.ntc_stat <- processNTCStat(inputPowerDataRegisters[3]);
+    returnDataTable.low_bat <- (inputPowerDataRegisters[3] & 0x1) != 0x00;
+    returnDataTable.ext_pwr_good <- (inputPowerDataRegisters[4] & 0x80) != 0x00;
+    returnDataTable.wall_sns_good <- (inputPowerDataRegisters[4] & 0x20) != 0x00;
+    returnDataTable.at_input_ilim <- (inputPowerDataRegisters[4] & 0x10) != 0x00;
+    returnDataTable.ovp_active <- (inputPowerDataRegisters[4] & 0x4) != 0x00;
+    returnDataTable.bad_cell <- (inputPowerDataRegisters[4] & 0x1) != 0x00;
+    returnDataTable.ntc_val <- ((inputPowerDataRegisters[5] & 0xfe) >> 1).tointeger();
+    returnDataTable.ntc_warning <- (inputPowerDataRegisters[5] & 0x1) != 0x00;
+
+    return returnTable;
 }
 
 
