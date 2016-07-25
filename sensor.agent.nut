@@ -34,7 +34,7 @@ impApiKey <- "staging-electric-imp-api-key";
 const HARDWARE_VERSION = "0.0.2";
 //no real rules about when this needs to change yet
 const FIRMWARE_VERSION = "0.0.1";
-
+OS_VERSION <- "unknown";
 
 //loggly
 logglyKey <- "1890ff8f-0c0a-4ca0-b2f4-74f8f3ea469b"
@@ -310,9 +310,9 @@ function processChargerStatus(input){
 function processNTCStat(input){
   //input used to be data.power_data[3]
     local ntcStat = (input & 0x6) >> 1;
-    if (ntc_stat == 0x0) return "NTC Normal";
-    if (ntc_stat == 0x1) return "NTC_TOO_COLD";
-    if (ntc_stat == 0x3) return "NTC_HOT_FAULT";
+    if (ntcStat == 0x0) return "NTC Normal";
+    if (ntcStat == 0x1) return "NTC_TOO_COLD";
+    if (ntcStat == 0x3) return "NTC_HOT_FAULT";
     return "NTC BUGGED OUT";
 }
 
@@ -328,7 +328,6 @@ function getOrSetLocationSettings(){
 
 function processPowerData(inputPowerDataRegisters){
     local returnDataTable = {};
-
     returnDataTable.disable_input_uvcl <- processInputUVCL(inputPowerDataRegisters[0]);
     returnDataTable.wall_i_lim <- processCurrentLimit(inputPowerDataRegisters[1]);
     returnDataTable.timer <- processTimer(inputPowerDataRegisters[1]);
@@ -345,35 +344,71 @@ function processPowerData(inputPowerDataRegisters){
     returnDataTable.bad_cell <- (inputPowerDataRegisters[4] & 0x1) != 0x00;
     returnDataTable.ntc_val <- ((inputPowerDataRegisters[5] & 0xfe) >> 1).tointeger();
     returnDataTable.ntc_warning <- (inputPowerDataRegisters[5] & 0x1) != 0x00;
-
-    return returnTable;
-}
-
-//this should be sent only in a single table from the device, like powerData
-function processVersionData(inputVersionTable){
-    local versionTable = {};
-    versionTable.osVersion <- inputVersionTable.osVersion;
-    versionTable.hardwareVersion <- inputVersionTable.hardwareVersion;
-    versionTable.firmwareVersion <- inputVersionTable.firmwareVersion;
-    return versionTable;
+    returnDataTable.input_uvcl_active <- processInputUVCL(inputPowerDataRegisters[0]);
+    return returnDataTable;
 }
 
 function processWifiData(inputDeviceData){
     local returnTable = {};
-    local powerData = processPowerData(inputDeviceData.powerData);
-    local versionData = processVersionData();
+    local powerData = processPowerData(inputDeviceData.power_data);
     returnTable = powerData;
-    returnTable.firmwareVersion <- versionData.firmwareVersion;
-    returnTable.hardwareVersion <- versionData.hardwareVersion;
-    returnTable.osVersion <- versionData.osVersion;
+    //add the device metadata
+    returnTable.firmwareVersion <- FIRMWARE_VERSION;
+    returnTable.hardwareVersion <- HARDWARE_VERSION;
+    returnTable.osVersion <- OS_VERSION;
     return returnTable;
 }
 
-function processRegularData(){
-
+function processWakeReason(integerWakeReason){
+    switch(integerWakeReason){
+      case 0:
+          return "WAKEREASON_POWER_ON"
+      case 1:
+          return "WAKEREASON_TIMER"
+      case 2:
+          return "WAKEREASON_SW_RESET"
+      case 3:
+          return "WAKEREASON_PIN"
+      case 4:
+          return "WAKEREASON_NEW_SQUIRREL"
+      case 5:
+          return "WAKEREASON_SQUIRREL_ERROR"
+      case 6:
+          return "WAKEREASON_NEW_FIRMWARE"
+      case 7: 
+          return "WAKEREASON_SNOOZE"
+      case 8:
+          return "WAKEREASON_HW_RESET"
+      case 9:
+          return "WAKEREASON_BLINKUP"
+    } 
+    //this is not accepted by the backend yet but should NEVER happen:
+    return "WAKEREASON_NOT_FOUND"
 }
 
-function sendReading(){
+function processRegularData(inputData){
+    local returnData = [];
+    //don't know what this is for
+    //foreach (origPoint in inputData.data) {
+    //    origPoint.sd <- [1];
+    //}
+    foreach (point in inputData.data) {
+        local newPoint = {};
+        newPoint.timestamp <- point.ts;
+        newPoint.battery <- point.b;
+        newPoint.humidity <- point.h;
+        newPoint.temperature <- point.t;
+        newPoint.electrical_conductivity <- point.m;
+        newPoint.light <- point.l;
+        newPoint.capacitance <- point.c;
+        newPoint.rssi <- point.r;
+        newPoint.wakeReason <- processWakeReason(point.w);
+        returnData.append(newPoint);
+    }
+    return returnData;
+}
+
+function sendReading(sendDataTable){
 
 }
 
@@ -387,14 +422,14 @@ function processAndSendDeviceData(deviceData){
         payLoadTable.wakeData <- processRegularData(deviceData);
         //wifiData is a terrible name
         //also wifiData is a single table, a more appropriate name might be powerData or ltcData or powerManagerData
-        payLoadTable.wifiData = processWifiData(deviceData);
-        sendReading(payLoadTable);
+        payLoadTable.wifiData <- processWifiData(deviceData);
+        send_data_json_node(payLoadTable);
     } catch (error) {
-        logglyError({
+        logglyLog({
             "function" : "processAndSendDeviceData",
             "message" : "a sub function may have failed",
             "errorMessage" : error
-        });
+        }, "Error");
     }
 }
 
@@ -625,6 +660,13 @@ function addColons(bssid) {
   return result;
 }
 
+function requestOSVersion(){
+
+}
+
+device.on("syncOSVersionFromDevice", function(osVersion){
+    OS_VERSION = osVersion;
+})
 
 device.onconnect(function() {
   // Any new blinkup will create a new agent, and hence the agent storage
@@ -635,6 +677,9 @@ device.onconnect(function() {
   // Load the settings table in from permanent storage
   local settings = server.load();
   
+  if(OS_VERSION == "unknown"){
+      device.send("syncOSVersion", []);
+  }
   
   if(fullResSet)
     {
