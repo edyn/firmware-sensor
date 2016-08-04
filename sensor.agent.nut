@@ -441,10 +441,6 @@ function addColons(bssid) {
   return result;
 }
 
-function requestOSVersion(){
-
-}
-
 device.on("syncOSVersionFromDevice", function(osVersion){
     OS_VERSION = osVersion;
 })
@@ -535,7 +531,7 @@ http.onrequest(function (request, response) {
         //} else {
         //    response.send(500, "Error: Action should be 'open' or 'close'.");
         //}
-        
+
         if ("fullRes" in request.query) {
         // if it was, send the value of it to the device
             device.send("fullRes", request.query["fullRes"]);
