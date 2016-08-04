@@ -525,16 +525,17 @@ device.on("fullRes",function(data)
 http.onrequest(function (request, response) {
     try {
         response.header("Access-Control-Allow-Origin", "*");
-/*
-        if (request.query.action == "open") {
-            server.save({action = request.query.action, time = request.query.time.tointeger(), duration = request.query.duration.tointeger()}); // seconds
-            response.send(200, "OK");
-        } else if (request.query.action == "close") {
-            server.save({action = request.query.action, time = request.query.time.tointeger()});  // seconds
-            response.send(200, "OK");
-        } else {
-            response.send(500, "Error: Action should be 'open' or 'close'.");
-        }*/
+
+        //if (request.query.action == "open") {
+        //    server.save({action = request.query.action, time = request.query.time.tointeger(), duration = request.query.duration.tointeger()}); // seconds
+        //    response.send(200, "OK");
+        //} else if (request.query.action == "close") {
+        //    server.save({action = request.query.action, time = request.query.time.tointeger()});  // seconds
+        //    response.send(200, "OK");
+        //} else {
+        //    response.send(500, "Error: Action should be 'open' or 'close'.");
+        //}
+        
         if ("fullRes" in request.query) {
         // if it was, send the value of it to the device
             device.send("fullRes", request.query["fullRes"]);
