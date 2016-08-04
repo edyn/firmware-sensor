@@ -408,10 +408,6 @@ function processRegularData(inputData){
     return returnData;
 }
 
-function sendReading(sendDataTable){
-
-}
-
 function processAndSendDeviceData(deviceData){
     try{
         //construct the table
