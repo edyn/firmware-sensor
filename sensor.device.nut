@@ -88,6 +88,10 @@ agent.on("fullRes",function(data){
     })
 })
 
+agent.on("syncOSVersion", function(data){
+    agent.send("syncOSVersionFromDevice", imp.getsoftwareversion());
+})
+
 
 //Needs to be moved to the proper location
 function configCapSense()
@@ -1403,7 +1407,8 @@ function regularOperation()
               m = lastLastReading*(3.0/65536.0),
               b = source.voltage(),
               c = timeDiffTwo*(1.0/samplerHzA),
-              r = imp.rssi()
+              r = imp.rssi(),
+              w = hardware.wakereason()
               });
               //server.log("DEVICE SIDE CAPACITANCE:"+nv.data.top().c);
         }        
@@ -1517,8 +1522,7 @@ function main() {
             blinkupFor(blinkupTime)
         }
     }
-}//end main
-    
+}//end main  
     
 // Define a function to handle disconnections
  
