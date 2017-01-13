@@ -88,6 +88,26 @@ agent.on("fullRes",function(data){
     })
 })
 
+newLine<-"\n\r"
+loraComm <-   hardware.uart1289;
+loraComm.configure(9600, 8, PARITY_NONE, 1, NO_CTSRTS);
+//todo before release: add better error handling/logging here
+function sendLoraMessage(message = ' ', newLine = false){
+    try{
+      server.log(message.tostring())
+      imp.sleep(0.1)
+      loraComm.write(message.tostring())
+      if(newLine){
+        loraComm.write(newLine)
+      }
+      imp.sleep(0.1)
+      //todo before release: I believe uart.flush can/should be used here
+    } catch(error){
+      server.log("error in sendLoraMessage:")
+      server.log(error)
+    }
+}
+
 
 //Needs to be moved to the proper location
 function configCapSense()

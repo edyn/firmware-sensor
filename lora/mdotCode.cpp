@@ -124,14 +124,15 @@ DigitalOut mDot17(PA_4,1);   //  GPIO/SPI_NCS   LCD_CS on EVB
 
 //DigitalInOut mDot19(PB_0,PIN_INPUT,PullNone,0); // GPIO         PushPull LED Low=Red High=Green set MODE=INPUT to turn off
 AnalogIn mDot20(PB_1);         //  GPIO          Current Sense Analog in on EVB
-Serial debugUART(PA_9, PA_10); // mDot debug UART
-//Serial mDotUART(PA_2, PA_3); // mDot external UART mDot02 and mDot03
+Serial debugUART(PA_2, PA_10); // mDot debug UART
+Serial mDotUART(PA_9, PA_3); // mDot external UART mDot02 and mDot03
 I2C mDoti2c(PC_9,PA_8); // mDot External I2C mDot6 and mDot7
 
 SPI mDotspi(PA_7,PA_6,PA_5); // mDot external SPI mDot11, mDot4, and mDot18
 #elif defined(MTDOT_UDK)
 
 Serial debugUART(USBTX, USBRX); // mDot debug UART
+Serial mDotUART(PA_2, PA_3); // mDot external UART mDot02 and mDot03
 
 #endif
 
@@ -277,7 +278,7 @@ void BoardInit()
     static Thread thread_2(pb2_debounce);
 
     debugUART.baud(115200);
-    // mDotUART.baud(9600);    // mdot UART unused but available on external connector
+    mDotUART.baud(9600);    // mdot UART unused but available on external connector
 
     thread_3 = new Thread(config_pkt_xmit); // start thread that sends LoRa packet when SW2 pressed
 
@@ -971,7 +972,7 @@ void mDotConfigureAndJoin()
             mdot_ret = 0;
         } 
         checkForExit(true);
-        scanf("  %c", &letter );
+        mDotUART.scanf("  %c", &letter );
         printf("value of letter = %c\n", letter );
         printf("delay = %lu\n\r",mdot_ret);
         osDelay(mdot_ret + 10000);
