@@ -814,6 +814,54 @@ void ReadSensors(BoardSensorData &data)
    printf("%s: position_value=%04x, reflected_value=%04x\r\n",__func__, position_value, reflected_value);
 }
 
+void flushSerialBuffer(){
+
+
+     for (int i = 0; i < 10; i++)
+     {
+       while (mDotUART() > 0)
+       {
+         char k = mDotUART.read(mDotUART);
+         delay(1);
+       }
+       delay(1);
+    }
+}
+
+void waitForMessage(){
+  char buffer[256];
+  buffer[0] = 0;
+  for (int i = 0; i < 10; i++)
+     {
+       while (mDotUART() > 0)
+       {
+         char k = mDotUART.read(mDotUART);
+         delay(1);
+       }
+       delay(1);
+  }
+  flushSerialBuffer();
+  int iterator = 0;
+  char currentByte;
+  currentByte = 'v';
+  while(currentByte != 'x'){
+    mDotUART.scanf("  %c", &currentByte );
+    buffer[iterator] = currentByte;
+    iterator++;
+  }
+
+  printf("this is the buffer:\n");
+  printf(buffer);
+  printf("\n");
+  return;
+}
+
+int buildInteger(char fourBytes[4]){
+    int i = (fourBytes[0] << 24) | (fourBytes[1] << 16) | (fourBytes[2] << 8) | (fourBytes[3]);
+    return i;
+}
+
+
 uint32_t PrepareFrame(std::vector<uint8_t> &frame, BoardSensorData &data)
 {
     static uint8_t buffer[64];
@@ -962,7 +1010,6 @@ void mDotConfigureAndJoin()
     
     // attempt to join the network
     printf("joining network\r\n");
-    char letter;
     while ((mdot_ret = mdot_radio->joinNetwork()) != mDot::MDOT_OK) { 
         log_error(mdot_radio,"failed to join network:", mdot_ret);
         if (mdot_radio->getFrequencyBand() == mDot::FB_868){
@@ -972,9 +1019,7 @@ void mDotConfigureAndJoin()
             mdot_ret = 0;
         } 
         checkForExit(true);
-        mDotUART.scanf("  %c", &letter );
-        printf("value of letter = %c\n", letter );
-        printf("delay = %lu\n\r",mdot_ret);
+        waitForMessage();
         osDelay(mdot_ret + 10000);
     } 
     printf("network joined\r\n");
@@ -982,7 +1027,6 @@ void mDotConfigureAndJoin()
     joinTicker.detach(); 
     JOIN_LED=1;
 }
-
 
 int main()
 {
