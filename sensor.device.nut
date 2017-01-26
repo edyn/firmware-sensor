@@ -1493,7 +1493,7 @@ function main() {
     {
         //TODO: review how blinkup is handled, it's pretty weird
         if(server.isconnected())
-        {   
+        {
             logglyLog({"message" : "New Blinkup"});
             blueLed.configure()
             //blueLed.blink(2,2)
