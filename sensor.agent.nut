@@ -49,35 +49,71 @@ const SCHEMA_VERSION = "0.1"
 function addLogglyDefault(logTable){
   logTable.macAddress <- macAgentSide;
   logTable.sourceGroup <- "Firmware";
-  logTable.env <- "Sensor_Loggly";
+  logTable.env <- "Production";
   return logTable
 }
 
-function logglyLog(logTable, level){
-  try{
-    //if it's not a table, don't try anything
-    if(type(logTable) != type({})){
-      loggly.warn({"SensorAgentWarning" : "LogglyLog passed data other than a table"})
-    } else {
-      server.log(type(logTable))
-      //add defaults to the table
-      logTable = addLogglyDefault(logTable);
-      //log based on the log level
-      if(level == "Log"){
-        loggly.log(logTable);
-      } else if (level == "Warning"){
-        loggly.warn(logTable);
-      } else if (level == "Error"){
-        loggly.error(logTable);
-      } else {
-        loggly.warning({"SensorAgentWarning" : "Invalid level passed to logglyLog"});
-        loggly.error(logTable);
-      }
+function serverLogTable(inputTable, level){
+    try{
+        //todo: function calls itself recursively
+        server.log("\nLoggly " + level + " table:")
+        foreach (key,value in inputTable){
+            if(typeof(value) == typeof({})){
+                server.log("\tsubTable '" + key + "' found in table:")
+                foreach (subKey,subValue in value){
+                    server.log("\t\t" + subKey + " : " + subValue)
+                }
+            } else if(typeof(value) == typeof([])){
+                if(value.len()){
+                    for(local x = 0; x < value.len(); x++){
+                        if(typeof(value[x]) != typeof([]) && typeof(value[x]) != typeof({})){
+                            server.log("\tArray " + key + " index " + x " : " + value[x]);
+                        } else {
+                            //easiest way to log these subtable/subarrays without throwing error
+                            server.log("\tArray " + key + " index " + x " : " + http.jsonencode(value[x]);
+                        }
+                    }
+                }
+            } else {
+                server.log("\t" + key + " : " + value)
+            }
+        }
+    } catch(error) {
+        //using library definition rather than logglyLog function
+        loggly.error({"message" : "Error in serverLogTable", "error" : error, "tableAsJson" : http.jsonencode(inputTable)})
     }
-  } catch(error) {
-    server.log("Loggly Log encountered an error! " + error);
-  }
 }
+
+
+function logglyLog(logTable = {"message" : "empty log table passed to logglyLog"}, level = "Log", serverLog = true){
+    try{
+        if(type(logTable) != type({})){
+            loggly.warn({"agentWarning" : "non-table passed to logglyLog"});
+            server.log("NON TABLE PASSED TO LOGGLYLOG!")
+        } else {
+            logTable = addLogglyDefaults(logTable);
+            if(serverLog){
+                serverLogTable(logTable, level)
+            }
+            if(level == "Log"){
+                loggly.log(logTable);
+            } else if (level == "Warning") {
+                loggly.warn(logTable);
+            } else if (level == "Error"){
+                loggly.error(logTable);
+            } else {
+                loggly.warn({"agentWarning" : "Invalid level passed to logglyLog"});
+            }
+        }
+    } catch (error) {
+        server.log("error in logglyLog")
+        loggly.error({
+            "function" : "logglyLog",
+            "error" : error
+        });
+    }
+}
+
 
 function recordBackendSettings(){
     try{
