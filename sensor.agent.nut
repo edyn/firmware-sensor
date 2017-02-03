@@ -85,7 +85,11 @@ function serverLogTable(inputTable, level){
         }
     } catch(error) {
         //using library definition rather than logglyLog function
-        loggly.error({"message" : "Error in serverLogTable", "error" : error, "tableAsJson" : http.jsonencode(inputTable)})
+        loggly.error({
+          "message" : "Error in serverLogTable",
+          "error" : error,
+          "tableAsJson" : http.jsonencode(inputTable)
+        })
     }
 }
 
@@ -107,7 +111,9 @@ function logglyLog(logTable = {"message" : "empty log table passed to logglyLog"
             } else if (level == "Error"){
                 loggly.error(logTable);
             } else {
-                loggly.warn({"agentWarning" : "Invalid level passed to logglyLog"});
+                loggly.warn({
+                  "agentWarning" : "Invalid level passed to logglyLog"
+                });
             }
         }
     } catch (error) {

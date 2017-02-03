@@ -201,7 +201,8 @@ function capSense(ModeSelect=true){
       server.log(lastlastreading)
     }
 }
-//Should move to something like this eventually to do analysis, but right now it's just needed for capsense to work:
+//Should move to something like this eventually to do analysis, but
+// right now it's just needed for capsense to work:
 function samplesReady(a,b){}
 
 ///
@@ -349,8 +350,10 @@ class PowerManager {
     // 7-bit base I²C address. In this case, you will need to
     // bit-shift the address left by 1 (ie. multiply it by 2):
     // static WRITE_ADDR = "\x09"; // LTC4156 write address as a 7-bit word
-    // static WRITE_ADDR = 0x09 << 1; // LTC4156 write address converted to an 8-bit word
-    // static WRITE_ADDR = 0x12; // LTC4156 write address converted to an 8-bit word
+    // static WRITE_ADDR = 0x09 << 1; // LTC4156 write address converted to
+    // an 8-bit word
+    // static WRITE_ADDR = 0x12; // LTC4156 write address converted to
+    // an 8-bit word
     // static READ_ADDR = 0x13;
     // Imp I2C API automatically changes the write/read bit
     // Note: Imp I2C address values are integers
@@ -583,7 +586,8 @@ class HumidityTemperatureSensor {
     // MUST BE SET TO '0' BEFORE CALCULATING PHYSICAL VALUES
     // This happens automatically, though, through the i2c.read function
     // is_data_stale = data[0] & STATUS_STALE_BIT;
-    // Mask for setting two least significant bits of least significant byte to zero
+    // Mask for setting two least significant bits of least significant
+    // byte to zero
     // 0b11111100 = 0xfc
     //server.log(data[0]);
     //server.log(data[0] << 8);
@@ -639,8 +643,9 @@ class source {
 }
 
 
-// PIN 7 – ADC_AUX – measurement solar cell voltage (divided by/3, limited to zener
-// voltage 6V)
+
+// PIN 7 – ADC_AUX – measurement solar cell voltage (divided by/3,
+// limited to zener voltage 6V)
 // Solar voltage sensor
 class solar {
   static pin = hardware.pin7;
@@ -666,8 +671,12 @@ class power {
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) server.log("Starting deep sleep (running).");
-        // if (trace == true) server.log("Note that subsequent 'sensing' wakes won't log here.");
-        // if (trace == true) server.log("The next wake to log will be the 'data transmission' wake.");
+        //if (trace == true) {
+        //  server.log("Note that subsequent 'sensing' wakes won't log here.");
+        //}
+        //if (trace == true) {
+        //  server.log("The next wake to log will be the 'data transmission' wake.");
+        //}
         //blueLed.on();
         server.sleepfor(INTERVAL_SENSOR_SAMPLE_S);
       });
@@ -849,8 +858,11 @@ function onConnectedTimeout(state) {
   }
   else {
     // Otherwise, do something else
-    // power.enter_deep_sleep_ship_store("Conservatively going into ship and store mode after failing to connect to server.");
-    if (debug == true) server.log("Gave a chance to blink up, then tried to connect to server but failed.");
+    // power.enter_deep_sleep_ship_store("Conservatively going into ship
+    // and store mode after failing to connect to server.");
+    if (debug == true) {
+      server.log("Gave a chance to blink up, then tried to connect to server but failed.");
+    }
     power.enter_deep_sleep_failed("Sleeping after failing to connect to server after a button press.");
   }
 }
@@ -1143,23 +1155,26 @@ function interrupthandle()
 
 //interruptPin is tied to the pin wakeup condition of the device
 //the user can check the on/off status of the device by pressing the button once
-//the user then has 5 seconds (for which the LED will be green) to press the button again
+//the user then has 5 seconds (for which the LED will be green) to press
+//the button again
 //pressing the button a second time enables blinkup
 
 function interruptPin() {
 
-    try
-    {
+    try{
       control=4;
       hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
         //explanation of the below if statement:
-        //Intertiem is recorded at the end of the interrupt (and initialized as 0)
-        //When you press the button, the code begins with an instance of interruptpin queued up
+        //Intertiem is recorded at the end of the interrupt
+        //(and initialized as 0)
+        //When you press the button, the code begins with an instance
+        //of interruptpin queued up
         //BUT it also recognizes your press as another call to the interrupt
-        //so the if statement below ensures the interrupt only runs once per press
-        //Let me know if this explanation is unclear because it's very important that if I die tomorrow somebody understands this
-      if((date().time-intertime)>1)
-      {
+        //so the if statement below ensures the interrupt only runs once
+        //per press
+        //Let me know if this explanation is unclear because it's very
+        //important that if I die tomorrow somebody understands this
+      if((date().time-intertime)>1){
           //we might be able to remove this sleep all together
           imp.sleep(1)
         blinkupFor(blinkupTime)
@@ -1170,8 +1185,7 @@ function interruptPin() {
 
         intertime=date().time;
         //if the imp has not connected before, use shallow sleep.
-    if(nv.pastConnect==false)
-        {
+    if(nv.pastConnect==false){
           //hasn't connected before, wait 60 before sleep
           hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
           wakeCallHandle(60.0,function()
@@ -1179,14 +1193,12 @@ function interruptPin() {
             power.enter_deep_sleep_failed("Has Never Connected");
           });
         }
-        else
-        {
+        else {
             //connected before: no disadvantage to deep sleep
             power.enter_deep_sleep_running("HasConnectedBefore");
         }
     }//end of try
-    catch(error)
-    {
+    catch(error){
         server.log(error);
         blinkAll(2,2);
         //error occurred in interrupt, control=4 and run main
@@ -1194,8 +1206,7 @@ function interruptPin() {
     }//end catch
 }
 
-function blinkupFor(timer=90)
-{
+function blinkupFor(timer=90){
     greenLed.configure();
     blueLed.configure();
     redLed.configure();
@@ -1212,8 +1223,7 @@ function blinkupFor(timer=90)
     imp.enableblinkup(false);
 }
 
-function regularOperation()
-    {
+function regularOperation(){
 
       if (debug == true) server.log("Device booted.");
       if (debug == true) server.log("Device's unique id: " + hardware.getdeviceid());
@@ -1288,12 +1298,11 @@ function regularOperation()
       powerManager.sample();
       try{
       imp.sleep(0.1);
-      if(powerManager.reg_3==null)
-      {
+      if(powerManager.reg_3==null){
           local counterI2C=1;
-          while(powerManager.reg_3==null && counterI2C<6)
-          {
-              //arbitrary, possibly unnecessary sleeps that might make it more stable
+          while(powerManager.reg_3==null && counterI2C<6){
+              //arbitrary, possibly unnecessary sleeps that might make it more
+              //stable
               //"check redundancies twice"
 
               server.log("POWER MANAGER FAIL # " + counterI2C);
@@ -1306,46 +1315,44 @@ function regularOperation()
               counterI2C+=1;
           }
           //will show up only when it's probably true:
-          if(powerManager.reg_3==null)
-          {
+          if(powerManager.reg_3==null){
             server.log("Possible damage to the LTC or I2C busses.");
           }
+      }else{
+          imp.sleep(0.1)
+      };
       }
-      else{imp.sleep(0.1)};
+      catch(error){
+          server.log("LTC SAMPLING ERROR");
       }
-      catch(error)
-      {server.log("LTC SAMPLING ERROR");}
 
       //server.log("PM PASS");
       humidityTemperatureSensor.sample();
       try{
-      if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32)
-      {
-          local counterI2C=1;
-          while((humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32) && counterI2C<6)
-          {
-              //arbitrary, possibly unnecessary sleeps that might make it more stable
-              //"check redundancies twice"
-              server.log("HUMIDITY TEMPERATURE FAIL # " + counterI2C)
+        if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32){
+            local counterI2C=1;
+            while((humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32) && counterI2C<6){
+                //arbitrary, possibly unnecessary sleeps that might make it more stable
+                //"check redundancies twice"
+                server.log("HUMIDITY TEMPERATURE FAIL # " + counterI2C)
 
-              server.log(humidityTemperatureSensor.humidity)
-              server.log(humidityTemperatureSensor.temperature)
-              imp.sleep(0.01);
-              hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-              imp.sleep(0.1);
-              humidityTemperatureSensor.sample();
-              imp.sleep(0.1);
-              counterI2C+=1;
-          }
-          //will show up only when it's probably true:
-          if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32)
-          {
-            server.log("Possible damage to the Humidity/Temperature Sensor or I2C busses.");
-          }
+                server.log(humidityTemperatureSensor.humidity)
+                server.log(humidityTemperatureSensor.temperature)
+                imp.sleep(0.01);
+                hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+                imp.sleep(0.1);
+                humidityTemperatureSensor.sample();
+                imp.sleep(0.1);
+                counterI2C+=1;
+            }
+            //will show up only when it's probably true:
+            if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32){
+              server.log("Possible damage to the Humidity/Temperature Sensor or I2C busses.");
+            }
+        }
+      } catch(error){
+        server.log("Hum/Temp Error");
       }
-      }
-      catch(error)
-      {server.log("Hum/Temp Error");}
 
       //server.log("Humidity/Temperature Pass")
       server.log("Memory free after sampling: " + imp.getmemoryfree());
@@ -1371,8 +1378,7 @@ function regularOperation()
         local batvol = source.voltage();
         //uncomment this sleep to get the light reading value change:
         imp.sleep(0.1);
-        if(runTest)
-        {
+        if(runTest){
             nv.data.push({
               ts = theCurrentTimestamp,
               t = humidityTemperatureSensor.temperature,
@@ -1382,9 +1388,7 @@ function regularOperation()
               b = source.voltage()
               testResults=unitTest()
             });
-        }
-        else
-        {
+        }else{
               nv.data.push({
               ts = theCurrentTimestamp,
               t = humidityTemperatureSensor.temperature,
@@ -1408,12 +1412,14 @@ function regularOperation()
         if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
           if (debug == true) server.log("Server refresh needed");
           connect(send_data, TIMEOUT_SERVER_S);
-                // if (debug == true) server.log("Sending location information without prompting.");
+                // if (debug == true) server.log("Sending location information
+                // without prompting.");
             // connect(send_loc, TIMEOUT_SERVER_S);
         }
 
         // ///
-        // all the important time-sensitive decisions based on current state go here
+        // all the important time-sensitive decisions based on current state
+        // go here
         // ///
 
         // // checking source voltage not necessary in the first pass
@@ -1442,40 +1448,42 @@ function main() {
 
     // create non-volatile storage if it doesn't exist
     if (!("nv" in getroottable() && "data" in nv)) {
-        nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false};
+        nv<-{
+          data = [],
+          data_sent = null,
+          running_state = true, PMRegB=[0x00,0x00],
+          PMRegC=[0x00,0x00],
+          pastConnect=false
+        };
     }
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
 
-    if(control==0)
-    {
+    if(control==0){
       control=startControlFlow();
-      //1 = cold boot (0), software reset (2), new squirrel code AKA new impOS version (4), squirrel error (5), firmware upgrade (6) and default case (shouldn't happen)
+      //1 = cold boot (0), software reset (2), new squirrel code AKA new impOS //version (4), squirrel error (5), firmware upgrade (6) and default case //(shouldn't happen)
       //2 = wake from deep sleep (1)
       //3 = pinWakeup (3)
       //4 = interrupt has run before
       //5 = blinkUp Successful (9)
     }//end control 0
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
-    if(control==1)
-    {
-        if(server.isconnected())
-        {
+    if(control==1){
+        if(server.isconnected()){
             //might be able to remove this sleep all together
             imp.sleep(1)
             regularOperation()
         }
 
-    //blinkupfor should happen before regular operation, but we can fix that later
+    //blinkupfor should happen before regular operation, but we can fix
+    //that later
         blinkupFor(blinkupTime)
     }
 
-    else if(control==2)
-    {
+    else if(control==2){
         regularOperation()
     }
     //3 =Pin Wakeup, do some configurations
-    else if(control==3)
-    {
+    else if(control==3){
       hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
       source.configure();
       local counterI2C=0;
@@ -1489,19 +1497,15 @@ function main() {
 
     }//end control 3
     //control 5 is blinkup
-    else if (control==5)
-    {
+    else if (control==5){
         //TODO: review how blinkup is handled, it's pretty weird
-        if(server.isconnected())
-        {
-            logglyLog({"message" : "New Blinkup"});
+        if(server.isconnected()){
+            logglyLog({"message: " : "New Blinkup"});
             blueLed.configure()
             //blueLed.blink(2,2)
             server.log("Is connected")
             regularOperation()
-        }
-        else
-        {
+        } else {
             blueLed.configure()
             //blueLed.blink(1,4)
             server.log("not connected")
@@ -1520,19 +1524,13 @@ function disconnectHandler(reason) {
 }
 
 
-function wakeCallHandle(time=null,func=null)
-{
-    if(time==null&&func==null)
-    {
-        if(nextWakeCall!=null)
-        {
+function wakeCallHandle(time=null,func=null) {
+    if(time==null&&func==null){
+        if(nextWakeCall!=null){
             imp.cancelwakeup(nextWakeCall);
         }
-    }
-    else
-    {
-        if(nextWakeCall!=null)
-        {
+    }else{
+        if(nextWakeCall!=null){
             imp.cancelwakeup(nextWakeCall);
         }
         nextWakeCall=imp.wakeup(time,func);//end naxt wake call
@@ -1542,8 +1540,7 @@ function wakeCallHandle(time=null,func=null)
 ///
 // End of functions
 ///
-function WatchDog()
-{
+function WatchDog(){
     power.enter_deep_sleep_failed("watchdog")
 }
 WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
