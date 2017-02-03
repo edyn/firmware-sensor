@@ -44,8 +44,8 @@ const LOWEST_FREQUENCY = 60 * 240;//60 seconds * 240
 const HIGHEST_BATTERY = 3.4;         //Volts
 const HIGH_BATTERY = 3.35
 const MEDIUM_BATTERY = 3.3;      //Volts
-const LOW_BATTERY = 3.21;         //Volts
-const LOWER_BATTERY = 3.18;        //Volts
+const LOW_BATTERY = 3.24;         //Volts
+const LOWER_BATTERY = 3.195;        //Volts
 
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
