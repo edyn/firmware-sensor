@@ -33,6 +33,20 @@ const TZ_OFFSET = -25200; // 7 hours for PDT
 const blinkupTime = 90;
 //Loggly Timeout Variable:
 const logglyConnectTimeout = 20;
+
+const HIGHEST_FREQUENCY = 60 * 5; //60 seconds * 5
+const HIGH_FREQUENCY = 60 * 10;   //60 seconds * 10
+const MEDIUM_FREQUENCY= 60 * 30;  //60 seconds * 30
+const LOW_FREQUENCY = 60 * 60;    //60 seconds * 60
+const LOWER_FREQUENCY = 60 * 100; //60 seconds * 100
+const LOWEST_FREQUENCY = 60 * 240;//60 seconds * 240
+
+const HIGHEST_BATTERY = 3.4;         //Volts
+const HIGH_BATTERY = 3.35
+const MEDIUM_BATTERY = 3.3;      //Volts
+const LOW_BATTERY = 3.24;         //Volts
+const LOWER_BATTERY = 3.195;        //Volts
+
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
@@ -886,85 +900,39 @@ function connect(callback, timeout) {
 
 
 
-// return true iff the collected data should be sent to the server
-function is_server_refresh_needed(data_last_sent, data_current) {
-  // first boot, always send
-  if (data_last_sent == null)     return true;
-
-  local send_interval_s = 0;
-
-  local higher_frequency = 60*5;
-  local high_frequency = 60*20;
-  local medium_frequency = 60*45;
-  local low_frequency = 60*60;
-  local lower_frequency = 60*120;
-  local lowest_frequency = 60*480;
-
-  if (debug == true) server.log("Debug mode.");
-
-  if (demo == true) {
-    server.log("Demo mode.");
-    higher_frequency = 60*0;
-    high_frequency = 60*1;
-    medium_frequency = 60*2;
-    low_frequency = 60*5;
-    lower_frequency = 60*10;
-    lowest_frequency = 60*30;
+// return true if the collected data should be sent to the server
+function isServerRefreshNeeded(lastSentData, currentData){
+  //note: we used to send data more fruently if it was rapidly changing by comparin currentData to lastDataSent
+  //if we've never sent data, send data.
+  if (debug) server.log("debug mode");
+  if(lastSentData == null) {
+    return true
   }
-
-  // Live coding settings
-  else if (demo == false && coding == true) {
-    server.log("Coding mode");
-    higher_frequency = 60*5;
-    high_frequency = 60*5;
-    medium_frequency = 60*5;
-    low_frequency = 60*5;
-    lower_frequency = 60*5;
-    lowest_frequency = 60*60;
+  //if we're connected, might as well send
+  if(server.isconnected()){
+    return true
   }
-
-
-  // Production settings
-  else if (demo == false && coding == false) {
-    higher_frequency = 60*5;
-    high_frequency = 60*10;
-    medium_frequency = 60*30;
-    low_frequency = 60*60;
-    lower_frequency = 60*120;
-    lowest_frequency = 60*240;
-  }
-
+  local sendInterval = 0;
   // send updates more often when the battery is full
-  if (data_current.b > 3.4) {
-    send_interval_s = high_frequency; // battery very high
-  }
-  else if (data_current.b > 3.35) send_interval_s = high_frequency;   // battery high
-  else if (data_current.b > 3.3) send_interval_s = high_frequency;  // battery medium
-  else if (data_current.b > 3.21) send_interval_s = high_frequency;  // battery getting low
-  else if (data_current.b > 3.18) {
-    send_interval_s = lower_frequency; // battery low
-    server.log("Low Vout from LTC4156.");
-  }
-  else if (data_current.b > 0.0) return false;             // battery critical
-  // else {
-  //   // emergency shutoff workaround to prevent the Imp 'red light bricked' state
-  //   power.enter_deep_sleep_ship_store("Emergency battery levels.");
-  // }
-
-  // // send updates more often when data has changed frequently and battery life is good
-  // if (data_current.b > 3.25
-  //   && (math.fabs(data_last_sent.t - data_current.t) > 5.0
-  //     || math.fabs(data_last_sent.h - data_current.h) > 5.0
-  //     || math.fabs(data_last_sent.l - data_current.l) > 50.0
-  //     || math.fabs(data_last_sent.m - data_current.m) > 0.2
-  //     || math.fabs(data_last_sent.b - data_current.b) > 0.2)) {
-  //   if (debug == true) server.log("Data is changing quickly, so send updates more often.");
-  //   send_interval_s /= 4;
-  // }
-
-  // send data to the server if (current time - last send time) > send_interval_s
-  return ((data_current.ts - data_last_sent.ts) > send_interval_s);
+    if (currentData.b > HIGHEST_BATTERY){
+      sendInterval = HIGH_FREQUENCY; // battery full
+    } else if (currentData.b > HIGH_BATTERY) {
+      sendInterval = HIGH_FREQUENCY; // battery very high
+    } else if (currentData.b > MEDIUM_BATTERY){
+        sendInterval = HIGH_FREQUENCY;   // battery high
+    } else if (currentData.b > MEDIUM_BATTERY){
+      sendInterval = HIGH_FREQUENCY;  // battery medium
+    } else if (currentData.b > LOW_BATTERY) {
+      sendInterval= HIGH_FREQUENCY;  // battery getting low
+    } else if (currentData.b > LOWER_BATTERY) {
+      sendInterval = LOWER_FREQUENCY; // battery low
+      server.log("Low Vout from LTC4156.");
+    } else {
+      return false //battery critical!
+    }
+    return ((currentData.ts - lastSentData.ts) > sendInterval);
 }
+
 
 // Callback for server status changes.
 function send_data(status) {
@@ -1409,7 +1377,7 @@ function regularOperation(){
 
         //feature 0.2 important
         //Send sensor data
-        if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
+        if (isServerRefreshNeeded(nv.data_sent, nv.data.top())) {
           if (debug == true) server.log("Server refresh needed");
           connect(send_data, TIMEOUT_SERVER_S);
                 // if (debug == true) server.log("Sending location information
