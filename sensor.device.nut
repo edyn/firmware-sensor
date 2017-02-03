@@ -736,7 +736,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
     } catch (error) {
         server.log(error)
         logglyError({
-            "sensorError" : error,
+            "error" : error,
             "function" : "forcedLogglyConnect",
             "message" : "failure when trying to force device to connect and send to loggly"
         });
@@ -1084,7 +1084,7 @@ function startControlFlow()
             branching=1;
             //This DOES try to force connection
             logglyError({
-              "sensorError" : "Waking From Software Reset (OS level Error, could be memory related)"
+              "error" : "Waking From Software Reset (OS level Error, could be memory related)"
             });
             break
         case WAKEREASON_NEW_SQUIRREL:
@@ -1097,7 +1097,7 @@ function startControlFlow()
             branching=2;
             //This DOES try to force connection
             logglyError({
-              "sensorError" : "Waking From Squirrel Runtime Error"
+              "error" : "Waking From Squirrel Runtime Error"
             }, true);
             break
 
