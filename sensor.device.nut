@@ -916,11 +916,13 @@ function isServerRefreshNeeded(lastSentData, currentData){
   }
   local sendInterval = 0;
   // send updates more often when the battery is full
-    if (currentData.b > HIGH_BATTERY) {
+    if (currentData.b > HIGHEST_BATTERY){
+      sendInterval = HIGH_FREQUENCY; // battery full
+    } else if (currentData.b > HIGH_BATTERY) {
       sendInterval = HIGH_FREQUENCY; // battery very high
     } else if (currentData.b > MEDIUM_BATTERY){
         sendInterval = HIGH_FREQUENCY;   // battery high
-    } else if (dcurrentData.b > MEDIUM_BATTERY){
+    } else if (currentData.b > MEDIUM_BATTERY){
       sendInterval = HIGH_FREQUENCY;  // battery medium
     } else if (currentData.b > LOW_BATTERY) {
       sendInterval= HIGH_FREQUENCY;  // battery getting low
