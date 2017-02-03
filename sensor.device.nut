@@ -643,6 +643,7 @@ class source {
 }
 
 
+
 // PIN 7 – ADC_AUX – measurement solar cell voltage (divided by/3,
 // limited to zener voltage 6V)
 // Solar voltage sensor
@@ -744,7 +745,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
     } catch (error) {
         server.log(error)
         logglyError({
-            "sensorError" : error,
+            "error" : error,
             "function" : "forcedLogglyConnect",
             "message" : "failure when trying to force device to connect and send to loggly"
         });
@@ -752,59 +753,43 @@ function forcedLogglyConnect(state, logTable, logLevel){
     }
 }
 
-function logglyLog(logTable = {}, forceConnect = false){
+function logglyGeneral(logTable = {}, forceConnect = false, level = "INFO"){
+  logglyLevel <- "Log"
+  if (level == "ERROR") {
+    logglyLevel = "Error"
+  } else if (level == "WARN") {
+    logglyLevel = "Warn"
+  } else {
+    logglyLevel = "Log"
+  }
   try{
     if(server.isconnected()){
         //Uncomment this in the future when unit testing is implemented on the sensor similar to the valve
         //logTable.UnitTesting <- unitTesting;
-        agent.send("logglyLog", logTable)
+        agent.send("loggly" + logglyLevel, logTable)
     } else if(forceConnect){
         //connect and send loggly stuff
         //really no reason we'd ever force a connect for a regular log...
         server.connect(function (connectStatus){
-            forcedLogglyConnect(connectStatus, logTable, "logglyLog");
+            forcedLogglyConnect(connectStatus, logTable, "loggly" + logglyLevel);
         }, logglyConnectTimeout);
     }
   } catch (error) {
-    server.log("Loggly Log Error: " + error);
+    server.log("Loggly " + level +  " Error: " + error);
   }
 }
 
+function logglyLog(logTable = {}, forceConnect = false){
+  logglyGeneral(logTable, forceConnect, "INFO");
+}
+
 function logglyWarn(logTable = {}, forceConnect = false){
-  try{
-    if(server.isconnected()){
-        //Uncomment this in the future when unit testing is implemented on
-        // the sensor similar to the valve
-        //logTable.UnitTesting <- unitTesting;
-        agent.send("logglyWarn", logTable)
-    } else if(forceConnect){
-        //connect and send loggly stuff
-        server.connect(function (connectStatus){
-            forcedLogglyConnect(connectStatus, logTable, "logglyWarn");
-        }, logglyConnectTimeout);
-    }
-  } catch (error) {
-    server.log("Loggly Warn Error: " + error)
-  }
+  logglyGeneral(logTable, forceConnect, "WARN");
 }
 
 //TODO: make server logging optional part of logglyerror
 function logglyError(logTable = {}, forceConnect = false){
-  try{
-    if(server.isconnected()){
-        //Uncomment this in the future when unit testing is implemented on
-        // the sensor similar to the valve
-        //logTable.UnitTesting <- unitTesting;
-        agent.send("logglyError", logTable)
-    } else if(forceConnect){
-        //connect and send loggly stuff
-        server.connect(function (connectStatus){
-            forcedLogglyConnect(connectStatus, logTable, "logglyError");
-        }, logglyConnectTimeout);
-    }
-  } catch (error) {
-    server.log("Loggly Error encountered an error: " + error)
-  }
+  logglyGeneral(logTable, forceConnect, "ERROR");
 }
 
 
@@ -1111,7 +1096,7 @@ function startControlFlow()
             branching=1;
             //This DOES try to force connection
             logglyError({
-              "sensorError" : "Waking From Software Reset (OS level Error, could be memory related)"
+              "error" : "Waking From Software Reset (OS level Error, could be memory related)"
             });
             break
         case WAKEREASON_NEW_SQUIRREL:
@@ -1124,7 +1109,7 @@ function startControlFlow()
             branching=2;
             //This DOES try to force connection
             logglyError({
-              "sensorError" : "Waking From Squirrel Runtime Error"
+              "error" : "Waking From Squirrel Runtime Error"
             }, true);
             break
 
@@ -1335,7 +1320,8 @@ function regularOperation(){
           }
       }else{imp.sleep(0.1)};
       }
-      catch(error){server.log("LTC SAMPLING ERROR");}
+      catch(error)
+      {server.log("LTC SAMPLING ERROR");}
 
       //server.log("PM PASS");
       humidityTemperatureSensor.sample();

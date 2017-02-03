@@ -46,7 +46,12 @@ loggly <- Loggly(logglyKey, {
 
 const SCHEMA_VERSION = "0.1"
 
-function addLogglyDefault(logTable){
+// TODO: Dustin, this was missing an 's' for a long time.
+// What do you think the implications were?
+function addLogglyDefaults(logTable){
+  if (!("machineType" in bodyResponseTable)) {
+    logTable.machineType <- "agent";
+  }
   logTable.macAddress <- macAgentSide;
   logTable.sourceGroup <- "Firmware";
   logTable.env <- "Production";
@@ -205,14 +210,28 @@ function loadBackendSettings(){
 //put the agent url on loggly. This will happen WHENEVER the agent is restarted
 logglyLog({"agentURL" : http.agenturl()}, "Log");
 
+function attributeLogToDevice(logTable){
+  logTable.machineType <- "device"
+  return logTable
+}
+
 device.on("logglyLog",
-  function(logTable){logglyLog(logTable, "Log")}
+  function(logTable){
+    logTable = attributeLogToDevice(logTable);
+    logglyLog(logTable, "Log");
+  }
 );
 device.on("logglyWarn",
-  function(logTable){logglyLog(logTable, "Warning")}
+  function(logTable){
+    logTable = attributeLogToDevice(logTable);
+    logglyLog(logTable, "Warning");
+  }
 );
 device.on("logglyError",
-  function(logTable){logglyLog(logTable, "Error")}
+  function(logTable){
+    logTable = attributeLogToDevice(logTable);
+    logglyLog(logTable, "Error");
+  }
 );
 
 function failedSendTable(targetURL, body, statuscode){
