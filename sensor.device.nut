@@ -905,6 +905,7 @@ function connect(callback, timeout) {
 // return true if the collected data should be sent to the server
 function isServerRefreshNeeded(lastSentData, currentData){
   //if we've never sent data, send data.
+  if(debug)server.log("debug mode");
   if(lastSentData == null) {
     return true
   }
