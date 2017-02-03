@@ -1318,10 +1318,13 @@ function regularOperation(){
           if(powerManager.reg_3==null){
             server.log("Possible damage to the LTC or I2C busses.");
           }
-      }else{imp.sleep(0.1)};
+      }else{
+          imp.sleep(0.1)
+      };
       }
-      catch(error)
-      {server.log("LTC SAMPLING ERROR");}
+      catch(error){
+          server.log("LTC SAMPLING ERROR");
+      }
 
       //server.log("PM PASS");
       humidityTemperatureSensor.sample();
