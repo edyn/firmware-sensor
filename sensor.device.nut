@@ -38,7 +38,7 @@ const HIGHEST_FREQUENCY = 60 * 5; //60 seconds * 5
 const HIGH_FREQUENCY = 60 * 10;   //60 seconds * 10
 const MEDIUM_FREQUENCY= 60 * 30;  //60 seconds * 30
 const LOW_FREQUENCY = 60 * 60;    //60 seconds * 60
-const LOWER_FREQUENCY = 60 * 120; //60 seconds * 120
+const LOWER_FREQUENCY = 60 * 100; //60 seconds * 100
 const LOWEST_FREQUENCY = 60 * 240;//60 seconds * 240
 
 const HIGHEST_BATTERY = 3.4;         //Volts
