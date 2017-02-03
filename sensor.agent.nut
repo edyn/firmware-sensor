@@ -75,7 +75,7 @@ function serverLogTable(inputTable, level){
                             server.log("\tArray " + key + " index " + x " : " + value[x]);
                         } else {
                             //easiest way to log these subtable/subarrays without throwing error
-                            server.log("\tArray " + key + " index " + x " : " + http.jsonencode(value[x]);
+                            server.log("\tArray " + key + " index " + x " : " + http.jsonencode(value[x]));
                         }
                     }
                 }
