@@ -903,9 +903,9 @@ function connect(callback, timeout) {
 
 
 // return true if the collected data should be sent to the server
-function isServerRefreshNeeded(dataLastSent, currentData){
+function isServerRefreshNeeded(lastSentData, currentData){
   //if we've never sent data, send data.
-  if(dataLastSent == null) {
+  if(lastSentData == null) {
     return true
   }
   //if we're connected, might as well send
@@ -928,7 +928,7 @@ function isServerRefreshNeeded(dataLastSent, currentData){
     } else {
       return false //battery critical!
     }
-    return ((currentData.ts - dataLastSent.ts) > sendInterval);
+    return ((currentData.ts - lastSentData.ts) > sendInterval);
 }
 
 
