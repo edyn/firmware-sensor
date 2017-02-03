@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 // Edyn - Soil IQ - Probe
 //
-// Imp Agent code runs on a server in the Imp Cloud. 
+// Imp Agent code runs on a server in the Imp Cloud.
 // It forwards data from the Imp Device to the Edyn server.
 ////////////////////////////////////////////////////////////
 #require "Firebase.class.nut:1.0.0"
@@ -38,15 +38,20 @@ OS_VERSION <- "unknown";
 
 //loggly
 logglyKey <- "1890ff8f-0c0a-4ca0-b2f4-74f8f3ea469b"
-loggly <- Loggly(logglyKey, { 
+loggly <- Loggly(logglyKey, {
     "tags" : "sensorLogs",
     "timeout" : 60,
-    "limit" : 20 //arbitrary 
+    "limit" : 20 //arbitrary
 });
 
 const SCHEMA_VERSION = "0.1"
 
-function addLogglyDefault(logTable){
+// TODO: Dustin, this was missing an 's' for a long time.
+// What do you think the implications were?
+function addLogglyDefaults(logTable){
+  if (!("machineType" in bodyResponseTable)) {
+    logTable.machineType <- "agent";
+  }
   logTable.macAddress <- macAgentSide;
   logTable.sourceGroup <- "Firmware";
   logTable.env <- "Production";
@@ -199,14 +204,28 @@ function loadBackendSettings(){
 //put the agent url on loggly. This will happen WHENEVER the agent is restarted
 logglyLog({"agentURL" : http.agenturl()}, "Log");
 
-device.on("logglyLog", 
-  function(logTable){logglyLog(logTable, "Log")}
+function attributeLogToDevice(logTable){
+  logTable.machineType <- "device"
+  return logTable
+}
+
+device.on("logglyLog",
+  function(logTable){
+    logTable = attributeLogToDevice(logTable);
+    logglyLog(logTable, "Log");
+  }
 );
-device.on("logglyWarn", 
-  function(logTable){logglyLog(logTable, "Warning")}
+device.on("logglyWarn",
+  function(logTable){
+    logTable = attributeLogToDevice(logTable);
+    logglyLog(logTable, "Warning");
+  }
 );
-device.on("logglyError", 
-  function(logTable){logglyLog(logTable, "Error")}
+device.on("logglyError",
+  function(logTable){
+    logTable = attributeLogToDevice(logTable);
+    logglyLog(logTable, "Error");
+  }
 );
 
 function failedSendTable(targetURL, body, statuscode){
@@ -359,7 +378,7 @@ function processInputUVCL(input){
 }
 
 function getOrSetLocationSettings(){
-    
+
 }
 
 function processPowerData(inputPowerDataRegisters){
@@ -411,13 +430,13 @@ function processWakeReason(integerWakeReason){
           return "WAKEREASON_SQUIRREL_ERROR"
       case 6:
           return "WAKEREASON_NEW_FIRMWARE"
-      case 7: 
+      case 7:
           return "WAKEREASON_SNOOZE"
       case 8:
           return "WAKEREASON_HW_RESET"
       case 9:
           return "WAKEREASON_BLINKUP"
-    } 
+    }
     //this is not accepted by the backend yet but should NEVER happen:
     return "WAKEREASON_NOT_FOUND"
 }
@@ -469,11 +488,11 @@ device.on("data", processAndSendDeviceData);
 
 function addColons(bssid) {
   local result = bssid.slice(0, 2);
-  
+
   for (local i = 2; i < 12; i += 2) {
     result += ":" + bssid.slice(i, (i + 2));
   }
-  
+
   return result;
 }
 
@@ -486,14 +505,14 @@ device.onconnect(function() {
   // (accessed with server.load/save) will be empty.
   // When the agent starts it can check to see if this is empty and
   // if so, send a message to the device.
-  
+
   // Load the settings table in from permanent storage
   local settings = server.load();
-  
+
   if(OS_VERSION == "unknown"){
       device.send("syncOSVersion", []);
   }
-  
+
   if(fullResSet)
     {
         server.log("here")
@@ -502,7 +521,7 @@ device.onconnect(function() {
         server.log("Full Res Set To False")
         fullResSet=false
     }
-}) 
+})
 
 // device.send("location_request", {test = "t"});
 // server.log("Initiated location information request");
@@ -529,7 +548,7 @@ function httpPostWrapper (url, headers, string) {
 //Full res related stuff:
 device.on("fullRes",function(data)
 {
-    
+
     local fullTailSend=array(10000);
     local fullBendSend=array(10000);
     for(local z=0;z<20000;z+=2)
@@ -548,7 +567,7 @@ device.on("fullRes",function(data)
             //data.data[0]["ts"].tostring().slice(0,5)+"/"
             server.log("SENT HIGH RES DATA")
 
-    
+
 }
 )
 
@@ -579,14 +598,3 @@ http.onrequest(function (request, response) {
         response.send(500, "Error: " + ex);
     }
 });
-
-
- 
-
-
-
-
-
-
-
-
