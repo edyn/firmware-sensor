@@ -49,7 +49,7 @@ const SCHEMA_VERSION = "0.1"
 // TODO: Dustin, this was missing an 's' for a long time.
 // What do you think the implications were?
 function addLogglyDefaults(logTable){
-  if (!("machineType" in bodyResponseTable)) {
+  if (!("machineType" in logTable) {
     logTable.machineType <- "agent";
   }
   logTable.macAddress <- macAgentSide;
