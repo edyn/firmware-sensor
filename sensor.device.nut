@@ -1523,5 +1523,5 @@ try{
         }
     );
     //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
-    enter_deep_sleep_running("error in main");
+    power.enter_deep_sleep_running("error in main");
 }
