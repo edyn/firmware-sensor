@@ -34,12 +34,12 @@ const blinkupTime = 90;
 //Loggly Timeout Variable:
 const logglyConnectTimeout = 20;
 
-const HIGHEST_FREQUENCY = 60 * 5; //60 seconds * 5
-const HIGH_FREQUENCY = 60 * 10;   //60 seconds * 10
-const MEDIUM_FREQUENCY= 60 * 30;  //60 seconds * 30
-const LOW_FREQUENCY = 60 * 60;    //60 seconds * 60
-const LOWER_FREQUENCY = 60 * 100; //60 seconds * 100
-const LOWEST_FREQUENCY = 60 * 240;//60 seconds * 240
+const HIGHEST_FREQUENCY = 300; //60 seconds * 5
+const HIGH_FREQUENCY = 600;   //60 seconds * 10
+const MEDIUM_FREQUENCY= 1800;  //60 seconds * 30
+const LOW_FREQUENCY = 3600;    //60 seconds * 60
+const LOWER_FREQUENCY = 6000; //60 seconds * 100
+const LOWEST_FREQUENCY = 7200;//60 seconds * 240
 
 const HIGHEST_BATTERY = 3.4;         //Volts
 const HIGH_BATTERY = 3.35
