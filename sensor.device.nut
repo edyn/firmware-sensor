@@ -1432,19 +1432,20 @@ function regularOperation(){
     //end regularOperation
 
 
+// create non-volatile storage if it doesn't exist
+if (!("nv" in getroottable() && "data" in nv)) {
+    nv<-{
+        wakeFromError = false,
+        data = [],
+        data_sent = null,
+        running_state = true, PMRegB=[0x00,0x00],
+        PMRegC=[0x00,0x00],
+        pastConnect=false
+    };
+}
+
 function main() {
 
-    // create non-volatile storage if it doesn't exist
-    if (!("nv" in getroottable() && "data" in nv)) {
-        nv<-{
-          wakeFromError = false,
-          data = [],
-          data_sent = null,
-          running_state = true, PMRegB=[0x00,0x00],
-          PMRegC=[0x00,0x00],
-          pastConnect=false
-        };
-    }
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
 
     if(control==0){
