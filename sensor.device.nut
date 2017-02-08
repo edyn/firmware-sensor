@@ -903,12 +903,10 @@ function connect(callback, timeout) {
         } catch(error) {
           if(connectionStatus){
           server.log("error in callback from function 'connect'")
-            logglyError(
-              {
-                "message" : "Error in connect's callback function",
-                "Error" : error
-              }
-            );
+            logglyError({
+              "message" : "Error in connect's callback function",
+              "Error" : error
+            });
           } else {
             nv.wakeFromError = true;
           }
@@ -1544,11 +1542,9 @@ try{
           function(connectStatus){
             if(connectStatus){
               server.log("waking from unknown error")
-              logglyError(
-                {
+              logglyError({
                   "message" : "waking from unknown error"
-                }
-              );
+              });
               //reset ONLY if we successfully connect and log
               nv.wakeFromError = false;
             }
