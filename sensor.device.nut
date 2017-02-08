@@ -915,8 +915,8 @@ function connect(callback, timeout) {
           //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
           power.enter_deep_sleep_running("error in callback from connect");
         }
-      }
-    , timeout);
+      },
+    timeout);
   }
 }
 
@@ -1543,6 +1543,7 @@ try{
       server.connect(
           function(connectStatus){
             if(connectStatus){
+              server.log("waking from unknown error")
               logglyError(
                 {
                   "message" : "waking from unknown error"
@@ -1553,8 +1554,8 @@ try{
             }
             //run main no matter what
             main();
-          }
-        , CONNECTION_TIME_ON_ERROR_WAKEUP)
+          },
+        CONNECTION_TIME_ON_ERROR_WAKEUP)
       }
     }
   } else {
