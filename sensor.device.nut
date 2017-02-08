@@ -1536,24 +1536,38 @@ function WatchDog(){
 }
 WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
 try{
-  if(!nv.wakeFromError)
+  if(!nv.wakeFromError){
     main();
   } else {
-    server.connect(
-      function(connectStatus){
-        if(connectStatus){
-          logglyError(
-            {
-              "message" : "waking from unknown error"
+    if(!server.isconnected()){
+      server.connect(
+          function(connectStatus){
+            if(connectStatus){
+              logglyError(
+                {
+                  "message" : "waking from unknown error"
+                }
+              );
+              //reset ONLY if we successfully connect and log
+              nv.wakeFromError = false;
             }
-          );
-          //reset ONLY if we successfully connect and log
-          nv.wakeFromError = false;
-        }
-        //run main no matter what
-        main();
+            //run main no matter what
+            main();
+          }
+        , CONNECTION_TIME_ON_ERROR_WAKEUP)
       }
-    , CONNECTION_TIME_ON_ERROR_WAKEUP)
+    }
+  } else {
+    logglyError(
+        {
+          "message" : "waking from unknown error"
+        }
+      );
+      //reset ONLY if we successfully connect and log
+      nv.wakeFromError = false;
+    }
+    //run main no matter what
+    main();
   }
 } catch (error) {
     server.log(error)
