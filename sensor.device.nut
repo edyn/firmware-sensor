@@ -894,7 +894,25 @@ function connect(callback, timeout) {
   else {
     if (debug == true) server.log("Need to connect first");
     // Otherwise, proceed as normal
-    server.connect(callback, timeout);
+    server.connect(
+      function(connectionStatus){
+        try{
+          callback(connectionStatus)
+        } catch(error) {
+          if(connectionStatus){
+          server.log("error in callback from function 'connect'")
+            logglyError(
+              {
+                "message" : "Error in connect's callback function",
+                "Error" : error
+              }
+            );
+          } else {
+            //going to handle this in next commit
+          }
+        }
+      }
+    , timeout);
   }
 }
 
