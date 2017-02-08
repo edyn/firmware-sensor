@@ -1563,8 +1563,8 @@ try{
     main();
   }
 } catch (error) {
-    server.log(error)
     if(server.isconnected()){
+      server.log(error)
       logglyError({
         "message" : "error in main!", 
         "error" : error
