@@ -1557,13 +1557,10 @@ try{
           },
         CONNECTION_TIME_ON_ERROR_WAKEUP)
       }
-    }
-  } else {
-    logglyError(
-        {
-          "message" : "waking from unknown error"
-        }
-      );
+    } else {
+      logglyError({
+        "message" : "waking from unknown error"
+      });
       //reset ONLY if we successfully connect and log
       nv.wakeFromError = false;
     }
@@ -1573,12 +1570,10 @@ try{
 } catch (error) {
     server.log(error)
     if(server.isconnected()){
-      logglyError(
-          {
-              "message" : "error in main!", 
-              "error" : error
-          }
-      );
+      logglyError({
+        "message" : "error in main!", 
+        "error" : error
+      });
     } else {
       nv.wakeFromError = true;
     }
