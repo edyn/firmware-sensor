@@ -911,9 +911,9 @@ function connect(callback, timeout) {
             );
           } else {
             nv.wakeFromError = true;
-            //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
-            power.enter_deep_sleep_running("error in callback from connect");
           }
+          //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
+          power.enter_deep_sleep_running("error in callback from connect");
         }
       }
     , timeout);
@@ -1557,12 +1557,16 @@ try{
   }
 } catch (error) {
     server.log(error)
-    logglyError(
-        {
-            "message" : "error in main!", 
-            "error" : error
-        }
-    );
+    if(server.isconnected()){
+      logglyError(
+          {
+              "message" : "error in main!", 
+              "error" : error
+          }
+      );
+    } else {
+      nv.wakeFromError = true;
+    }
     //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
     power.enter_deep_sleep_running("error in main");
 }
