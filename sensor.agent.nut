@@ -261,11 +261,14 @@ function send_data_json_node(data) {
   //failed send to backend
   if (res.statuscode < 200 || res.statuscode > 203) {
     // TODO: retry?
-    server.log("Error sending message to Postgres database.");
+    server.log("Error sending message to Postgres database");
     local logglyWarnTable = failedSendTable(readings_url, res.body, res.statuscode);
     logglyLog(logglyWarnTable, "Warning");
   } else {
-    server.log("Data sent successfully to Postgres database.");
+    logglyLog({
+      "message": "Readings sent successfully to Postgres database"
+    }, "Log");
+    server.log("Readings sent successfully to Postgres database");
   }
 }
 
