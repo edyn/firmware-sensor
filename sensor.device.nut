@@ -47,6 +47,8 @@ const MEDIUM_BATTERY = 3.3;      //Volts
 const LOW_BATTERY = 3.24;         //Volts
 const LOWER_BATTERY = 3.195;        //Volts
 
+const CONNECTION_TIME_ON_ERROR_WAKEUP = 30;
+
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
@@ -908,7 +910,9 @@ function connect(callback, timeout) {
               }
             );
           } else {
-            //going to handle this in next commit
+            nv.wakeFromError = true;
+            //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
+            power.enter_deep_sleep_running("error in callback from connect");
           }
         }
       }
@@ -1435,6 +1439,7 @@ function main() {
     // create non-volatile storage if it doesn't exist
     if (!("nv" in getroottable() && "data" in nv)) {
         nv<-{
+          wakeFromError = false,
           data = [],
           data_sent = null,
           running_state = true, PMRegB=[0x00,0x00],
@@ -1531,7 +1536,25 @@ function WatchDog(){
 }
 WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
 try{
+  if(!nv.wakeFromError)
     main();
+  } else {
+    server.connect(
+      function(connectStatus){
+        if(connectStatus){
+          logglyError(
+            {
+              "message" : "waking from unknown error"
+            }
+          );
+          //reset ONLY if we successfully connect and log
+          nv.wakeFromError = false;
+        }
+        //run main no matter what
+        main();
+      }
+    , CONNECTION_TIME_ON_ERROR_WAKEUP)
+  }
 } catch (error) {
     server.log(error)
     logglyError(
