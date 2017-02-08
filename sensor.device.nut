@@ -1556,7 +1556,6 @@ try{
             main();
           },
         CONNECTION_TIME_ON_ERROR_WAKEUP)
-      }
     } else {
       logglyError({
         "message" : "waking from unknown error"
