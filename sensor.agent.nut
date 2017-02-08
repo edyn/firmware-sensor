@@ -98,7 +98,7 @@ function logglyLog(logTable = {"message" : "empty log table passed to logglyLog"
     try{
         if(type(logTable) != type({})){
             loggly.warn({"agentWarning" : "non-table passed to logglyLog"});
-            server.log("NON TABLE PASSED TO LOGGLYLOG!")
+            server.error("NON TABLE PASSED TO LOGGLYLOG!")
         } else {
             logTable = addLogglyDefaults(logTable);
             if(serverLog){
@@ -117,7 +117,7 @@ function logglyLog(logTable = {"message" : "empty log table passed to logglyLog"
             }
         }
     } catch (error) {
-        server.log("error in logglyLog")
+        server.error("error in logglyLog")
         loggly.error({
             "function" : "logglyLog",
             "error" : error
@@ -143,7 +143,7 @@ function recordBackendSettings(){
         local res = req.sendsync();
         //TODO: make generic handling function for HTTP requests
         if(res.statuscode < 200 || res.statuscode > 204){
-            server.log("Failed to save backend settings to firebase")
+            server.error("Failed to save backend settings to firebase")
             logglyLog(
                 {
                     "message" : "Failed to save backend settings",
@@ -154,7 +154,7 @@ function recordBackendSettings(){
             server.log("Saved backend settings to firebase")
         }
     } catch(error) {
-        server.log("error in saveBackendSettings: " + error)
+        server.error("error in saveBackendSettings: " + error)
     }
 }
 
@@ -168,7 +168,7 @@ function loadBackendSettings(){
         local res = req.sendsync();
         //TODO: make generic handling function for HTTP requests
         if(res.statuscode < 200 || res.statuscode > 204){
-            server.log("Failed to load backend settings " + res.statuscode)
+            server.error("Failed to load backend settings " + res.statuscode)
             logglyLog(
                 {
                     "message" : "Failed to load backend settings",
@@ -203,7 +203,7 @@ function loadBackendSettings(){
             }
         }
     } catch(error) {
-        server.log("error in loadBackendSettings: " + error)
+        server.error("error in loadBackendSettings: " + error)
     }
 }
 
@@ -261,7 +261,7 @@ function send_data_json_node(data) {
   //failed send to backend
   if (res.statuscode < 200 || res.statuscode > 203) {
     // TODO: retry?
-    server.log("Error sending message to Postgres database.");
+    server.error("Error sending message to Postgres database.");
     local logglyWarnTable = failedSendTable(readings_url, res.body, res.statuscode);
     logglyLog(logglyWarnTable, "Warning");
   } else {
@@ -275,10 +275,10 @@ function processResponse(incomingDataTable) {
   if (incomingDataTable.statuscode != 200) {
     // TODO: retry?
     // server.log("error sending message: " + res.body);
-    server.log("API status code: " + res.statuscode);
+    server.error("API status code: " + res.statuscode);
     // server.log(res.body);
     // server.log("error sending message: " + res.body.slice(0,40));
-    server.log("Error saving device location in DB.");
+    server.error("Error saving device location in DB.");
     local logglyWarnTable = failedSendTable(res.statuscode);
     logglyLog(logglyWarnTable, "Warning");
   }
