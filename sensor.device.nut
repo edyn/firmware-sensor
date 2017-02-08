@@ -902,7 +902,7 @@ function connect(callback, timeout) {
           callback(connectionStatus)
         } catch(error) {
           if(connectionStatus){
-          server.log("error in callback from function 'connect'")
+            server.log("error in callback from function 'connect'")
             logglyError({
               "message" : "Error in connect's callback function",
               "Error" : error
