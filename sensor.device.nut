@@ -47,6 +47,8 @@ const MEDIUM_BATTERY = 3.3;      //Volts
 const LOW_BATTERY = 3.24;         //Volts
 const LOWER_BATTERY = 3.195;        //Volts
 
+const CONNECTION_TIME_ON_ERROR_WAKEUP = 30;
+
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
@@ -894,7 +896,25 @@ function connect(callback, timeout) {
   else {
     if (debug == true) server.log("Need to connect first");
     // Otherwise, proceed as normal
-    server.connect(callback, timeout);
+    server.connect(
+      function(connectionStatus){
+        try{
+          callback(connectionStatus)
+        } catch(error) {
+          if(connectionStatus){
+            server.log("error in callback from function 'connect'")
+            logglyError({
+              "message" : "Error in connect's callback function",
+              "Error" : error
+            });
+          } else {
+            nv.wakeFromError = true;
+          }
+          //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
+          power.enter_deep_sleep_running("error in callback from connect");
+        }
+      },
+    timeout);
   }
 }
 
@@ -1412,18 +1432,20 @@ function regularOperation(){
     //end regularOperation
 
 
+// create non-volatile storage if it doesn't exist
+if (!("nv" in getroottable() && "data" in nv)) {
+    nv<-{
+        wakeFromError = false,
+        data = [],
+        data_sent = null,
+        running_state = true, PMRegB=[0x00,0x00],
+        PMRegC=[0x00,0x00],
+        pastConnect=false
+    };
+}
+
 function main() {
 
-    // create non-volatile storage if it doesn't exist
-    if (!("nv" in getroottable() && "data" in nv)) {
-        nv<-{
-          data = [],
-          data_sent = null,
-          running_state = true, PMRegB=[0x00,0x00],
-          PMRegC=[0x00,0x00],
-          pastConnect=false
-        };
-    }
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
 
     if(control==0){
@@ -1512,4 +1534,45 @@ function WatchDog(){
     power.enter_deep_sleep_failed("watchdog")
 }
 WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
-main();
+try{
+  if(!nv.wakeFromError){
+    main();
+  } else {
+    if(!server.isconnected()){
+      server.connect(
+          function(connectStatus){
+            if(connectStatus){
+              server.log("waking from unknown error")
+              logglyError({
+                  "message" : "waking from unknown error"
+              });
+              //reset ONLY if we successfully connect and log
+              nv.wakeFromError = false;
+            }
+            //run main no matter what
+            main();
+          },
+        CONNECTION_TIME_ON_ERROR_WAKEUP)
+    } else {
+      logglyError({
+        "message" : "waking from unknown error"
+      });
+      //reset ONLY if we successfully connect and log
+      nv.wakeFromError = false;
+    }
+    //run main no matter what
+    main();
+  }
+} catch (error) {
+    if(server.isconnected()){
+      server.log(error)
+      logglyError({
+        "message" : "error in main!", 
+        "error" : error
+      });
+    } else {
+      nv.wakeFromError = true;
+    }
+    //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
+    power.enter_deep_sleep_running("error in main");
+}
