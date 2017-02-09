@@ -485,7 +485,7 @@ function processAndSendDeviceData(deviceData){
         logglyLog({
             "function" : "processAndSendDeviceData",
             "message" : "a sub function may have failed",
-            "errorMessage" : error
+            "error" : error
         }, "Error");
     }
 }
