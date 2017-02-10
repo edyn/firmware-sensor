@@ -1393,11 +1393,6 @@ function sendStoredErrors(){
     }
 }
 
-function saveReadingToNV(inputReading){
-
-    nv.data.push(inputReading);
-}
-
 function regularOperation(){
 
       if (debug == true) server.log("Device booted.");
