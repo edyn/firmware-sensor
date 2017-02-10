@@ -808,7 +808,9 @@ function logglyWarn(logTable = {}, forceConnect = false){
 
 //TODO: make server logging optional part of logglyerror
 function logglyError(logTable = {}, forceConnect = false){
-  logglyGeneral(logTable, forceConnect, "ERROR");
+    if(server.isconnected()){
+        logglyGeneral(logTable, forceConnect, "ERROR");
+    }
 }
 
 
@@ -1600,7 +1602,9 @@ if (!("nv" in getroottable() && "data" in nv)) {
         data_sent = null,
         running_state = true, PMRegB=[0x00,0x00],
         PMRegC=[0x00,0x00],
-        pastConnect=false
+        pastConnect=false,
+        storedErrors = [],
+        storedErrorsCircularIndex = 0
     };
 }
 
