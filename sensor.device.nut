@@ -894,6 +894,9 @@ function connect(callback, timeout) {
     if (debug == true) server.log("Server connected");
     // We're already connected, so execute the callback
     nv.pastConnect=true;
+    if(nv.storedErrors.len()){
+      sendStoredErrors();
+    }
     callback(SERVER_CONNECTED);
   }
   else {
@@ -902,6 +905,10 @@ function connect(callback, timeout) {
     server.connect(
       function(connectionStatus){
         try{
+          //always send errors if possible
+          if(nv.storedErrors.len()){
+            sendStoredErrors();
+          }
           callback(connectionStatus)
         } catch(error) {
           if(connectionStatus){
