@@ -1260,6 +1260,31 @@ function collectReadingData(){
     });
 }
 
+//only useful if you're connected
+function logFreeNVMemory(){
+    try{
+        local nvSize = estimateSize(nv);
+        local freeNV = NV_SIZE_LIMIT - nvSize;
+        local numberReadings = nv.data.len();
+        local readingsSize = estimateSize(nv.data);
+        local averageReadingSize = 0.0;
+        if(numberReadings){
+            averageReadingSize = readingsSize/numberReadings;
+        }
+        server.log("REMAINING NV MEMORY: " + freeNV);
+        logglyLog({
+            "freeNVMemory" : freeNV,
+            "readingsSize" : readingsSize,
+            "numberReadings" : numberReadings,
+            "averageReadingSize" : averageReadingSize,
+            "non-readings size" : nvSize - readingsSize
+        });
+    } catch(error){
+        server.log("error in logFreeNVMemory: " + error)
+        return
+    }
+}
+
 function saveReadingToNV(inputReading){
 
     nv.data.push(inputReading);
