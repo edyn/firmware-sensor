@@ -1316,6 +1316,30 @@ function logFreeNVMemory(){
     }
 }
 
+function pushError(errorTable){
+    local numberStoredErrors = nv.storedErrors.len();
+    //less than maximum number stored are in the nv table:
+    //trim the nv readings if there isn't enough room since errors are more important:
+    if(trimStoredNVReadingsEvenly(estimateSize(errorTable))){
+        if(numberStoredErrors < STORED_ERRORS_MAX){
+            nv.storedErrors.append(errorTable);
+        } else {
+            //record if the circular buffer is full
+            if(numberStoredErrors < STORED_ERRORS_MAX + 1){
+                //this technically makes the length of STORED_ERRORS_MAX above STORED_ERRORS_MAX but it's important.
+                nv.storedErrors.append({"error" : "More than " + STORED_ERRORS_MAX + "errors since sendStoredErrors last succeeded"})
+            }
+            //iterate the circular buffer
+            nv.storedErrors[nv.storedErrorsCircularIndex] = errorTable;
+            nv.storedErrorsCircularIndex += 1;
+            if(nv.storedErrorsCircularIndex >= STORED_ERRORS_MAX){
+                nv.storedErrorsCircularIndex = 0;
+            }
+        }
+    }
+    //if storedErrors is already
+}
+
 function sendStoredErrors(){
     try{
         local numberErrors =  nv.storedErrors.len();
