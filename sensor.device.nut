@@ -1211,6 +1211,25 @@ function blinkupFor(timer=90){
     imp.enableblinkup(false);
 }
 
+function collectReadingData(){
+    nv.data.push({
+        ts = theCurrentTimestamp,
+        t = humidityTemperatureSensor.temperature,
+        h = humidityTemperatureSensor.humidity,
+        l = solar.voltage(),
+        m = lastLastReading*(3.0/65536.0),
+        b = source.voltage(),
+        c = timeDiffTwo*(1.0/samplerHzA),
+        r = imp.rssi(),
+        w = hardware.wakereason()
+    });
+}
+
+function saveReadingToNV(inputReading){
+    
+    nv.data.push(inputReading);
+}
+
 function regularOperation(){
 
       if (debug == true) server.log("Device booted.");
@@ -1358,7 +1377,7 @@ function regularOperation(){
             i += 2;
           }
         }
-
+        local
         // store sensor data in non-volatile storage
         //0.1
         //testing or not
@@ -1366,30 +1385,8 @@ function regularOperation(){
         local batvol = source.voltage();
         //uncomment this sleep to get the light reading value change:
         imp.sleep(0.1);
-        if(runTest){
-            nv.data.push({
-              ts = theCurrentTimestamp,
-              t = humidityTemperatureSensor.temperature,
-              h = humidityTemperatureSensor.humidity,
-              l = solar.voltage(),
-              m = soil.voltage(),
-              b = source.voltage()
-              testResults=unitTest()
-            });
-        }else{
-              nv.data.push({
-              ts = theCurrentTimestamp,
-              t = humidityTemperatureSensor.temperature,
-              h = humidityTemperatureSensor.humidity,
-              l = solar.voltage(),
-              m = lastLastReading*(3.0/65536.0),
-              b = source.voltage(),
-              c = timeDiffTwo*(1.0/samplerHzA),
-              r = imp.rssi(),
-              w = hardware.wakereason()
-              });
-              //server.log("DEVICE SIDE CAPACITANCE:"+nv.data.top().c);
-        }
+        local newReading = collectReadingData();
+
         powerManager.resumeCharging();
 
       // End Saving
