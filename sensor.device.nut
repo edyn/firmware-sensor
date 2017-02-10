@@ -1277,6 +1277,30 @@ function trimStoredNVReadingsEvenly(inputDataSize){
     }
 }
 
+function saveReadingToNV(reading){
+    try{
+        local readingSize = estimateSize(reading);
+        local nvSize = estimateSize(nv);
+        local saveReadingTable = {}
+        saveReadingTable = clone(reading);
+        //trim the nv table if there isn't enough room:
+        if(trimStoredNVReadingsEvenly(readingSize)){
+            nv.data.append(saveReadingTable);
+        } else {
+            //can't log this in any way dealing the the NV table safely
+            server.log("failed to make room for reading");
+        }
+    } catch (error) {
+        server.log(error)
+        logglyError({
+            "error" : error,
+            "function" : "saveReadingToNV",
+            "message" : "Error saving a reading to NV on failed connection"
+        });
+        power.enter_deep_sleep_running("error in saving nv reading to table")
+    }
+}
+
 function collectReadingData(){
     nv.data.push({
         ts = theCurrentTimestamp,
