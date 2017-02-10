@@ -1364,7 +1364,6 @@ function pushError(errorTable){
             }
         }
     }
-    //if storedErrors is already
 }
 
 function sendStoredErrors(){
