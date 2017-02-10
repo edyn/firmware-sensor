@@ -1246,6 +1246,37 @@ function estimateSize(v) {
     return t;
 }
 
+//future todo: you could determine how many and which readings to throw away before removing any
+function trimStoredNVReadingsEvenly(inputDataSize){
+    //recalculate each time and check for readings:
+    try{
+        while((NV_SIZE_LIMIT - estimateSize(nv)) < inputDataSize && nv.data.len()){
+            local indexToRemove = 0;
+            local smallestTimeGap = 1893484800; //60 year time gap, so large it guarantees ANY real time gap is smaller
+            //collect gaps if there's more than one reading
+            if(nv.data.len() > 1){
+                for(local i = 1; i < nv.data.len(); i++){
+                    local currentIndexGap = nv.data[i].ts - nv.data[i - 1].ts;
+                    if(currentIndexGap < smallestTimeGap){
+                        smallestTimeGap = currentIndexGap;
+                        indexToRemove = i;
+                    }
+                }
+            }
+            //never remove the first reading (we can if we want to)
+            if(indexToRemove == 0){
+                return false
+            }
+            nv.data.remove(indexToRemove);
+        }
+        return true;
+    } catch (error){
+        //cannot risk saving this to nv! just return false I guess
+        server.log("error in trimStoredNVReadingsEvenly: " + error);
+        return false
+    }
+}
+
 function collectReadingData(){
     nv.data.push({
         ts = theCurrentTimestamp,
@@ -1284,6 +1315,8 @@ function logFreeNVMemory(){
         return
     }
 }
+
+
 
 function saveReadingToNV(inputReading){
 
