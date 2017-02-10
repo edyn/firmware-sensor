@@ -1211,6 +1211,41 @@ function blinkupFor(timer=90){
     imp.enableblinkup(false);
 }
 
+//table size estimator, accurate 'to within 100 bytes' (not very accurate)
+//because of this 100 byte resolution, we should avoid writing to the nv when it's size is 3800-3900 bytes
+function estimateSize(v) {
+    // Every table as a 4 byte size, then the entries, then a null, count
+    // size and trailing null to start with
+    local t = 4+1;
+    foreach(a,b in v) {
+        if (typeof v == "table") {
+            // BSON entries have type, name (cstring), then data
+            // Here we count the type and name with terminating nill
+            t += 1+a.len()+1;
+        } else {
+            // It's an array, there's a type byte per entry
+            t += 1;
+        }
+        switch(typeof b) {
+            case "table":
+            case "array":
+            t += estimateSize(b);
+            break;
+            case "integer":
+            case "float":
+            t += 4;
+            break;
+            case "bool":
+            t+=1;
+            break;
+            case "string":
+            t += 4+b.len()+1;
+            break;
+        }
+    }
+    return t;
+}
+
 function collectReadingData(){
     nv.data.push({
         ts = theCurrentTimestamp,
@@ -1226,7 +1261,7 @@ function collectReadingData(){
 }
 
 function saveReadingToNV(inputReading){
-    
+
     nv.data.push(inputReading);
 }
 
