@@ -49,6 +49,9 @@ const LOWER_BATTERY = 3.195;        //Volts
 
 const CONNECTION_TIME_ON_ERROR_WAKEUP = 30;
 
+const NV_SIZE_LIMIT = 3000; //bytes, value taken from valve code
+const STORED_ERRORS_MAX = 3; //stored errors
+
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
