@@ -1316,7 +1316,31 @@ function logFreeNVMemory(){
     }
 }
 
-
+function sendStoredErrors(){
+    try{
+        local numberErrors =  nv.storedErrors.len();
+        //if len returns 0, numberReadings is interpreted as false
+        if(numberErrors){
+            if(server.isconnected()){
+                //the reason for 2 for loops is so that we can do the "safe" version of recording first
+                for (local errIterator = 0; errIterator < numberErrors; errIterator++){
+                    server.log(nv.storedErrors[errIterator]);
+                }
+                //and the "dangerous" version second, as logglyError could be throwing errors, but server.log probably isn't
+                for (local errIterator = 0; errIterator < numberErrors; errIterator++){
+                    logglyError(nv.storedErrors[errIterator]);
+                }
+                if(server.flush(20)){
+                    nv.storedErrors = [];
+                }
+            }
+        }
+    } catch (error) {
+        //we don't want this to stop operations for the whole device, so this catch needs to be super safe
+        //it's better to not send errors at all than create new ones
+        server.log("ERROR SENDING STORED ERRORS: " + error)
+    }
+}
 
 function saveReadingToNV(inputReading){
 
