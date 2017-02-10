@@ -1545,16 +1545,16 @@ function regularOperation(){
             i += 2;
           }
         }
-        local
         // store sensor data in non-volatile storage
-        //0.1
-        //testing or not
+        //suspend charging
         powerManager.suspendCharging();
         local batvol = source.voltage();
         //uncomment this sleep to get the light reading value change:
         imp.sleep(0.1);
         local newReading = collectReadingData();
+        saveReadingToNV(newReading);
 
+        //resume charging
         powerManager.resumeCharging();
 
       // End Saving
