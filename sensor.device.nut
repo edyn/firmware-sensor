@@ -808,9 +808,7 @@ function logglyWarn(logTable = {}, forceConnect = false){
 
 //TODO: make server logging optional part of logglyerror
 function logglyError(logTable = {}, forceConnect = false){
-    if(server.isconnected()){
-        logglyGeneral(logTable, forceConnect, "ERROR");
-    }
+    logglyGeneral(logTable, forceConnect, "ERROR");
 }
 
 
