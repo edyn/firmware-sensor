@@ -893,6 +893,7 @@ function connect(callback, timeout) {
     if (debug == true) server.log("Server connected");
     // We're already connected, so execute the callback
     nv.pastConnect=true;
+    logFreeNVMemory();
     if(nv.storedErrors.len()){
       sendStoredErrors();
     }
@@ -904,6 +905,7 @@ function connect(callback, timeout) {
     server.connect(
       function(connectionStatus){
         try{
+          logFreeNVMemory();
           //always send errors if possible
           if(nv.storedErrors.len()){
             sendStoredErrors();
@@ -1337,7 +1339,7 @@ function logFreeNVMemory(){
         local readingsSize = estimateSize(nv.data);
         local averageReadingSize = 0.0;
         if(numberReadings){
-            averageReadingSize = readingsSize/numberReadings;
+            averageReadingSize = readingsSize / numberReadings;
         }
         server.log("REMAINING NV MEMORY: " + freeNV);
         logglyLog({
@@ -1364,7 +1366,9 @@ function pushError(errorTable){
             //record if the circular buffer is full
             if(numberStoredErrors < STORED_ERRORS_MAX + 1){
                 //this technically makes the length of STORED_ERRORS_MAX above STORED_ERRORS_MAX but it's important.
-                nv.storedErrors.append({"error" : "More than " + STORED_ERRORS_MAX + "errors since sendStoredErrors last succeeded"})
+                nv.storedErrors.append({
+                    "error" : "More than " + STORED_ERRORS_MAX + " errors since sendStoredErrors last succeeded"
+                });
             }
             //iterate the circular buffer
             nv.storedErrors[nv.storedErrorsCircularIndex] = errorTable;
@@ -1386,7 +1390,8 @@ function sendStoredErrors(){
                 for (local errIterator = 0; errIterator < numberErrors; errIterator++){
                     server.log(nv.storedErrors[errIterator]);
                 }
-                //and the "dangerous" version second, as logglyError could be throwing errors, but server.log probably isn't
+                //and the "dangerous" version second, 
+                //as logglyError could be throwing errors, but server.log probably isn't
                 for (local errIterator = 0; errIterator < numberErrors; errIterator++){
                     logglyError(nv.storedErrors[errIterator]);
                 }
