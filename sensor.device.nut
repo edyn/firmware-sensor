@@ -1739,44 +1739,48 @@ function WatchDog(){
 }
 WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
 try{
-  if(!nv.wakeFromError){
-    main();
-  } else {
-    if(!server.isconnected()){
-      server.connect(
-          function(connectStatus){
-            if(connectStatus){
-              server.log("waking from unknown error")
-              logglyError({
-                  "message" : "waking from unknown error"
-              });
-              //reset ONLY if we successfully connect and log
-              nv.wakeFromError = false;
+    if(!nv.storedErrors.len()){
+        main();
+    } else {
+        if(server.isconnected()){
+            //adding a little safety:
+            try{
+                sendStoredErrors();
+            } catch (error){
+                server.log("error in sendStoredErrors: " + error);
             }
-            //run main no matter what
-            main();
-          },
-        CONNECTION_TIME_ON_ERROR_WAKEUP)
-    } else {
-      logglyError({
-        "message" : "waking from unknown error"
-      });
-      //reset ONLY if we successfully connect and log
-      nv.wakeFromError = false;
+        } else {
+            server.connect(function(connectionStatus){
+                //adding a little safety:
+                try{
+                    sendStoredErrors();
+                } catch (error){
+                    server.log("error in sendStoredErrors: " + error);
+                } 
+                imp.wakeup(1.0,
+                    function(){
+                        try{
+                            main();
+                        } catch (error){
+                            logglyError({
+                                "message" : "error in main on forced connect!", 
+                                "error" : error,
+                                "timestamp" : time
+                            });
+                          //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
+                          power.enter_deep_sleep_running("error in main");
+                        }
+                    }
+                );
+            }, CONNECTION_TIME_ON_ERROR_WAKEUP); 
+        }
     }
-    //run main no matter what
-    main();
-  }
 } catch (error) {
-    if(server.isconnected()){
-      server.log(error)
-      logglyError({
+    logglyError({
         "message" : "error in main!", 
-        "error" : error
-      });
-    } else {
-      nv.wakeFromError = true;
-    }
+        "error" : error,
+        "timestamp" : time
+    });
     //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
     power.enter_deep_sleep_running("error in main");
 }
