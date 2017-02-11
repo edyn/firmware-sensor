@@ -49,8 +49,9 @@ const LOWER_BATTERY = 3.195;        //Volts
 
 const CONNECTION_TIME_ON_ERROR_WAKEUP = 30;
 
-const NV_SIZE_LIMIT = 3000; //bytes, value taken from valve code
+const NV_SIZE_LIMIT = 2900; //bytes, value taken from valve code
 const STORED_ERRORS_MAX = 3; //stored errors
+
 
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
@@ -1224,6 +1225,9 @@ function blinkupFor(timer=90){
 //table size estimator, accurate 'to within 100 bytes' (not very accurate)
 //because of this 100 byte resolution, we should avoid writing to the nv when it's size is 3800-3900 bytes
 function estimateSize(v) {
+    if(v == null){
+      return 0;
+    }
     // Every table as a 4 byte size, then the entries, then a null, count
     // size and trailing null to start with
     local t = 4+1;
@@ -1312,7 +1316,7 @@ function saveReadingToNV(reading){
 }
 
 function collectReadingData(){
-    nv.data.push({
+    local tempReading ={
         ts = theCurrentTimestamp,
         t = humidityTemperatureSensor.temperature,
         h = humidityTemperatureSensor.humidity,
@@ -1322,7 +1326,8 @@ function collectReadingData(){
         c = timeDiffTwo*(1.0/samplerHzA),
         r = imp.rssi(),
         w = hardware.wakereason()
-    });
+    }
+    return tempReading
 }
 
 //only useful if you're connected
@@ -1398,6 +1403,44 @@ function sendStoredErrors(){
         server.log("ERROR SENDING STORED ERRORS: " + error)
     }
 }
+
+//functions that are useful for testing NV safety:
+//todo: remove these comments from production code and make them available in a test document"
+
+//local testNVSafetyLoop(){
+//    local z = 0
+//    local y = 0
+//    while(1){
+//        testNVSafety()
+//        if(z < 100) {
+//            z++
+//            if(!(z%10)){
+//              logFreeNVMemory();
+//            }
+//        } else {
+//            server.log("DONE WITH RUN NUMBER " + y)
+//            y++
+//            nv.data = []
+//            sendStoredErrors();
+//        }
+//    }
+//}
+
+//function testNVSafety(){
+//  local roll = 1.0 * math.rand() / RAND_MAX;
+//  if(roll < 0.25){
+//        local newReading = collectReadingData();
+//        saveReadingToNV(newReading);
+//  } else if(roll < 0.5) {
+//        local newReading = {"ts" : time(), "ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD" : "ABCD"}
+//        saveReadingToNV(newReading);
+//  } else if (roll < 0.75) {
+//        pushError({"message" : "ABCD", "a" : "b", "c" : "d", "e" : "f" , "g" : "h"})
+//  } else {
+//        pushError({"ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD" : "ABCD"});
+//  }
+//  logFreeNVMemory();
+//}
 
 function regularOperation(){
 
