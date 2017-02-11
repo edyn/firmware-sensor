@@ -1382,7 +1382,7 @@ function pushError(errorTable){
 
 function sendStoredErrors(){
     try{
-        local numberErrors =  nv.storedErrors.len();
+        local numberErrors = nv.storedErrors.len();
         //if len returns 0, numberReadings is interpreted as false
         if(numberErrors){
             if(server.isconnected()){
