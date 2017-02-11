@@ -26,9 +26,7 @@ const INTERVAL_SLEEP_FAILED_S = 600; // sample sensors this often
 // const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
 const INTERVAL_SLEEP_SHIP_STORE_S = 2419198;
 const POLL_ITERATION_MAX = 5; // maximum number of iterations for sensor polling loop
-// const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
 // New setting now that we're recording register values
-const NV_ENTRIES_MAX = 19; // maximum NV entry space is about 55, based on testing
 const TZ_OFFSET = -25200; // 7 hours for PDT
 const blinkupTime = 90;
 //Loggly Timeout Variable:
@@ -1579,16 +1577,6 @@ function regularOperation(){
       //End Sampling
       //Begin Saving
 
-        // nv space is limited to 4kB and will not notify of failure
-        // discard every second entry if over MAX entries
-        // TODO: combine similar data points instead of discarding them
-        if (nv.data.len() > NV_ENTRIES_MAX) {
-          local i = 1;
-          while(i < nv.data.len()) {
-            nv.data.remove(i);
-            i += 2;
-          }
-        }
         // store sensor data in non-volatile storage
         //suspend charging
         powerManager.suspendCharging();
