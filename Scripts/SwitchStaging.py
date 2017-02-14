@@ -6,7 +6,7 @@ from os import remove, close
 import os
 
 mypath=os.path.dirname(os.path.abspath(__file__))
-agentFile=mypath+"/valve.agent.nut"
+agentFile=mypath+"/sensor.agent.nut"
 args = sys.argv;
 
 def replace(file_path, pattern, subst):

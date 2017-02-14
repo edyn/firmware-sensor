@@ -14,6 +14,8 @@ ArgumentList = sys.argv[1].split();
 
 #default inputs:
 versionNumber = "0.0.1"
+defaultValveVersion = "0.0.1"
+defaultSensorVersion = "0.0.2"
 staging = "feature"
 device = ""
 debugModes = [];
@@ -223,7 +225,6 @@ try:
 			device = "valve"
 		elif(ArgumentList[0].lower()[0] == "s"):
 			device = "sensor"
-			print "this doesn't work with sensor yet, come back in the fuuuuutuuuure"
 		else:
 			print "First argument needs to specify 'sensor' or 'valve'"
 			assert(device == "valve" or device == "sensor")
@@ -235,6 +236,10 @@ try:
 			versionNumber = ArgumentList[vIndex + 1]
 			print "Using Version Number " + versionNumber
 		else:
+			if(device == "sensor"):
+				versionNumber = defaultSensorVersion
+			elif (device == "valve"):
+				versionNumber = defaultValveVersion
 			print "Using Default Version Number: " + versionNumber
 
 		###################
@@ -257,25 +262,32 @@ try:
 		else:
 			print "Working with feature code in " + WorkingPath
 			getFeature()
-		#############
-		#Debug Modes#
-		#############
+		###################
+		#Valve Debug Modes#
+		###################
 
-		#Debug Memory
-		if("-dm" in ArgumentList):
-			memoryDebugMode()
-			staging = staging + "_Debug_Memory"
-		#Debug Offline Mode
-		if("-do" in ArgumentList):
-			offlineDebugMode()
-			staging = staging + "_Debug_Offline"
-		#Debug Lightning Mode
-		if("-lm" in ArgumentList):
-			lightningDebugMode()
-			staging = staging + "_Lightning"
+		if(device == "valve"):
+			#Debug Memory
+			if("-dm" in ArgumentList):
+				memoryDebugMode()
+				staging = staging + "_Debug_Memory"
+			#Debug Offline Mode
+			if("-do" in ArgumentList):
+				offlineDebugMode()
+				staging = staging + "_Debug_Offline"
+			#Debug Lightning Mode
+			if("-lm" in ArgumentList):
+				lightningDebugMode()
+				staging = staging + "_Lightning"
 
-		if("-bto" in ArgumentList):
-			setBlinkupTimerToOne();
+			if("-bto" in ArgumentList):
+				setBlinkupTimerToOne();
+		####################
+		#Sensor Debug Modes#
+		####################
+
+		if(device == "sensor"):
+			print "no debug modes yet"
 		############
 		#Unit Tests#
 		############
