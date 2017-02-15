@@ -15,7 +15,8 @@ deviceConcat=mypath+"/sensor.device.function.nut"
 
 #with open(agentConcat, 'w+') as fin:
 #    agentTestsText=fin.read()
-    
+ 
+print "\n     ***FUNCTIONAL TESTS***\n"   
 
 
 def replace(file_path, pattern, subst):
@@ -88,4 +89,4 @@ with open(deviceConcat, 'w+') as fin:
 with open(agentConcat, 'w+') as fin:
     fin.write(agentText + "\n" + agentTests)
 
-
+print "\nFUNCTIONAL TEST SETUP COMPLETE\n"
