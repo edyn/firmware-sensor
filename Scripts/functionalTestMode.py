@@ -5,13 +5,13 @@ from tempfile import mkstemp
 from shutil import move
 from os import remove, close
 mypath=os.path.dirname(os.path.abspath(__file__))
-agentFile=mypath+"/valve.agent.nut"
-agentTests=mypath+"/valve.agent.function.tests.nut"
-agentConcat=mypath+"/valve.agent.function.nut"
+agentFile=mypath+"/sensor.agent.nut"
+agentTests=mypath+"/sensor.agent.function.tests.nut"
+agentConcat=mypath+"/sensor.agent.function.nut"
 
-deviceFile=mypath+"/valve.device.nut"
-deviceTests=mypath+"/valve.device.function.tests.nut"
-deviceConcat=mypath+"/valve.device.function.nut"
+deviceFile=mypath+"/sensor.device.nut"
+deviceTests=mypath+"/sensor.device.function.tests.nut"
+deviceConcat=mypath+"/sensor.device.function.nut"
 
 #with open(agentConcat, 'w+') as fin:
 #    agentTestsText=fin.read()
@@ -39,32 +39,34 @@ wholeDeviceUnitFile=""
 
 #Simple Replace:
 replace(deviceFile, "server.sleepFor", "mostRecentDeepSleepCall = ")
-replace(deviceFile, "server.log(", "if(!mute)server.log(")
-replace(deviceFile, "forwardPin.write(1);","")
-replace(deviceFile, "controlPin.write(1);","")
-
-replace(deviceFile, "unitTesting <- false;", "unitTesting <- true;\ncodeDebug <- false;\ninitialPhaseBool <- false;\n throwError <- false")
-replace(deviceFile, "server.isconnected()", "fakeWifi")
-replace(deviceFile, "dataTable.batteryVoltage <- ", "dataTable.batteryVoltage <- fakeBattery//")
-replace(deviceFile, "dataTable.batteryMean <- nv.lastEMA;", "dataTable.batteryMean <- fakeBattery;")
-replace(deviceFile, "const BLINKUP_TIMER", "const BLINKUP_TIMER = 0.1;//")
-replace(deviceFile, "time()", "fakeTime")
-replace(deviceFile, "local nextConnectionTime", "local nextConnectionTime =  120//")
-replace(deviceFile, "server.connect(","server.disconnect();\nserver.connect(")
-replace(deviceFile, "function firstXSecondsCheck(){", "function firstXSecondsCheck(){return initialPhaseBool;")
-replace(deviceFile,'server.log("OS', '//')
-replace(deviceFile,'server.log("main")', '{}\nif(throwError){THROWANERROR};')
 replace(deviceFile, 'mostRecentDeepSleepCall = inputTime;', 'mostRecentDeepSleepCall = inputTime;\nsendResults();')
+replace(deviceFile, "server.log(", "if(!mute)server.log(")
 
-replace(deviceFile, "function correctReadingTimestamps(readings){", "function correctReadingTimestamps(readings){return readings")
+
+replace(deviceFile, "testing <- false;", "testing <- true;\ncodeDebug <- false;\ninitialPhaseBool <- false;\n throwError <- false")
+replace(deviceFile, "server.isconnected()", "fakeWifi")
+
+#todo: need to add fake battery value
+#todo: can i fake a 'not connected but then succeeds in connecting' kind of thing?
+
+#todo: this probably has a different name
+replace(deviceFile, "const BLINKUP_TIMER", "const BLINKUP_TIMER = 0.1;//")
+#this should work without changing it:
+replace(deviceFile, "time()", "fakeTime")
+#lol, the sensor should change to fit this, but we'll have to make due for now
+replace(deviceFile, "local nextConnectionTime", "local nextConnectionTime =  120//")
+#hmm this needs some further thought on the valve as well:
+replace(deviceFile, "server.connect(","server.disconnect();\nserver.connect(")
+
+#I guess we might add this to the sensor:
+replace(deviceFile,'server.log("main")', '{}\nif(throwError){THROWANERROR};')
+
 
 #Agent File Editing
-replace(agentFile,'server.log("OS', '//')
 replace(agentFile,'httpPut(updateWateringsURL', 'wateringToSend=http.jsondecode(wateringToSend)\nwateringToSend.uuid <- singleWatering.uuid;\nlastWateringsFromDevice.append(wateringToSend)//')
 #Simple Replace:
 replace(agentFile, '#require "Loggly.class.nut:1.1.0"','#require "Loggly.class.nut:1.1.0"\ncodeDebug <- false;\ntestDebug <- true;')
-replace(agentFile, 'local responseBody = httpGet(apiScheduleURL, "", headers)', 'local responseBody = scheduleFromBackend')
-replace(agentFile, "unitTesting <- 0;", 'unitTesting <- 1;')
+replace(agentFile, "testing <- 0;", 'testing <- 1;')
 replace(agentTests, "server.log", "if(testDebug)server.log")
 
 insertAtTopOfDevice = "fakeTime <- 0;\nmute <- false;\n"
