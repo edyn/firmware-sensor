@@ -1534,45 +1534,51 @@ function WatchDog(){
     power.enter_deep_sleep_failed("watchdog")
 }
 WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
-try{
-  if(!nv.wakeFromError){
-    main();
-  } else {
-    if(!server.isconnected()){
-      server.connect(
-          function(connectStatus){
-            if(connectStatus){
-              server.log("waking from unknown error")
-              logglyError({
-                  "message" : "waking from unknown error"
-              });
-              //reset ONLY if we successfully connect and log
-              nv.wakeFromError = false;
-            }
-            //run main no matter what
-            main();
-          },
-        CONNECTION_TIME_ON_ERROR_WAKEUP)
-    } else {
-      logglyError({
-        "message" : "waking from unknown error"
-      });
-      //reset ONLY if we successfully connect and log
-      nv.wakeFromError = false;
+
+
+function mainWithSafety(){
+    try{
+      if(!nv.wakeFromError){
+        main();
+      } else {
+        if(!server.isconnected()){
+          server.connect(
+              function(connectStatus){
+                if(connectStatus){
+                  server.log("waking from unknown error")
+                  logglyError({
+                      "message" : "waking from unknown error"
+                  });
+                  //reset ONLY if we successfully connect and log
+                  nv.wakeFromError = false;
+                }
+                //run main no matter what
+                main();
+              },
+            CONNECTION_TIME_ON_ERROR_WAKEUP)
+        } else {
+          logglyError({
+            "message" : "waking from unknown error"
+          });
+          //reset ONLY if we successfully connect and log
+          nv.wakeFromError = false;
+        }
+        //run main no matter what
+        main();
+      }
+    } catch (error) {
+        if(server.isconnected()){
+          server.log(error)
+          logglyError({
+            "message" : "error in main!", 
+            "error" : error
+          });
+        } else {
+          nv.wakeFromError = true;
+        }
+        //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
+        power.enter_deep_sleep_running("error in main");
     }
-    //run main no matter what
-    main();
-  }
-} catch (error) {
-    if(server.isconnected()){
-      server.log(error)
-      logglyError({
-        "message" : "error in main!", 
-        "error" : error
-      });
-    } else {
-      nv.wakeFromError = true;
-    }
-    //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
-    power.enter_deep_sleep_running("error in main");
 }
+
+mainWithSafety();

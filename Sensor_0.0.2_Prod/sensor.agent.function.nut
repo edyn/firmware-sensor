@@ -7,13 +7,7 @@ mainRun <- 0;
 
 function sendResults(){
 			mute = false;
-			server.log("LAST SLEEP: " + mostRecentDeepSleepCall + "\nWAKE REASON: " + wakeReason)
-			if(nv.data.len()){
-				server.log("STORED READINGS: " + nv.data.len());
-			}
-			if(nv.storedErrors.len()){
-				server.log("STORED ERRORS: " + nv.storedErrors.len());
-			}
+			server.log("LAST SLEEP: " + mostRecentDeepSleepCall + "\nVALVE STATE:" + nv.valveState + "\nWAKE REASON: " + wakeReason)
 			agent.send("deviceResults", {"mainRun" : mainRun, "lastSleep" : mostRecentDeepSleepCall,  "wakeReason" : wakeReason, "storedReadings" : nv.data.len()})
 			if(nv.storedErrors.len()){
 				for(local x = 0; x < nv.storedErrors.len(); x++){
@@ -22,10 +16,10 @@ function sendResults(){
 					} else {
 						server.log("no message in stored error #" + x)
 					}
-					if("Error" in nv.storedErrors[x]){
-						server.log("Error in stored error: " + nv.storedErrors[x].valveError)
+					if("valveError" in nv.storedErrors[x]){
+						server.log("valveError in stored error: " + nv.storedErrors[x].valveError)
 					} else {
-						server.log("no Error in stored error #" + x)
+						server.log("no valveError in stored error #" + x)
 					}
 				}
 			}
@@ -38,6 +32,7 @@ agent.on("runMain",
 		fakeWifi = runTable.online;
 		fakeTime = runTable.fakeTime;
 		wakeReason = runTable.wakeReason;
+		initialPhaseBool = runTable.initialTimeBool
 		mute = runTable.mute;
 		throwError = runTable.throwError;
 		mainRun += 1;
