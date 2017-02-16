@@ -1745,8 +1745,6 @@ function WatchDog(){
     power.enter_deep_sleep_failed("watchdog")
 }
 WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
-<<<<<<< HEAD:Sensor_0.0.2_Prod/sensor.device.nut
-
 
 function mainWithSafety(){
     try{
