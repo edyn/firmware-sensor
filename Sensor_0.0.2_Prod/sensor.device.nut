@@ -687,7 +687,7 @@ class power {
     //Implementing Electric Imp's sleeping fix
     //TODO: change inputTime to be the input of the function
     local inputTime = INTERVAL_SENSOR_SAMPLE_S;
-    if (debug == true) server.log("Deep sleep (running) call because: "+reason);
+    server.log("Deep sleep (running) call because: "+reason);
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) server.log("Starting deep sleep (running).");
@@ -711,7 +711,7 @@ class power {
     //blueLed.pulse();
     //TODO: change inputTime to be the input of the function
     local inputTime = INTERVAL_SLEEP_SHIP_STORE_S;
-    if (debug == true) server.log("Deep sleep (storage) call because: "+reason)
+    server.log("Deep sleep (storage) call because: " + reason);
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) server.log("Starting deep sleep (ship and store).");
@@ -729,7 +729,7 @@ class power {
     redLed.blink(0.1,6);
     //TODO: change inputTime to be the input of the function
     local inputTime = INTERVAL_SLEEP_FAILED_S;
-    if (debug == true) server.log("Deep sleep (failed) call because: "+reason)
+    server.log("Deep sleep (failed) call because: " + reason);
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) server.log("Starting deep sleep (failed).");
