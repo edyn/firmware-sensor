@@ -683,6 +683,8 @@ class power {
     //Old version before Electric Imp's sleeping fix
     //imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
     //Implementing Electric Imp's sleeping fix
+    //TODO: change inputTime to be the input of the function
+    local inputTime = INTERVAL_SENSOR_SAMPLE_S;
     if (debug == true) server.log("Deep sleep (running) call because: "+reason);
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
@@ -694,7 +696,7 @@ class power {
         //  server.log("The next wake to log will be the 'data transmission' wake.");
         //}
         //blueLed.on();
-        server.sleepfor(INTERVAL_SENSOR_SAMPLE_S);
+        server.sleepfor(inputTime);
       });
     });
   }
@@ -705,12 +707,14 @@ class power {
     //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
     //Implementing Electric Imp's sleeping fix
     //blueLed.pulse();
+    //TODO: change inputTime to be the input of the function
+    local inputTime = INTERVAL_SLEEP_SHIP_STORE_S;
     if (debug == true) server.log("Deep sleep (storage) call because: "+reason)
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) server.log("Starting deep sleep (ship and store).");
         blueLed.on();
-        server.sleepfor(INTERVAL_SLEEP_SHIP_STORE_S);
+        server.sleepfor(inputTime);
       });
     });
   }
@@ -721,16 +725,18 @@ class power {
     //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
     //Implementing Electric Imp's sleeping fix
     redLed.blink(0.1,6);
+    //TODO: change inputTime to be the input of the function
+    local inputTime = INTERVAL_SLEEP_FAILED_S;
     if (debug == true) server.log("Deep sleep (failed) call because: "+reason)
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) server.log("Starting deep sleep (failed).");
         blueLed.on();
         if(imp.rssi()){
-            server.sleepfor(INTERVAL_SLEEP_FAILED_S);
+            server.sleepfor(inputTime);
         }
         else{
-            server.sleepfor(INTERVAL_SLEEP_FAILED_S);
+            server.sleepfor(inputTime);
         }
 
       });
@@ -884,7 +890,8 @@ function onConnectedTimeout(state) {
 }
 
 function connect(callback, timeout) {
-  // Check if we're connected before calling server.connect()
+  //using a comma in the line below to avoid 'find and replace' error
+  // Check if we're connected before calling server,connect()
   // to avoid race condition
 
   if (server.isconnected()) {
@@ -1581,4 +1588,4 @@ function mainWithSafety(){
     }
 }
 
-mainWithSafety();
+mainWithSafety();//Run Main
