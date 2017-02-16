@@ -1399,7 +1399,12 @@ function regularOperation(){
         //Send sensor data
         if (isServerRefreshNeeded(nv.data_sent, nv.data.top())) {
           if (debug == true) server.log("Server refresh needed");
-          connect(send_data, TIMEOUT_SERVER_S);
+          if(server.isconnected()){
+              send_data();
+          } else {
+              //TODO: THIS IS NOT SAFE (no try/catch):
+              connect(send_data, TIMEOUT_SERVER_S);
+          }
                 // if (debug == true) server.log("Sending location information
                 // without prompting.");
             // connect(send_loc, TIMEOUT_SERVER_S);
