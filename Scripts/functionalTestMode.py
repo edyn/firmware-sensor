@@ -40,8 +40,7 @@ wholeLine=""
 wholeDeviceUnitFile=""
 
 #Simple Replace:
-replace(deviceFile, "server.sleepFor", "mostRecentDeepSleepCall = ")
-replace(deviceFile, 'mostRecentDeepSleepCall = inputTime;', 'mostRecentDeepSleepCall = inputTime;\nsendResults();')
+replace(deviceFile, "server.sleepfor(inputTime)", 'mostRecentDeepSleepCall = inputTime;\nsendResults()');
 replace(deviceFile, "server.log(", "if(!mute)server.log(")
 
 
@@ -52,7 +51,7 @@ replace(deviceFile, "server.isconnected()", "fakeWifi")
 #todo: can i fake a 'not connected but then succeeds in connecting' kind of thing?
 
 #todo: this probably has a different name
-replace(deviceFile, "const BLINKUP_TIMER", "const BLINKUP_TIMER = 0.1;//")
+replace(deviceFile, "const blinkupTime", "const blinkupTime = 0.1;//")
 #this should work without changing it:
 replace(deviceFile, "time()", "fakeTime")
 #lol, the sensor should change to fit this, but we'll have to make due for now
@@ -71,7 +70,7 @@ replace(agentFile, '#require "Loggly.class.nut:1.1.0"','#require "Loggly.class.n
 replace(agentFile, "testing <- 0;", 'testing <- 1;')
 replace(agentTests, "server.log", "if(testDebug)server.log")
 
-insertAtTopOfDevice = "fakeTime <- 0;\nmute <- false;\n"
+insertAtTopOfDevice = "fakeTime <- 0;\nmute <- false;\nfakeWifi <- true;\nmostRecentDeepSleepCall <- -1\nwakeReason <- -1\nthrowError <- false\n"
 
 with open(agentFile, 'r') as fin:
     agentText=fin.read()

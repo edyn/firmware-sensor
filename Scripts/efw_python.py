@@ -115,10 +115,14 @@ def getImpModelID(modelName, apiKey):
 		headers = {"Authorization":"Basic " + apiKey}
 		params = urllib.urlencode({"name":modelName})
 		connection = httplib.HTTPSConnection('build.electricimp.com')
+		print "x"
 		connection.connect()
 		connection.request('GET', '/v4/models?' + params, '', headers)
 		results = json.loads(connection.getresponse().read())
+		print "y"
+		print str(results)
 		modelID = results["models"][0]['id']
+		print "z"
 		return modelID
 	except: 
 		raise "error getting model ID, efw_python probably constructed a bad model name, or imp api key is wrong.\nModel name attempted:" + modelName
@@ -355,6 +359,8 @@ try:
 		cleanDir()
 except: 
 	print("Unexpected error:", sys.exc_info()[0])
+	print("Unexpected error:", sys.exc_info()[1])
+	print("Unexpected error:", sys.exc_info()[2])
 	print "FATAL ERROR IN efw_python.py, cleaning directory"
 	cleanDir()
 
