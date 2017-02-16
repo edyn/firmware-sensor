@@ -202,7 +202,7 @@ function capSense(ModeSelect=true){
     timeDiffTwo=indexeNeg-kneeIndex
     highread=maxVSoil
     //debugs
-    if(true){
+    if(false){
       server.log("Last Sample:")
       server.log(lastreading)
       server.log("MaxVSoil:")
