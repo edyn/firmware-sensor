@@ -42,8 +42,8 @@ wholeDeviceUnitFile=""
 #Simple Replace:
 replace(deviceFile, "server.sleepfor(inputTime)", 'mostRecentDeepSleepCall = inputTime;\nsendResults()');
 replace(deviceFile, "server.log(", "if(!mute)server.log(")
-
-
+replace(deviceFile, "WDTimer<-imp.wakeup(", "//WDTimer<-imp.wakeup(");
+replace(deviceFile, "mainWithSafety();//Run Main", "//mainWithSafety();//Run Main")
 replace(deviceFile, "testing <- false;", "testing <- true;\ncodeDebug <- false;\ninitialPhaseBool <- false;\n throwError <- false")
 replace(deviceFile, "server.isconnected()", "fakeWifi")
 
