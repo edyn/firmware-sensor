@@ -63,14 +63,14 @@ function connectedDuringWateringSequence(){
 
 	//Events
 	/////////////////////////// 		Connected|   Battery| Wake Reason|      Fake Time|   Error| 	Mute|
-	local eventA = createSingleEvent(		 true, 	 	3.31,    WR_TIMER, 		     2190, 	 false, 	false/*mute*/);
-	local eventB = createSingleEvent(		 true, 		3.31,    WR_TIMER, 		     2200, 	 false,		false/*mute*/);
-	local eventC = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 2260, 	 false, 	false/*mute*/);
-	local eventD = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 2740, 	 false, 	false/*mute*/);
-	local eventE = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 2800, 	 false, 	false/*mute*/);
-	local eventF = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 2860, 	 false, 	false/*mute*/);
-	local eventG = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 2920, 	 false, 	false/*mute*/);
-	local eventH = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 2980, 	 false, 	false/*mute*/);
+	local eventA = createSingleEvent(		 true, 	 	3.31,    WR_TIMER, 		     2190, 	 false, 	true/*mute*/);
+	local eventB = createSingleEvent(		 true, 		3.31,    WR_TIMER, 		     2200, 	 false,		true/*mute*/);
+	local eventC = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 2260, 	 false, 	true/*mute*/);
+	local eventD = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 2740, 	 false, 	true/*mute*/);
+	local eventE = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 2800, 	 false, 	true/*mute*/);
+	local eventF = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 2860, 	 false, 	true/*mute*/);
+	local eventG = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 2920, 	 false, 	true/*mute*/);
+	local eventH = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 2980, 	 false, 	true/*mute*/);
 
 	//Device Results
 	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
