@@ -54,12 +54,30 @@ function createSingleEvent(online, battery, wakeReason, fakeTime, throwError, mu
 
 jsonNull <- http.jsonencode([]);
 
-//Sequence 1
-//Description:
-//The device wakes up from timer and has two waterings in the future, it is connected properly and successfully completes them both
-function connectedDuringWateringSequence(){
+function exampleSequence(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "connectedDuringWateringSequence"
+	testNameChangeArray[runMainSequenceArray.len()] <- "exampleSequence"
+
+	//Events
+	/////////////////////////// 		Connected|   Battery| Wake Reason|      Fake Time|   Error| 	Mute|
+	local eventA = createSingleEvent(		 true, 	 	3.31,    WR_TIMER, 		     2190, 	 false, 	true/*mute*/);
+
+	//Device Results 
+	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
+	
+	//Sequence
+	//////////////////
+
+	//1 (r2)
+	expectedResultsArray.append(deviceResultsA)
+	runMainSequenceArray.append(eventA)
+}
+
+//Sequence 1
+function connectedAndSendingData(){
+
+	testNameChangeArray[runMainSequenceArray.len()] <- "connectedAndSendingData"
 
 	//Events
 	/////////////////////////// 		Connected|   Battery| Wake Reason|      Fake Time|   Error| 	Mute|
@@ -72,7 +90,7 @@ function connectedDuringWateringSequence(){
 	local eventG = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 2920, 	 false, 	true/*mute*/);
 	local eventH = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 2980, 	 false, 	true/*mute*/);
 
-	//Device Results
+	//Device Results 
 	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
 	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
 	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				0);
@@ -115,6 +133,7 @@ function connectedDuringWateringSequence(){
 	runMainSequenceArray.append(eventH)
 	
 }
+
 
 successes <- []
 failures <- []
