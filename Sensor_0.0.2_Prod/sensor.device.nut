@@ -795,7 +795,7 @@ function logglyGeneral(logTable = {}, forceConnect = false, level = "INFO"){
         //connect and send loggly stuff
         //really no reason we'd ever force a connect for a regular log...
         server.connect(function (connectStatus){
-            forcedLogglyConnect(connectStatus, logTable, "loggly" + logglyLevel);
+            forcedLogglyConnect(server.isconnected(), logTable, "loggly" + logglyLevel);
         }, logglyConnectTimeout);
     }
   } catch (error) {
@@ -1754,7 +1754,7 @@ function mainWithSafety(){
         if(!server.isconnected()){
           server.connect(
               function(connectStatus){
-                if(connectStatus){
+                if(server.isconnected()){
                   server.log("waking from unknown error")
                   logglyError({
                       "message" : "waking from unknown error"

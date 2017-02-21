@@ -40,6 +40,7 @@ agent.on("runMain",
 		wakeReason = runTable.wakeReason;
 		mute = runTable.mute;
 		throwError = runTable.throwError;
+		connectSuccess = runTable.connectSuccess;
 		mainRun += 1;
 		main();
 	}
