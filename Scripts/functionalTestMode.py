@@ -70,7 +70,7 @@ replace(agentFile, '#require "Loggly.class.nut:1.1.0"','#require "Loggly.class.n
 replace(agentFile, "testing <- 0;", 'testing <- 1;')
 replace(agentTests, "server.log", "if(testDebug)server.log")
 
-insertAtTopOfDevice = "fakeTime <- 0;\nmute <- false;\nfakeWifi <- true;\nmostRecentDeepSleepCall <- -1\nwakeReason <- -1\nthrowError <- false\n connectSuccess = true"
+insertAtTopOfDevice = "fakeTime <- 0;\nmute <- false;\nfakeWifi <- true;\nmostRecentDeepSleepCall <- -1;\nwakeReason <- -1;\nthrowError <- false;\nconnectSuccess <- true;"
 
 with open(agentFile, 'r') as fin:
     agentText=fin.read()
