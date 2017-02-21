@@ -14,9 +14,13 @@ https://www.dropbox.com/s/seyd0s7umcv0q61/201407_ide_api.zip?dl=0
 
 ##### Installing
 This guide assumes you’ll be using the developer tools via the PHP wrapper script. After the instructions on installing and using the wrapper scripts, a brief guide to the underlying API is provided so that you may write your own tools if desired.
+
 1. Get the API key from Paul or Dustin
-2. Install the php wrappers
+
+1. Install the php wrappers
+
  There’s no formal installation script to run, but you’ll need to add the scripts and library to your PATH. Some users may prefer to simply move the ide_api folder to a directory already in the PATH.
+
  The executables require that the relative path to the files in ide_api/lib be preserved.
 ```
 export PATH=$PATH:<your installed path>/ide_api/bin
