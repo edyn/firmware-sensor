@@ -1580,3 +1580,58 @@ WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
 main();
 
 
+//mainWithSafety();//Run Main
+server.log("Device Started");
+
+ATInstructionsList <- []
+ATInstructionsList.append("AT+PN=1")
+ATInstructionsList.append("AT+FSB=1")
+ATInstructionsList.append("AT+NI=0,00:25:0C:00:00:01:00:01")
+ATInstructionsList.append("AT+NK=0,27:64:F6:63:A1:EF:1B:5F:66:28:17:59:73:5E:C1:E3")
+ATInstructionsList.append("AT+TXDR=10")
+ATInstructionsList.append("AT+TXP=20")
+ATInstructionsList.append("AT+ANT=0")
+ATInstructionsList.append("AT+NJM=1")
+ATInstructionsList.append("AT&W")
+ATInstructionsList.append("AT+JD=5")
+ATInstructionsList.append("AT+JOIN")
+ATInstructionsList.append("AT+SEND a")
+ATInstructionsList.append("AT+SEND b")
+ATInstructionsList.append("AT+SEND c")
+ATInstructionsList.append("AT+SEND d")
+ATInstructionsList.append("AT+SEND e")
+ATInstructionsList.append("AT+SEND f")
+ATInstructionsList.append("AT+SEND g")
+ATInstructionsList.append("AT+SEND h")
+ATInstructionsList.append("AT+SEND i")
+ATInstructionsList.append("AT+SEND j")
+
+
+function arduinoData() {
+    // Read the UART for data sent by Arduino to indicate the state of its LED.
+    local b = arduino.read();
+    while (b != -1) {
+        // As long as UART read value is not -1, we're getting data
+        local state = "Unknown";
+        if (b == 0x10) state = "Off";
+        if (b == 0x11) state = "On"
+        server.log(b.tochar());
+        b = arduino.read();
+    }
+}
+
+// Alias UART to which Arduino is connected and configure UART
+arduino <- hardware.uart1289;
+arduino.configure(115200, 8, PARITY_NONE, 1, NO_CTSRTS, arduinoData);
+x <- 0;
+function blink(state) {
+    // Write state (1 or 0) to the Arduino
+    server.log("Setting LED to: " + state);
+    arduino.write(ATInstructionsList[x] + "\r");
+    x++
+    imp.wakeup(10.0, function(){ blink(1 - state); });
+}
+
+
+// Start blinking
+blink(1);
