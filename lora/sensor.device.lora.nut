@@ -1691,12 +1691,5 @@ function loraCompleteATInstructionLoop(index){
     }
 }
 
-if("aBCDEFG".find("CDE")){
-  server.log("yep")
-  server.log("ABCDEFG".find("z") == null)
-} else {
-  server.log("nope")
-}
-
 connectLORAAndSendReadings();
 
