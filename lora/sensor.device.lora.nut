@@ -1585,13 +1585,15 @@ server.log("Device Started");
 
 ATInstructionsList <- []
 
-function sendATInstruction(commantAT = "AT", responseExpected = "OK", maximumDelay = 5, retry = false){
-    arduino.write(ATInstructionsList[x] + "\r");
-
-}
-
-function addATInstructionToList(instruction, resultSuccess, resultFailure, timeout){
-    //todo before release: this takes instructions, and expects certain results one way or another, on timeout go to sleep
+function addATInstructionToLORAQueue(instruction, resultSuccess, resultFailure, timeout){
+    //todo before release: 
+    //this takes instructions, and expects certain results one way or another, on timeout go to sleep
+    ATInstructionsList.append({
+        "cmd"     : instruction,
+        "success" : resultSuccess,
+        "failure" : resultFailure,
+        "timeout" : timeout
+    });
 }
 
 function loraCommConfig(){
@@ -1602,16 +1604,21 @@ function loraCommConfig(){
 }
 
 function addConfigurationToLORAQueue(){
-    ATInstructionsList.append("AT+PN=1")
-    ATInstructionsList.append("AT+FSB=1")
-    ATInstructionsList.append("AT+NI=0,00:25:0C:00:00:01:00:01")
-    ATInstructionsList.append("AT+NK=0,27:64:F6:63:A1:EF:1B:5F:66:28:17:59:73:5E:C1:E3")
-    ATInstructionsList.append("AT+TXDR=10")
-    ATInstructionsList.append("AT+TXP=20")
-    ATInstructionsList.append("AT+ANT=0")
-    ATInstructionsList.append("AT+NJM=1")
-    ATInstructionsList.append("AT+JD=5")
-    ATInstructionsList.append("AT&W")
+    //don't know what failures look like for most of these:
+    addATInstructionToLORAQueue("AT+PN=1", "OK", "fail", 0.25);
+    addATInstructionToLORAQueue("AT+FSB=1", "OK", "fail", 0.25);
+    addATInstructionToLORAQueue("AT+NI=0,00:25:0C:00:00:01:00:01", "OK", "fail" , 0.25);
+    //todo before release:
+    //THIS INSTRUCTION ALWAYS FAILS AND NEVER GETS WHAT IT SHULD RETURN?!?! lower the baud???
+    addATInstructionToLORAQueue("AT+NK=0,27:64:F6:63:A1:EF:1B:5F:66:28:17:59:73:5E:C1:E3", "Set Network Key:", "fail", 0.25);
+    addATInstructionToLORAQueue("AT+TXDR=10", "OK", "fail", 0.25);
+    addATInstructionToLORAQueue("AT+TXP=20", "OK", "fail", 0.25);
+    addATInstructionToLORAQueue("AT+ANT=0", "OK", "fail", 0.25);
+    addATInstructionToLORAQueue("AT+NJM=1", "OK", "fail", 0.25);
+    addATInstructionToLORAQueue("AT+JD=5", "OK", "fail", 0.25);
+    addATInstructionToLORAQueue("AT&W", "OK", "fail", 0.5);
+    addATInstructionToLORAQueue("AT+JOIN", "Successfully joined network", "fail", 10);
+    addATInstructionToLORAQueue("AT+SEND Connected", "OK", "fail", 5);
 }
 
 function loraData() {
@@ -1621,16 +1628,12 @@ function loraData() {
         // As long as UART read value is not -1, we're getting data
         local incomingChar = incomingByte.tochar();
         loraCommBuffer += incomingChar;
-        if(incomingByte == 10){
-          server.log(loraCommBuffer);
-          loraCommBuffer = ""
-        }
         incomingByte = lora.read();
     }
 }
 
 //x <- 0;
-//function blink(state) {
+//function sendATInstruction(state) {
 //    lora.write(ATInstructionsList[x] + "\r");
 //    x++
 //    imp.wakeup(10.0, function(){ blink(1 - state); });
@@ -1650,14 +1653,50 @@ function addReadingToLORAQueue(inputReading){
 function connectLORAAndSendReadings(){
     loraCommConfig();
     addConfigurationToLORAQueue();
-    if(nv.data.len()){
-        for(local x = 0; x < nv.data.){
-            addReadingToLORAQueue(nv.data[x]);
+    //todo before release: remove this conditional
+    if(false){
+        if(nv.data.len()){
+            for(local x = 0; x < nv.data.len(); x++){
+                addReadingToLORAQueue(nv.data[x]);
+            }
         }
+    }
+    loraSendATInstructionLoop(0);
+}
+
+function loraSendATInstructionLoop(index){
+    if(index < ATInstructionsList.len()){
+        local executeInstruction = ATInstructionsList[index];
+        lora.write(executeInstruction.cmd + "\r");
+        server.log("timeout for instruction " + executeInstruction.cmd + " : " + executeInstruction.timeout)
+        imp.wakeup(executeInstruction.timeout, function(){loraCompleteATInstructionLoop(index)});
+    } else {
+      power.enter_deep_sleep_running("finished AT command set")
     }
 }
 
-exampleInstructionsToSend();
+function loraCompleteATInstructionLoop(index){
+    local currentInstruction = ATInstructionsList[index];
+    if(loraCommBuffer.find(currentInstruction.success) != null){
+        server.log("AT INSTRUCTION " + currentInstruction.cmd + " SUCCESS");
+        loraCommBuffer = "";
+        loraSendATInstructionLoop(index + 1);
+    } else {
+        //todo before release:
+        //just go to sleep i guess
+        server.log("FAILURE FOR AT INSTRUCTION " + currentInstruction.cmd);
+        server.log(currentInstruction.success);
+        server.log(loraCommBuffer);
+        power.enter_deep_sleep_running("failed AT instructions");
+    }
+}
 
-// Start blinking
-blink(1);
+if("aBCDEFG".find("CDE")){
+  server.log("yep")
+  server.log("ABCDEFG".find("z") == null)
+} else {
+  server.log("nope")
+}
+
+connectLORAAndSendReadings();
+
