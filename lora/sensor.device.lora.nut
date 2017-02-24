@@ -1590,6 +1590,10 @@ function sendATInstruction(commantAT = "AT", responseExpected = "OK", maximumDel
 
 }
 
+function addATInstructionToList(instruction, resultSuccess, resultFailure, timeout){
+    //todo before release: this takes instructions, and expects certain results one way or another, on timeout go to sleep
+}
+
 function loraCommConfig(){
     // Alias UART to which Arduino is connected and configure UART
     loraCommBuffer <- "";
@@ -1597,7 +1601,7 @@ function loraCommConfig(){
     lora.configure(115200, 8, PARITY_NONE, 1, NO_CTSRTS, loraData);
 }
 
-function addConfigurationToATInstructions(){
+function addConfigurationToLORAQueue(){
     ATInstructionsList.append("AT+PN=1")
     ATInstructionsList.append("AT+FSB=1")
     ATInstructionsList.append("AT+NI=0,00:25:0C:00:00:01:00:01")
@@ -1608,30 +1612,6 @@ function addConfigurationToATInstructions(){
     ATInstructionsList.append("AT+NJM=1")
     ATInstructionsList.append("AT+JD=5")
     ATInstructionsList.append("AT&W")
-}
-
-function exampleInstructionsToSend(){
-    ATInstructionsList.append("AT+PN=1")
-    ATInstructionsList.append("AT+FSB=1")
-    ATInstructionsList.append("AT+NI=0,00:25:0C:00:00:01:00:01")
-    ATInstructionsList.append("AT+NK=0,27:64:F6:63:A1:EF:1B:5F:66:28:17:59:73:5E:C1:E3")
-    ATInstructionsList.append("AT+TXDR=10")
-    ATInstructionsList.append("AT+TXP=20")
-    ATInstructionsList.append("AT+ANT=0")
-    ATInstructionsList.append("AT+NJM=1")
-    ATInstructionsList.append("AT+JD=5")
-    ATInstructionsList.append("AT&W")
-    ATInstructionsList.append("AT+JOIN")
-    ATInstructionsList.append("AT+SEND a")
-    ATInstructionsList.append("AT+SEND b")
-    ATInstructionsList.append("AT+SEND c")
-    ATInstructionsList.append("AT+SEND d")
-    ATInstructionsList.append("AT+SEND e")
-    ATInstructionsList.append("AT+SEND f")
-    ATInstructionsList.append("AT+SEND g")
-    ATInstructionsList.append("AT+SEND h")
-    ATInstructionsList.append("AT+SEND i")
-    ATInstructionsList.append("AT+SEND j")
 }
 
 function loraData() {
@@ -1649,15 +1629,34 @@ function loraData() {
     }
 }
 
-x <- 0;
-function blink(state) {
-    // Write state (1 or 0) to the Arduino
-    lora.write(ATInstructionsList[x] + "\r");
-    x++
-    imp.wakeup(10.0, function(){ blink(1 - state); });
+//x <- 0;
+//function blink(state) {
+//    lora.write(ATInstructionsList[x] + "\r");
+//    x++
+//    imp.wakeup(10.0, function(){ blink(1 - state); });
+//}
+
+function minimizeReadingForLora(inputReading){
+    //todo before release:
+    //get it down to 11 bytes and return
 }
 
-loraCommConfig();
+function addReadingToLORAQueue(inputReading){
+    local minimizedReading = minimizeReadingForLora(inputReading);
+    //todo before release: 
+    //add an 'at send' command to the queue with minimized reading as an 11 byte array MAX!!!!
+}
+
+function connectLORAAndSendReadings(){
+    loraCommConfig();
+    addConfigurationToLORAQueue();
+    if(nv.data.len()){
+        for(local x = 0; x < nv.data.){
+            addReadingToLORAQueue(nv.data[x]);
+        }
+    }
+}
+
 exampleInstructionsToSend();
 
 // Start blinking
