@@ -1652,7 +1652,6 @@ function loraData() {
 x <- 0;
 function blink(state) {
     // Write state (1 or 0) to the Arduino
-    server.log("Setting LED to: " + state);
     lora.write(ATInstructionsList[x] + "\r");
     x++
     imp.wakeup(10.0, function(){ blink(1 - state); });
