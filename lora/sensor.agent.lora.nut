@@ -577,6 +577,26 @@ device.on("fullRes",function(data)
 }
 )
 
+function hexStringToInt(hexString) {
+    // Does the string start with '0x'? If so, remove it
+    if (hexString.slice(0, 2) == "0x") hexString = hexString.slice(2);
+
+    // Get the integer value of the remaining string
+    local intValue = 0;
+
+    foreach (character in hexString) {
+        local nibble = character - '0';
+        if (nibble > 9) nibble = ((nibble & 0x1F) - 7);
+        intValue = (intValue << 4) + nibble;
+    }
+
+    return intValue;
+}
+function intToHexString(intValue) {
+    // '02' ensures single-digit value are presented with two digits
+    return format("0x%02X", intValue);
+}
+
 
 // create a request handler
 http.onrequest(function(request, response){
@@ -584,9 +604,9 @@ http.onrequest(function(request, response){
   {
     // decode the json - if it's invalid json an error will be thrown
     local data = http.jsondecode(request.body);
-    server.log("\nBODY SENT TO AGENT:")
-    server.log(request.body)
-    
+    if("PDU" in data){
+        interpretPDU(PDUToString(data.PDU))
+    }
     // send response to whoever hit the agent url
     response.send(200, "OK");
   } 
@@ -595,3 +615,33 @@ http.onrequest(function(request, response){
     response.send(500, "Invalid JSON string");
   }
 });
+
+//  436F6E6E6563746564 == "Connected"
+
+function hexAsStringToChar(input){
+    //server.log(hexStringToInt("0x" + input).tochar())
+    return hexStringToInt("0x" + input).tochar()
+}
+
+function PDUToString(inputPDU){
+    local outputString = ""
+    for(local  x = 0; x < inputPDU.len(); x += 2){
+        //server.log(inputPDU.slice(x, x + 2))
+        outputString = outputString + hexAsStringToChar(inputPDU.slice(x, x + 2))
+    }
+    return outputString
+}
+
+function interpretPDU(inputPDUString){
+    local firstChar = inputPDUString.slice(0,1)
+    server.log(firstChar)
+    if(firstChar == "C"){
+        server.log("CONNECTED INTERPRET")
+        logglyLog({"message" : "LORAConnected", "time" : time()})
+    } else if(firstChar == "T"){
+        
+    } else if(firstChar == "C") {
+    
+    }
+}
+

@@ -1618,7 +1618,8 @@ function addConfigurationToLORAQueue(){
     addATInstructionToLORAQueue("AT+JD=5", "OK", "fail", 0.25);
     addATInstructionToLORAQueue("AT&W", "OK", "fail", 0.5);
     addATInstructionToLORAQueue("AT+JOIN", "Successfully joined network", "fail", 10);
-    addATInstructionToLORAQueue("AT+SEND Connected", "OK", "fail", 5);
+    //a timeout of 1 or lower usually fails, 3 usually succeeds, could change based on distance to gateway:
+    addATInstructionToLORAQueue("AT+SEND Connected", "OK", "fail", 3);
 }
 
 function loraData() {
