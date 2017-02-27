@@ -36,6 +36,46 @@ const HARDWARE_VERSION = "0.0.2";
 const FIRMWARE_VERSION = "0.0.1";
 OS_VERSION <- "unknown";
 
+globalLORAReading <- 
+{
+    "wifiData" : {
+        "i_charge": 100,
+        "at_input_ilim": false,
+        "ntc_stat":"NTC Normal",
+        "ntc_val": 87,
+        "disable_input_uvcl": false,
+        "ovp_active": false,
+        "low_bat": false,
+        "wall_sns_good": false,
+        "ntc_warning": false,
+        "timer": 60,
+        "bad_cell": false,
+        "wall_i_lim":"100mA Max (USB Low Power)",
+        "ext_pwr_good": false,
+        "v_float": 3.8,
+        "c_x_set": 10,
+        "charger_status":"Charger Off",
+        "input_uvcl_active": false,
+        "firmwareVersion" : "LORA",
+        "hardwareVersion" : "LORA",
+        "osVersion" : "LORA"
+    },
+    "wakeData" : [{
+        "timestamp" : time(),
+        "battery" : 3.353535,
+        "humidity" : 33.353535,
+        "temperature" : 25.0,
+        "electrical_conductivity" : 1.0,
+        "light" : 3.0,
+        "capacitance" : 0.005,
+        "rssi" : -60,
+        "wakeReason" : "WAKEREASON_POWER_ON"
+    }],
+    "schemaVersion" : "0.1",
+    "macAddress" : "20000c2a690aab40"
+}
+
+
 //loggly
 logglyKey <- "1890ff8f-0c0a-4ca0-b2f4-74f8f3ea469b"
 loggly <- Loggly(logglyKey, {
@@ -644,4 +684,3 @@ function interpretPDU(inputPDUString){
     
     }
 }
-
