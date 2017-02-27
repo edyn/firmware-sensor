@@ -987,8 +987,6 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 // Callback for server status changes.
 function send_data(status) {
   // update last sent data (even on failure, so the next send attempt is not immediate)
-  addAllReadingsToLORAQueue();
-  return
   local power_manager_data=[];
   local nvDataSize = nv.data.len();
   nv.data_sent = nv.data.top();
@@ -1438,8 +1436,9 @@ function regularOperation()
         //Send sensor data
         if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
           if (debug == true) server.log("Server refresh needed");
-          connect(send_data, TIMEOUT_SERVER_S);
-                // if (debug == true) server.log("Sending location information without prompting.");
+          addAllReadingsToLORAQueue()
+          connectLORAAndSendReadings();
+            // if (debug == true) server.log("Sending location information without prompting.");
             // connect(send_loc, TIMEOUT_SERVER_S);
         }
         
@@ -1635,18 +1634,6 @@ function loraData() {
     }
 }
 
-//x <- 0;
-//function sendATInstruction(state) {
-//    lora.write(ATInstructionsList[x] + "\r");
-//    x++
-//    imp.wakeup(10.0, function(){ blink(1 - state); });
-//}
-
-function minimizeReadingForLora(inputReading){
-    //todo before release:
-    //get it down to 11 bytes and return
-}
-
 function addAllReadingsToLORAQueue(){
     if(nv.data.len()){
         for (local x = 0; x < nv.data.len()){
@@ -1675,11 +1662,12 @@ function addReadingToLORAQueue(inputReading){
     addSendToLoraQueueWithLenLim("T", inputReading.ts.tostring())
     addSendToLoraQueueWithLenLim("B", inputReading.b.tostring())
     addSendToLoraQueueWithLenLim("H", inputReading.h.tostring())
-    addSendToLoraQueueWithLenLim("t", inputReading.ts.tostring())
-    addSendToLoraQueueWithLenLim("M", inputReading.ts.tostring())
-    addSendToLoraQueueWithLenLim("L", inputReading.ts.tostring())
-    addSendToLoraQueueWithLenLim("c", inputReading.ts.tostring())
-    addSendToLoraQueueWithLenLim("w", inputReading.ts.tostring())
+    addSendToLoraQueueWithLenLim("t", inputReading.t.tostring())
+    addSendToLoraQueueWithLenLim("M", inputReading.m.tostring())
+    addSendToLoraQueueWithLenLim("L", inputReading.l.tostring())
+    addSendToLoraQueueWithLenLim("c", inputReading.c.tostring())
+    addSendToLoraQueueWithLenLim("w", inputReading.w.tostring())
+    addSendToLoraQueueWithLenLim("S", "endReading")
     return
     //todo before release: 
     //add an 'at send' command to the queue with minimized reading as an 11 byte array MAX!!!!
@@ -1726,5 +1714,4 @@ function loraCompleteATInstructionLoop(index){
     }
 }
 
-connectLORAAndSendReadings();
 
