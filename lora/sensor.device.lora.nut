@@ -987,6 +987,8 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 // Callback for server status changes.
 function send_data(status) {
   // update last sent data (even on failure, so the next send attempt is not immediate)
+  addAllReadingsToLORAQueue();
+  return
   local power_manager_data=[];
   local nvDataSize = nv.data.len();
   nv.data_sent = nv.data.top();
@@ -1645,8 +1647,40 @@ function minimizeReadingForLora(inputReading){
     //get it down to 11 bytes and return
 }
 
+function addAllReadingsToLORAQueue(){
+    if(nv.data.len()){
+        for (local x = 0; x < nv.data.len()){
+            addReadingToLORAQueue(nv.data[x])
+        }
+    }
+}
+
+function addSendToLoraQueueWithLenLim(letter = "C", inputReading = "onnected"){
+    if(inputReading.len() <= 10){
+        addATInstructionToLORAQueue("AT+SEND " + letter + inputReading);
+    } else {
+        addATInstructionToLORAQueue("AT+SEND " + letter + inputReading.slice(0,11));
+    }
+}
+
 function addReadingToLORAQueue(inputReading){
-    local minimizedReading = minimizeReadingForLora(inputReading);
+    local timestamp = inputReading.ts.tostring();
+    local battery = inputReading.b.tostring();
+    local humidity = inputReading.h.tostring();
+    local temperature = inputReading.t.tostring();
+    local ec = inputReading.m.tostring();
+    local light = inputReading.l.tostring();
+    local capacitance = inputReading.c.tostring();
+    local wakeReason = inpputReading.w.tostring();
+    addSendToLoraQueueWithLenLim("T", inputReading.ts.tostring())
+    addSendToLoraQueueWithLenLim("B", inputReading.b.tostring())
+    addSendToLoraQueueWithLenLim("H", inputReading.h.tostring())
+    addSendToLoraQueueWithLenLim("t", inputReading.ts.tostring())
+    addSendToLoraQueueWithLenLim("M", inputReading.ts.tostring())
+    addSendToLoraQueueWithLenLim("L", inputReading.ts.tostring())
+    addSendToLoraQueueWithLenLim("c", inputReading.ts.tostring())
+    addSendToLoraQueueWithLenLim("w", inputReading.ts.tostring())
+    return
     //todo before release: 
     //add an 'at send' command to the queue with minimized reading as an 11 byte array MAX!!!!
 }
