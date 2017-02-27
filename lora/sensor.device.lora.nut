@@ -1434,7 +1434,8 @@ function regularOperation()
         
         //feature 0.2 important
         //Send sensor data
-        if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
+        //if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
+        if(true){//todo before release: revert this line
           if (debug == true) server.log("Server refresh needed");
           addAllReadingsToLORAQueue()
           connectLORAAndSendReadings();
@@ -1636,7 +1637,7 @@ function loraData() {
 
 function addAllReadingsToLORAQueue(){
     if(nv.data.len()){
-        for (local x = 0; x < nv.data.len()){
+        for (local x = 0; x < nv.data.len(); x++){
             addReadingToLORAQueue(nv.data[x])
         }
     }
