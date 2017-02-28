@@ -30,7 +30,12 @@ const POLL_ITERATION_MAX = 5; // maximum number of iterations for sensor polling
 // New setting now that we're recording register values
 const NV_ENTRIES_MAX = 19; // maximum NV entry space is about 55, based on testing
 const TZ_OFFSET = -25200; // 7 hours for PDT
-const blinkupTime = 90;
+
+////LORA SPECIFIC:
+//BLINKUP TIME NEEDS TO BE LOW OR LORA SEND WILL FAIL IF THERE'S A BLINKUP PERIOD
+//(is that even really a problem? probably not.)
+const blinkupTime = 0.1;
+
 //Loggly Timeout Variable:
 const logglyConnectTimeout = 20;
 debug <- false; // How much logging do we want?
@@ -1321,7 +1326,7 @@ function regularOperation()
       if(powerManager.reg_3==null)
       {
           local counterI2C=1;
-          while(powerManager.reg_3==null && counterI2C<6)
+          while(powerManager.reg_3==null && counterI2C<2)
           {
               //arbitrary, possibly unnecessary sleeps that might make it more stable
               //"check redundancies twice"
@@ -1352,7 +1357,7 @@ function regularOperation()
       if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32)
       {
           local counterI2C=1;
-          while((humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32) && counterI2C<6)
+          while((humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32) && counterI2C<2)
           {
               //arbitrary, possibly unnecessary sleeps that might make it more stable
               //"check redundancies twice"
@@ -1702,8 +1707,8 @@ function loraCompleteATInstructionLoop(index){
         //todo before release:
         //just go to sleep i guess
         server.log("FAILURE FOR AT INSTRUCTION " + currentInstruction.cmd);
-        server.log(currentInstruction.success);
-        server.log(loraCommBuffer);
+        server.log("EXPECTED: " + currentInstruction.success);
+        server.log("BUFFER: " +loraCommBuffer);
         power.enter_deep_sleep_running("failed AT instructions");
     }
 }
