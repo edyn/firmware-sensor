@@ -1474,7 +1474,8 @@ function regularOperation()
 
 
 function main() {
-    
+    //for lora we want 120 seconds from when main begins
+    WDTimer<-imp.wakeup(120,WatchDog);//end naxt wake call
     // create non-volatile storage if it doesn't exist
     if (!("nv" in getroottable() && "data" in nv)) {
         nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false};   
@@ -1582,9 +1583,16 @@ function WatchDog()
 {
     power.enter_deep_sleep_failed("watchdog")
 }
-//WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
-//main();
 
+
+
+//on cold boot do a blinkup, otherwise forget it.
+if(hardware.wakereason() == 0){
+    imp.enableblinkup(true);
+    imp.wakeup(main, 90);
+} else {
+    main();
+}
 
 //mainWithSafety();//Run Main
 server.log("Device Started");
@@ -1712,5 +1720,3 @@ function loraCompleteATInstructionLoop(index){
         power.enter_deep_sleep_running("failed AT instructions");
     }
 }
-
-main()
