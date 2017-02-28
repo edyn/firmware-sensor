@@ -1437,7 +1437,6 @@ function regularOperation()
         //if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
         if(true){//todo before release: revert this line
           if (debug == true) server.log("Server refresh needed");
-          addAllReadingsToLORAQueue()
           connectLORAAndSendReadings();
             // if (debug == true) server.log("Sending location information without prompting.");
             // connect(send_loc, TIMEOUT_SERVER_S);
@@ -1645,9 +1644,9 @@ function addAllReadingsToLORAQueue(){
 
 function addSendToLoraQueueWithLenLim(letter = "C", inputReading = "onnected"){
     if(inputReading.len() <= 10){
-        addATInstructionToLORAQueue("AT+SEND " + letter + inputReading);
+        addATInstructionToLORAQueue("AT+SEND " + letter + inputReading, "OK", "fail", 3);
     } else {
-        addATInstructionToLORAQueue("AT+SEND " + letter + inputReading.slice(0,11));
+        addATInstructionToLORAQueue("AT+SEND " + letter + inputReading.slice(0,11), "OK", "fail", 3);
     }
 }
 
@@ -1659,7 +1658,7 @@ function addReadingToLORAQueue(inputReading){
     local ec = inputReading.m.tostring();
     local light = inputReading.l.tostring();
     local capacitance = inputReading.c.tostring();
-    local wakeReason = inpputReading.w.tostring();
+    //local wakeReason = inputReading.w.tostring();
     addSendToLoraQueueWithLenLim("T", inputReading.ts.tostring())
     addSendToLoraQueueWithLenLim("B", inputReading.b.tostring())
     addSendToLoraQueueWithLenLim("H", inputReading.h.tostring())
@@ -1667,7 +1666,7 @@ function addReadingToLORAQueue(inputReading){
     addSendToLoraQueueWithLenLim("M", inputReading.m.tostring())
     addSendToLoraQueueWithLenLim("L", inputReading.l.tostring())
     addSendToLoraQueueWithLenLim("c", inputReading.c.tostring())
-    addSendToLoraQueueWithLenLim("w", inputReading.w.tostring())
+    //addSendToLoraQueueWithLenLim("w", inputReading.w.tostring())
     addSendToLoraQueueWithLenLim("S", "endReading")
     return
     //todo before release: 
@@ -1678,13 +1677,7 @@ function connectLORAAndSendReadings(){
     loraCommConfig();
     addConfigurationToLORAQueue();
     //todo before release: remove this conditional
-    if(false){
-        if(nv.data.len()){
-            for(local x = 0; x < nv.data.len(); x++){
-                addReadingToLORAQueue(nv.data[x]);
-            }
-        }
-    }
+    addAllReadingsToLORAQueue();
     loraSendATInstructionLoop(0);
 }
 
@@ -1715,4 +1708,4 @@ function loraCompleteATInstructionLoop(index){
     }
 }
 
-
+main()
