@@ -21,10 +21,13 @@
 const TIMEOUT_SERVER_S = 10; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 
-const INTERVAL_SENSOR_SAMPLE_S = 600; // sample sensors this often
-const INTERVAL_SLEEP_FAILED_S = 600; // sample sensors this often
+//todo before release: change this back
+const INTERVAL_SENSOR_SAMPLE_S = 60; // sample sensors this often
+//todo before release: change this back:
+const INTERVAL_SLEEP_FAILED_S = 60; // sample sensors this often
 // const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
-const INTERVAL_SLEEP_SHIP_STORE_S = 2419198;
+//todo before release: change this back:
+const INTERVAL_SLEEP_SHIP_STORE_S = 60;
 const POLL_ITERATION_MAX = 5; // maximum number of iterations for sensor polling loop
 // const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
 // New setting now that we're recording register values
@@ -718,9 +721,10 @@ class power {
     //Implementing Electric Imp's sleeping fix
     redLed.blink(0.1,6);
     if (debug == true) server.log("Deep sleep (failed) call because: "+reason)
-    imp.wakeup(0.5,function() {
+    //todo before release: remove this connect
+    server.connect(function(whatever){imp.wakeup(0.5,function() {
       imp.onidle(function() {
-        if (debug == true) server.log("Starting deep sleep (failed).");
+        server.log("Starting deep sleep (failed). " + reason);
         blueLed.on();
         if(imp.rssi()){
             server.sleepfor(INTERVAL_SLEEP_FAILED_S);
@@ -731,6 +735,8 @@ class power {
         
       });
     });
+    },30)
+    
   }
 }
 
@@ -1280,7 +1286,7 @@ function regularOperation()
       greenLed.configure();
       redLed.configure();
       blueLed.configure();
-      
+        
       // sensor configurations
       soil.configure();
       solar.configure();
@@ -1493,12 +1499,10 @@ function main() {
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
     if(control==1)
     {
-        if(server.isconnected())
-        {
             //might be able to remove this sleep all together
             imp.sleep(1)
             regularOperation()
-        }
+        
         
     //blinkupfor should happen before regular operation, but we can fix that later
         blinkupFor(blinkupTime)
@@ -1583,30 +1587,6 @@ function WatchDog()
     power.enter_deep_sleep_failed("watchdog")
 }
 
-try{
-    if(server.isconnected()){
-      logglyLog({
-          "message" : "LORA booting up and connected", 
-          "wakereason" : hardware.wakereason()
-      });
-      //on cold boot do a blinkup, otherwise forget it.
-      if(hardware.wakereason() == 0){
-          imp.enableblinkup(true);
-          blueLed.configure()
-          blueLed.on()
-          imp.wakeup(5, main);
-      } else {
-          main();
-      }
-      server.disconnect();
-    } 
-} catch(error){
-  server.log ("error in loggly log function for LORA bootup: " + error)
-}
-
-
-
-
 
 
 //mainWithSafety();//Run Main
@@ -1674,7 +1654,7 @@ function addSendToLoraQueueWithLenLim(letter = "C", inputReading = "onnected"){
     if(inputReading.len() <= 10){
         addATInstructionToLORAQueue("AT+SEND " + letter + inputReading, "OK", "fail", 3);
     } else {
-        addATInstructionToLORAQueue("AT+SEND " + letter + inputReading.slice(0,11), "OK", "fail", 3);
+        addATInstructionToLORAQueue("AT+SEND " + letter + inputReading.slice(0,10), "OK", "fail", 3);
     }
 }
 
@@ -1735,3 +1715,30 @@ function loraCompleteATInstructionLoop(index){
         power.enter_deep_sleep_running("failed AT instructions");
     }
 }
+
+
+try{
+    if(server.isconnected()){
+        logglyLog({
+            "message" : "LORA booting up and connected", 
+            "wakereason" : hardware.wakereason()
+        });
+        //on cold boot do a blinkup, otherwise forget it.
+        if(hardware.wakereason() == 0){
+            imp.enableblinkup(true);
+            blueLed.configure()
+            blueLed.on()
+            imp.wakeup(5, main);
+        } else {
+            main();
+        }
+        //todo before release: uncomment this:
+        //server.disconnect();
+    } else {
+        main();
+    }
+} catch(error){
+    server.log ("error in loggly log function for LORA bootup: " + error)
+}
+
+
