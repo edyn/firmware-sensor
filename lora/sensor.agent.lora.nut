@@ -679,7 +679,12 @@ function interpretPDU(inputPDUString){
     server.log(firstChar)
     if(firstChar == "C"){
         server.log("CONNECTED INTERPRET")
-        logglyLog({"message" : "LORAConnected", "time" : time()})
+        local numberOfReadings = inputPDUString.slice(1,inputPDUString.len()).tointeger()
+        logglyLog({
+            "message" : "LORAConnected", 
+            "time" : time(),
+            "numberOfReadings" : numberOfReadings
+        })
     } else if(firstChar == "T"){
         globalLORAReading.wakeData[0].timestamp <- inputPDUString.slice(1,inputPDUString.len()).tointeger()
     } else if(firstChar == "B") {
