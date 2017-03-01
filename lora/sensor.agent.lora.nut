@@ -82,7 +82,7 @@ loggly <- Loggly(logglyKey, {
     "tags" : "sensorLogs",
     "timeout" : 60,
     "limit" : 20 //arbitrary
-});
+})
 
 const SCHEMA_VERSION = "0.1"
 
