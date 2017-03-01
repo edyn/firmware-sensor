@@ -1481,7 +1481,6 @@ function main() {
         nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false};   
     }
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
-
     if(control==0)
     {
       control=startControlFlow();
@@ -1584,15 +1583,29 @@ function WatchDog()
     power.enter_deep_sleep_failed("watchdog")
 }
 
-
-
-//on cold boot do a blinkup, otherwise forget it.
-if(hardware.wakereason() == 0){
-    imp.enableblinkup(true);
-    imp.wakeup(main, 90);
-} else {
-    main();
+try{
+    if(server.isconnected()){
+      logglyLog({
+          "message" : "LORA booting up and connected", 
+          "wakereason" : hardware.wakereason()
+      });
+      //on cold boot do a blinkup, otherwise forget it.
+      if(hardware.wakereason() == 0){
+          imp.enableblinkup(true);
+          imp.wakeup(main, 90);
+      } else {
+          main();
+      }
+      server.disconnect();
+    } 
+} catch(error){
+  server.log ("error in loggly log function for LORA bootup")
 }
+
+
+
+
+
 
 //mainWithSafety();//Run Main
 server.log("Device Started");
