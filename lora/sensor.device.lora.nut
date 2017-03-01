@@ -1631,7 +1631,7 @@ function addConfigurationToLORAQueue(){
     addATInstructionToLORAQueue("AT&W", "OK", "fail", 0.5);
     addATInstructionToLORAQueue("AT+JOIN", "Successfully joined network", "fail", 10);
     //a timeout of 1 or lower usually fails, 3 usually succeeds, could change based on distance to gateway:
-    addATInstructionToLORAQueue("AT+SEND Connected", "OK", "fail", 3);
+    addATInstructionToLORAQueue("AT+SEND C" + nv.data.len().tostring(), "OK", "fail", 3);
 }
 
 function loraData() {
@@ -1706,7 +1706,7 @@ function loraSendATInstructionLoop(index){
 function loraCompleteATInstructionLoop(index){
     local currentInstruction = ATInstructionsList[index];
     if(loraCommBuffer.find(currentInstruction.success) != null){
-        if(currentInstruction.slice(0.1) == "S") {
+        if(currentInstruction.cmd.slice(0.1) == "S") {
             if(nv.data.len()){
                 nv.data.remove(0);
             }
