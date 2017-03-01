@@ -1592,6 +1592,7 @@ server.log("Device Started");
 //todo before release (hardware limited): control the power to the mdot through an imp pin
 //todo before release (hardware limited): figure out a way to control I2C
 //lora todo: send power data occasionally
+//lora todo: connect to wifi occasionally
 //lora todo: minimize reading into only one or two sends:
 //lora todo: figure out minimum time it takes to send readings
 //lora todo: make that amount of time a constant
