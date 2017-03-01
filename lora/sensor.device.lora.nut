@@ -1164,7 +1164,7 @@ function startControlFlow()
     return branching
 }//endcontrolflow
 
-function trimStoredNVReadingsEvenly(inputDataSize){
+function trimStoredNVReadingsEvenly(){
     //recalculate each time and check for readings:
     try{
         while(nv.data.len() > LORA_STORED_READINGS_MAX){
