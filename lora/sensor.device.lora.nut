@@ -1592,14 +1592,16 @@ try{
       //on cold boot do a blinkup, otherwise forget it.
       if(hardware.wakereason() == 0){
           imp.enableblinkup(true);
-          imp.wakeup(main, 90);
+          blueLed.configure()
+          blueLed.on()
+          imp.wakeup(5, main);
       } else {
           main();
       }
       server.disconnect();
     } 
 } catch(error){
-  server.log ("error in loggly log function for LORA bootup")
+  server.log ("error in loggly log function for LORA bootup: " + error)
 }
 
 
