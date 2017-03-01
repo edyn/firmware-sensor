@@ -912,9 +912,9 @@ function is_server_refresh_needed(data_last_sent, data_current) {
 
   local send_interval_s = 0;
   
-  local higher_frequency = 60*5;
-  local high_frequency = 60*20;
-  local medium_frequency = 60*45;
+  local higher_frequency = 60*60;
+  local high_frequency = 60*60;
+  local medium_frequency = 60*60;
   local low_frequency = 60*60;
   local lower_frequency = 60*120;
   local lowest_frequency = 60*480;
@@ -945,9 +945,9 @@ function is_server_refresh_needed(data_last_sent, data_current) {
   
   // Production settings
   else if (demo == false && coding == false) {
-    higher_frequency = 60*5;
-    high_frequency = 60*10;
-    medium_frequency = 60*30;
+    higher_frequency = 60*60;
+    high_frequency = 60*60;
+    medium_frequency = 60*60;
     low_frequency = 60*60;
     lower_frequency = 60*120;
     lowest_frequency = 60*240;
@@ -1588,6 +1588,7 @@ server.log("Device Started");
 ////////
 //LORA//
 ////////
+//todo before release: add trimReadingsEvenly style logic to the readings.
 //lora todo: minimize reading into only one or two sends:
 //lora todo: figure out minimum time it takes to send readings
 //lora todo: make that amount of time a constant
