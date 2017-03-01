@@ -672,6 +672,8 @@ function PDUToString(inputPDU){
     return outputString
 }
 
+send_data_json_node(globalLORAReading)
+
 function interpretPDU(inputPDUString){
     local firstChar = inputPDUString.slice(0,1)
     server.log(firstChar)
@@ -679,8 +681,20 @@ function interpretPDU(inputPDUString){
         server.log("CONNECTED INTERPRET")
         logglyLog({"message" : "LORAConnected", "time" : time()})
     } else if(firstChar == "T"){
-        
-    } else if(firstChar == "C") {
-    
+        globalLORAReading.wakeData.timestamp <- inputPDUString.slice(1,inputPDUString.len()).toint()
+    } else if(firstChar == "B") {
+        globalLORAReading.wakeData.battery <- inputPDUString.slice(1,inputPDUString.len()).tofloat()
+    } else if(firstChar == "H") {
+        globalLORAReading.wakeData.humidity <- inputPDUString.slice(1,inputPDUString.len()).tofloat()
+    } else if(firstChar == "t") {
+        globalLORAReading.wakeData.temperature <- inputPDUString.slice(1,inputPDUString.len()).tofloat()
+    } else if(firstChar == "M") {
+        globalLORAReading.wakeData.electrical_conductivity <- inputPDUString.slice(1,inputPDUString.len()).tofloat()
+    } else if(firstChar == "L") {
+        globalLORAReading.wakeData.light <- inputPDUString.slice(1,inputPDUString.len()).toint()
+    } else if(firstChar == "c") {
+        globalLORAReading.wakeData.capacitance <- inputPDUString.slice(1,inputPDUString.len()).tofloat()
+    } else if(firstChar == "S") {
+        send_data_json_node(globalLORAReading);
     }
 }
