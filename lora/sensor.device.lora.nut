@@ -105,7 +105,8 @@ function sendLoraMessage(message = ' ', newLine = false){
         loraComm.write(newLine)
       }
       imp.sleep(0.1)
-      //todo before release: I believe uart.flush can/should be used here
+      //LORA todo: I believe uart.flush can/should be used here
+      //counter to that: it works as is
     } catch(error){
       server.log("error in sendLoraMessage:")
       server.log(error)
