@@ -21,13 +21,9 @@
 const TIMEOUT_SERVER_S = 10; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 
-//todo before release: change this back
-const INTERVAL_SENSOR_SAMPLE_S = 60; // sample sensors this often
-//todo before release: change this back:
-const INTERVAL_SLEEP_FAILED_S = 60; // sample sensors this often
-// const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
-//todo before release: change this back:
-const INTERVAL_SLEEP_SHIP_STORE_S = 60;
+const INTERVAL_SENSOR_SAMPLE_S = 600; // sample sensors this often
+const INTERVAL_SLEEP_FAILED_S = 600; // sample sensors this often
+const INTERVAL_SLEEP_SHIP_STORE_S = 600;
 const POLL_ITERATION_MAX = 5; // maximum number of iterations for sensor polling loop
 // const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
 // New setting now that we're recording register values
