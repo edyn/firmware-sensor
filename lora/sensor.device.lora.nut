@@ -35,6 +35,8 @@ const TZ_OFFSET = -25200; // 7 hours for PDT
 //(is that even really a problem? probably not.)
 const blinkupTime = 0.1;
 
+const LORA_STORED_READINGS_MAX = 3;
+
 //Loggly Timeout Variable:
 const logglyConnectTimeout = 20;
 debug <- false; // How much logging do we want?
@@ -1162,6 +1164,36 @@ function startControlFlow()
     return branching
 }//endcontrolflow
 
+function trimStoredNVReadingsEvenly(inputDataSize){
+    //recalculate each time and check for readings:
+    try{
+        while(nv.data.len() > LORA_STORED_READINGS_MAX){
+            local indexToRemove = 0;
+            local smallestTimeGap = 1893484800; //60 year time gap, so large it guarantees ANY real time gap is smaller
+            //collect gaps if there's more than one reading
+            if(nv.data.len() > 1){
+                for(local i = 1; i < nv.data.len(); i++){
+                    local currentIndexGap = nv.data[i].ts - nv.data[i - 1].ts;
+                    if(currentIndexGap < smallestTimeGap){
+                        smallestTimeGap = currentIndexGap;
+                        indexToRemove = i;
+                    }
+                }
+            }
+            //never remove the first reading (we can if we want to)
+            if(indexToRemove == 0){
+                return false
+            }
+            nv.data.remove(indexToRemove);
+        }
+        return true;
+    } catch (error){
+        //cannot risk saving this to nv! just return false I guess
+        server.log("error in trimStoredNVReadingsEvenly: " + error);
+        return false
+    }
+}
+
 
 //new interrupt handler, to prevent interruptPin() from running twice
 function interrupthandle()
@@ -1402,6 +1434,7 @@ function regularOperation()
         local batvol = source.voltage();
         //uncomment this sleep to get the light reading value change:
         imp.sleep(0.1);
+        trimStoredNVReadingsEvenly();
         if(runTest)
         {
             nv.data.push({
@@ -1588,7 +1621,6 @@ server.log("Device Started");
 ////////
 //LORA//
 ////////
-//todo before release: add trimReadingsEvenly style logic to the readings.
 //todo before release (hardware limited): control the power to the mdot through an imp pin
 //todo before release (hardware limited): figure out a way to control I2C
 //lora todo: send power data occasionally
