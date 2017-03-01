@@ -95,7 +95,7 @@ agent.on("fullRes",function(data){
 newLine<-"\n\r"
 loraComm <-   hardware.uart1289;
 loraComm.configure(9600, 8, PARITY_NONE, 1, NO_CTSRTS);
-//todo before release: add better error handling/logging here
+//LORA todo: add better error handling/logging here
 function sendLoraMessage(message = ' ', newLine = false){
     try{
       server.log(message.tostring())
@@ -718,22 +718,15 @@ class power {
     //Implementing Electric Imp's sleeping fix
     redLed.blink(0.1,6);
     if (debug == true) server.log("Deep sleep (failed) call because: "+reason)
-    //todo before release: remove this connect
-    server.connect(function(whatever){imp.wakeup(0.5,function() {
-      imp.onidle(function() {
+    imp.onidle(function() {
         server.log("Starting deep sleep (failed). " + reason);
         blueLed.on();
         if(imp.rssi()){
             server.sleepfor(INTERVAL_SLEEP_FAILED_S);
-        }
-        else{
+        } else {
             server.sleepfor(INTERVAL_SLEEP_FAILED_S);
         }
-        
       });
-    });
-    },30)
-    
   }
 }
 
@@ -1442,8 +1435,7 @@ function regularOperation()
         
         //feature 0.2 important
         //Send sensor data
-        //if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
-        if(true){//todo before release: revert this line
+        if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
           if (debug == true) server.log("Server refresh needed");
           connectLORAAndSendReadings();
             // if (debug == true) server.log("Sending location information without prompting.");
@@ -1592,11 +1584,20 @@ function WatchDog()
 //mainWithSafety();//Run Main
 server.log("Device Started");
 
+
+////////
+//LORA//
+////////
+//lora todo: minimize reading into only one or two sends:
+//lora todo: figure out minimum time it takes to send readings
+//lora todo: make that amount of time a constant
+//lora todo: use that constant in defining watchdog timer
+//lora todo: return as soon as you get success acknowledge from the mdot
+
+
 ATInstructionsList <- []
 
 function addATInstructionToLORAQueue(instruction, resultSuccess, resultFailure, timeout){
-    //todo before release: 
-    //this takes instructions, and expects certain results one way or another, on timeout go to sleep
     ATInstructionsList.append({
         "cmd"     : instruction,
         "success" : resultSuccess,
@@ -1617,8 +1618,10 @@ function addConfigurationToLORAQueue(){
     addATInstructionToLORAQueue("AT+PN=1", "OK", "fail", 0.25);
     addATInstructionToLORAQueue("AT+FSB=1", "OK", "fail", 0.25);
     addATInstructionToLORAQueue("AT+NI=0,00:25:0C:00:00:01:00:01", "OK", "fail" , 0.25);
-    //todo before release:
+    //lora todo:
     //THIS INSTRUCTION ALWAYS FAILS AND NEVER GETS WHAT IT SHULD RETURN?!?! lower the baud???
+    //well, it actually always succeeds but what it communicates back to the imp is always misinterpreted
+    //so it's not important at all but it wouldn't pass a unit test
     addATInstructionToLORAQueue("AT+NK=0,27:64:F6:63:A1:EF:1B:5F:66:28:17:59:73:5E:C1:E3", "Set Network Key:", "fail", 0.25);
     addATInstructionToLORAQueue("AT+TXDR=10", "OK", "fail", 0.25);
     addATInstructionToLORAQueue("AT+TXP=20", "OK", "fail", 0.25);
@@ -1677,14 +1680,11 @@ function addReadingToLORAQueue(inputReading){
     //addSendToLoraQueueWithLenLim("w", inputReading.w.tostring())
     addSendToLoraQueueWithLenLim("S", "endReading")
     return
-    //todo before release: 
-    //add an 'at send' command to the queue with minimized reading as an 11 byte array MAX!!!!
 }
 
 function connectLORAAndSendReadings(){
     loraCommConfig();
     addConfigurationToLORAQueue();
-    //todo before release: remove this conditional
     addAllReadingsToLORAQueue();
     loraSendATInstructionLoop(0);
 }
@@ -1712,8 +1712,6 @@ function loraCompleteATInstructionLoop(index){
         loraCommBuffer = "";
         loraSendATInstructionLoop(index + 1);
     } else {
-        //todo before release:
-        //just go to sleep i guess
         server.log("FAILURE FOR AT INSTRUCTION " + currentInstruction.cmd);
         server.log("EXPECTED: " + currentInstruction.success);
         server.log("BUFFER: " +loraCommBuffer);
@@ -1737,8 +1735,6 @@ try{
         } else {
             main();
         }
-        //todo before release: uncomment this:
-        //server.disconnect();
     } else {
         main();
     }
