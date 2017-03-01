@@ -1703,6 +1703,11 @@ function loraSendATInstructionLoop(index){
 function loraCompleteATInstructionLoop(index){
     local currentInstruction = ATInstructionsList[index];
     if(loraCommBuffer.find(currentInstruction.success) != null){
+        if(currentInstruction.slice(0.1) == "S") {
+            if(nv.data.len()){
+                nv.data.remove(0);
+            }
+        }
         server.log("AT INSTRUCTION " + currentInstruction.cmd + " SUCCESS");
         loraCommBuffer = "";
         loraSendATInstructionLoop(index + 1);
