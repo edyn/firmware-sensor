@@ -1481,11 +1481,14 @@ function regularOperation()
 
 function main() {
     //for lora we want 120 seconds from when main begins
-    WDTimer<-imp.wakeup(120,WatchDog);//end naxt wake call
     // create non-volatile storage if it doesn't exist
     if (!("nv" in getroottable() && "data" in nv)) {
         nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false};   
     }
+
+    //the cost of each reading is 24 seconds (8 lora communications at 3 seconds each)
+    WDTimer<-imp.wakeup(60 + nv.data.len() * 25,WatchDog);//end naxt wake call
+
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
     if(control==0)
     {
