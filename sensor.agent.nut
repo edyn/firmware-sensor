@@ -580,6 +580,7 @@ device.on("fullRes",function(data)
 }
 )
 
+const INTERNAL_AUTH = "rVV8JJgZ1konzq8Bj9BR"
 
 // Accept requests to open/close the valve
 http.onrequest(function (request, response) {
