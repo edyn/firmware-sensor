@@ -58,7 +58,7 @@ replace(deviceFile, "time()", "fakeTime")
 #lol, the sensor should change to fit this, but we'll have to make due for now
 replace(deviceFile, "local nextConnectionTime", "local nextConnectionTime =  120//")
 #hmm this needs some further thought on the valve as well:
-replace(deviceFile, "server.connect(","server.disconnect();\nserverConnectCalled = true;\nif(connectSuccess){fakeWifi = true};\nserver.connect(")
+replace(deviceFile, 'server.connect(','server.log("disconnecting");\nserver.disconnect();\nserverConnectCalled = true;\nif(connectSuccess){fakeWifi = true};\nserver.connect(')
 
 replace(deviceFile, "source.voltage()","fakeBattery")
 
@@ -73,7 +73,7 @@ replace(agentFile, '#require "Loggly.class.nut:1.1.0"','#require "Loggly.class.n
 replace(agentFile, "testing <- 0;", 'testing <- 1;')
 replace(agentTests, "server.log", "if(testDebug)server.log")
 
-insertAtTopOfDevice = "fakeTime <- 0;\nmute <- false;\nfakeWifi <- true;\nmostRecentDeepSleepCall <- -1;\nwakeReason <- -1;\nthrowError <- false;\nconnectSuccess <- true;"
+insertAtTopOfDevice = "serverConnectCalled <- false;\nfakeTime <- 0;\nmute <- false;\nfakeWifi <- true;\nmostRecentDeepSleepCall <- -1;\nwakeReason <- -1;\nthrowError <- false;\nconnectSuccess <- true;"
 
 with open(agentFile, 'r') as fin:
     agentText=fin.read()
