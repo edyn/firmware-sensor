@@ -43,6 +43,7 @@ agent.on("runMain",
 		connectSuccess = runTable.connectSuccess;
 		mainRun += 1;
 		control = 0;
+		serverConnectCalled = 0;
 		mainWithSafety();
 	}
 )
