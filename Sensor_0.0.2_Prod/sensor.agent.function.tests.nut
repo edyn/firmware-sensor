@@ -76,20 +76,16 @@ function exampleSequence(){
 }
 
 //Sequence 1
-function connectedAndSendingData(){
+function connectedOrConnectingAndSendingData(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "connectedAndSendingData"
+	testNameChangeArray[runMainSequenceArray.len()] <- "connectedOrConnectingAndSendingData"
 
 	//Events
 	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
 	local eventA = createSingleEvent(		true,	 	3.31,    WR_TIMER, 		     	true,		   0, 	 false, 	true/*mute*/);
 	local eventB = createSingleEvent(		true, 		3.31,    WR_TIMER, 		     	true, (3600*6*1), 	 false,		true/*mute*/);
-	local eventC = createSingleEvent(		true, 		3.31,    WR_TIMER, 			 	true, (3600*6*2), 	 false, 	true/*mute*/);
-	local eventD = createSingleEvent(		true, 		3.31,    WR_TIMER, 			 	true, (3600*6*3), 	 false, 	true/*mute*/);
-	local eventE = createSingleEvent(		false, 		3.31,    WR_TIMER, 			 	true, (3600*6*4), 	 false, 	true/*mute*/);
-	local eventF = createSingleEvent(		false, 		3.31,    WR_TIMER, 			 	true, (3600*6*5), 	 false, 	true/*mute*/);
-	local eventG = createSingleEvent(		false, 		3.31,    WR_TIMER, 			 	true, (3600*6*6), 	 false, 	true/*mute*/);
-	local eventH = createSingleEvent(		false, 		3.31,    WR_TIMER, 			 	true, (3600*6*7), 	 false, 	true/*mute*/);
+	local eventC = createSingleEvent(	   false, 		3.31,    WR_TIMER, 			 	true, (3600*6*2), 	 false, 	true/*mute*/);
+	local eventD = createSingleEvent(	   false, 		3.31,    WR_TIMER, 			 	true, (3600*6*3), 	 false, 	true/*mute*/);
 
 	//Device Results 
 	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
@@ -97,6 +93,7 @@ function connectedAndSendingData(){
 	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				0);
 	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				0);
 	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
+	local deviceResultsE = createDeviceResults(	   600,		WR_TIMER, 				1);
 
 	//Sequence
 	//////////////////
@@ -117,23 +114,8 @@ function connectedAndSendingData(){
 	expectedResultsArray.append(deviceResultsB)
 	runMainSequenceArray.append(eventD)
 	
-	//5 (r6)
-	expectedResultsArray.append(deviceResultsC)
-	runMainSequenceArray.append(eventE)
-	
-	//6 (r7)
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventF)
-	
-	//7 (r8)
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventG)
-	
-	//8 (r9)
-	expectedResultsArray.append(deviceResultsD)
-	runMainSequenceArray.append(eventH)
-	
 }
+
 
 successes <- []
 failures <- []
@@ -186,7 +168,7 @@ function processDeviceResults(results){
 		server.log("FAIL WAKE REASON ON MAIN RUN " + mainIndex)
 		failureString = failureString + testName + " fail wakeReason in event " + mainIndex + ", expected: " + expectedResultsArray[mainIndex].wakeReason + ", actual: " + results.wakeReason+ "\n"
 	}
-	if(results.storedReadings < expectedResultsArray[mainIndex].storedReadings){
+	if(results.storedReadings != expectedResultsArray[mainIndex].storedReadings){
 		server.log("FAIL stored readings ON MAIN RUN " + mainIndex)
 		failureString = failureString + testName + " fail storedReadings in event " + mainIndex + ", expected at least: " + expectedResultsArray[mainIndex].storedReadings + ", actual: " + results.storedReadings+ "\n"
 	}
