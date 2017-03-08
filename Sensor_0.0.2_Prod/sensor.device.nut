@@ -979,7 +979,7 @@ function send_data(status) {
   local nvDataSize = nv.data.len();
   nv.data_sent = nv.data.top();
 
-  if (status == SERVER_CONNECTED) {
+  if (server.isconnected()) {
     // ok: send data
     // server.log(imp.scanwifinetworks());
     //
