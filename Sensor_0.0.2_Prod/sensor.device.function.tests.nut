@@ -42,6 +42,7 @@ agent.on("runMain",
 		throwError = runTable.throwError;
 		connectSuccess = runTable.connectSuccess;
 		mainRun += 1;
-		main();
+		control = 0;
+		mainWithSafety();
 	}
 )

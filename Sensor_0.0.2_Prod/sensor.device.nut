@@ -1656,7 +1656,6 @@ if (!("nv" in getroottable() && "data" in nv)) {
 }
 
 function main() {
-
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
 
     if(control==0){

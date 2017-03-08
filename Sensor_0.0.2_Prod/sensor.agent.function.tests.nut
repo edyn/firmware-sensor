@@ -82,14 +82,14 @@ function connectedAndSendingData(){
 
 	//Events
 	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
-	local eventA = createSingleEvent(		 true, 	 	3.31,    WR_TIMER, 		     	true,		2190, 	 false, 	true/*mute*/);
-	local eventB = createSingleEvent(		 true, 		3.31,    WR_TIMER, 		     	true,		2200, 	 false,		true/*mute*/);
-	local eventC = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 	true,		2260, 	 false, 	true/*mute*/);
-	local eventD = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 	true,		2740, 	 false, 	true/*mute*/);
-	local eventE = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 	true,		2800, 	 false, 	true/*mute*/);
-	local eventF = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 	true,		2860, 	 false, 	true/*mute*/);
-	local eventG = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 	true,		2920, 	 false, 	true/*mute*/);
-	local eventH = createSingleEvent(		 true, 		3.31,    WR_TIMER, 			 	true,		2980, 	 false, 	true/*mute*/);
+	local eventA = createSingleEvent(		true,	 	3.31,    WR_TIMER, 		     	true,		   0, 	 false, 	true/*mute*/);
+	local eventB = createSingleEvent(		true, 		3.31,    WR_TIMER, 		     	true, (3600*6*1), 	 false,		true/*mute*/);
+	local eventC = createSingleEvent(		true, 		3.31,    WR_TIMER, 			 	true, (3600*6*2), 	 false, 	true/*mute*/);
+	local eventD = createSingleEvent(		true, 		3.31,    WR_TIMER, 			 	true, (3600*6*3), 	 false, 	true/*mute*/);
+	local eventE = createSingleEvent(		false, 		3.31,    WR_TIMER, 			 	true, (3600*6*4), 	 false, 	true/*mute*/);
+	local eventF = createSingleEvent(		false, 		3.31,    WR_TIMER, 			 	true, (3600*6*5), 	 false, 	true/*mute*/);
+	local eventG = createSingleEvent(		false, 		3.31,    WR_TIMER, 			 	true, (3600*6*6), 	 false, 	true/*mute*/);
+	local eventH = createSingleEvent(		false, 		3.31,    WR_TIMER, 			 	true, (3600*6*7), 	 false, 	true/*mute*/);
 
 	//Device Results 
 	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
@@ -133,27 +133,6 @@ function connectedAndSendingData(){
 	expectedResultsArray.append(deviceResultsD)
 	runMainSequenceArray.append(eventH)
 	
-}
-
-//Sequence 2
-function intermittentWifi(){
-
-	testNameChangeArray[runMainSequenceArray.len()] <- "exampleSequence"
-
-	//Events
-	/////////////////////////// 		Connected|   Battery| Wake Reason|      Fake Time|   Error| 	Mute|
-	local eventA = createSingleEvent(		 true, 	 	3.31,    WR_TIMER, 		     2190, 	 false, 	true/*mute*/);
-
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
-	
-	//Sequence
-	//////////////////
-
-	//1 (r2)
-	expectedResultsArray.append(deviceResultsA)
-	runMainSequenceArray.append(eventA)
 }
 
 successes <- []
