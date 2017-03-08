@@ -47,6 +47,7 @@ replace(deviceFile, "mainWithSafety();//Run Main", "//mainWithSafety();//Run Mai
 replace(deviceFile, "testing <- false;", "testing <- true;\ncodeDebug <- false;\ninitialPhaseBool <- false;\n throwError <- false")
 replace(deviceFile, "server.isconnected()", "fakeWifi")
 replace(deviceFile, "hardware.wakereason()", "wakeReason")
+replace(deviceFile, "theCurrentTimestamp", "fakeTime")
 #todo: need to add fake battery value
 #todo: can i fake a 'not connected but then succeeds in connecting' kind of thing?
 
@@ -58,6 +59,8 @@ replace(deviceFile, "time()", "fakeTime")
 replace(deviceFile, "local nextConnectionTime", "local nextConnectionTime =  120//")
 #hmm this needs some further thought on the valve as well:
 replace(deviceFile, "server.connect(","server.disconnect();\nserverConnectCalled = true;\nif(connectSuccess){fakeWifi = true};\nserver.connect(")
+
+replace(deviceFile, "source.voltage()","fakeBattery")
 
 #I guess we might add this to the sensor:
 replace(deviceFile,'server.log("main")', '{}\nif(throwError){THROWANERROR};')
