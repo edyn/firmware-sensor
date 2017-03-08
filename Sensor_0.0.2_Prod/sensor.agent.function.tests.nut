@@ -184,7 +184,7 @@ function processDeviceResults(results){
 
 device.on("deviceResults", processDeviceResults);
 
-connectedAndSendingData()
+connectedOrConnectingAndSendingData()
 exampleSequence();
 
 //Start running the tests:
