@@ -46,7 +46,7 @@ replace(deviceFile, "WDTimer<-imp.wakeup(", "//WDTimer<-imp.wakeup(");
 replace(deviceFile, "mainWithSafety();//Run Main", "//mainWithSafety();//Run Main")
 replace(deviceFile, "testing <- false;", "testing <- true;\ncodeDebug <- false;\ninitialPhaseBool <- false;\n throwError <- false")
 replace(deviceFile, "server.isconnected()", "fakeWifi")
-
+replace(deviceFile, "hardware.wakereason()", "wakeReason")
 #todo: need to add fake battery value
 #todo: can i fake a 'not connected but then succeeds in connecting' kind of thing?
 
