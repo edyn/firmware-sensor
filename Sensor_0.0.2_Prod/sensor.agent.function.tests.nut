@@ -93,7 +93,7 @@ function connectedOrConnectingAndSendingData(){
 	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				0);
 	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				0);
 	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
-	local deviceResultsE = createDeviceResults(	   600,		WR_TIMER, 				1);
+	local deviceResultsE = createDeviceResults(	   600,		WR_TIMER, 				0);
 
 	//Sequence
 	//////////////////
