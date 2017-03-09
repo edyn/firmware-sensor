@@ -55,13 +55,14 @@ function createSingleEvent(online, battery, wakeReason, connectSuccess, fakeTime
 jsonNull <- http.jsonencode([]);
 
 //Sequence 0
+//useful for clearing out the 'data last sent timestamp'
 function exampleSequence(){
 
 	testNameChangeArray[runMainSequenceArray.len()] <- "exampleSequence"
 
 	//Events
 	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|      Fake Time|    Error| 	Mute|
-	local eventA = createSingleEvent(		 true, 	 	3.31,    WR_TIMER,				true,			2190, 	 false, 	true/*mute*/);
+	local eventA = createSingleEvent(		 true, 	 	3.31,    WR_TIMER,				true,			   0, 	 false, 	true/*mute*/);
 
 	//Device Results 
 	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
@@ -116,6 +117,51 @@ function connectedOrConnectingAndSendingData(){
 	
 }
 
+//Sequence 2
+function notConnectedAndStoringReadingsThenSend(){
+
+	testNameChangeArray[runMainSequenceArray.len()] <- "notConnectedAndStoringReadingsThenSend"
+
+	//Events
+	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
+	local eventA = createSingleEvent(	    true,	 	3.31,    WR_TIMER, 		     	true,		   0, 	 false, 	true/*mute*/);
+	local eventB = createSingleEvent(	   false, 		3.31,    WR_TIMER, 		       false, (3600*6*1), 	 false,		true/*mute*/);
+	local eventC = createSingleEvent(	   false, 		3.31,    WR_TIMER, 			   false, (3600*6*2), 	 false, 	true/*mute*/);
+	local eventD = createSingleEvent(	   false, 		3.31,    WR_TIMER, 			   false, (3600*6*3), 	 false, 	true/*mute*/);
+	local eventE = createSingleEvent(	   false, 		3.31,    WR_TIMER, 			    true, (3600*6*4), 	 false, 	true/*mute*/);
+
+	//Device Results 
+	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
+	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
+	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				2);
+	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				3);
+	local deviceResultsE = createDeviceResults(	   600,		WR_TIMER, 				0);
+
+	//Sequence
+	//////////////////
+
+	//1
+	expectedResultsArray.append(deviceResultsA)
+	runMainSequenceArray.append(eventA)
+	
+	//2
+	expectedResultsArray.append(deviceResultsB)
+	runMainSequenceArray.append(eventB)
+	
+	//3
+	expectedResultsArray.append(deviceResultsC)
+	runMainSequenceArray.append(eventC)
+	
+	//4
+	expectedResultsArray.append(deviceResultsD)
+	runMainSequenceArray.append(eventD)
+
+	//5
+	expectedResultsArray.append(deviceResultsE)
+	runMainSequenceArray.append(eventE)
+	
+}
 
 successes <- []
 failures <- []
@@ -184,7 +230,15 @@ function processDeviceResults(results){
 
 device.on("deviceResults", processDeviceResults);
 
-connectedOrConnectingAndSendingData()
+
+//MAKNIG THE EVENT LIST:
+//(node that exampleSequence resets the 'data last sent timestamp' to 0 so it's useful for clearing out the last results)
+
+
+exampleSequence();
+connectedOrConnectingAndSendingData();
+exampleSequence();
+notConnectedAndStoringReadingsThenSend();
 exampleSequence();
 
 //Start running the tests:
