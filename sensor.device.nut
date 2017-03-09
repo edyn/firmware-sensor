@@ -759,7 +759,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
             return
         }
     } catch (error) {
-        server.error(error)
+        server.error("\t" + error)
         logglyError({
             "error" : error,
             "function" : "forcedLogglyConnect",
@@ -1515,7 +1515,7 @@ function main() {
 function disconnectHandler(reason) {
   if (reason != SERVER_CONNECTED){
     //guaranteed not to run (how could it ever?):
-    if (debug == true) server.error("Unexpectedly lost wifi connection.");
+    if (debug == true) server.error("\tUnexpectedly lost wifi connection.");
     power.enter_deep_sleep_failed("Unexpectedly lost wifi connection.");
   }
 }
