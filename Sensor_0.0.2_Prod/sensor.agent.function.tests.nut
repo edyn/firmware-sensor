@@ -449,6 +449,60 @@ function throwMainErrorFailedConnection(){
 
 }
 
+//these will need to be updated if they're ever changed on the device:
+
+const HIGHEST_FREQUENCY = 300; //60 seconds * 5
+const HIGH_FREQUENCY = 600;   //60 seconds * 10
+const MEDIUM_FREQUENCY= 1800;  //60 seconds * 30
+const LOW_FREQUENCY = 3600;    //60 seconds * 60
+const LOWER_FREQUENCY = 6000; //60 seconds * 100
+const LOWEST_FREQUENCY = 7200;//60 seconds * 240
+
+const HIGHEST_BATTERY = 3.4;         //Volts
+const HIGH_BATTERY = 3.35
+const MEDIUM_BATTERY = 3.3;      //Volts
+const LOW_BATTERY = 3.24;         //Volts
+const LOWER_BATTERY = 3.195;        //Volts
+
+
+
+function testSendFrequencyHighestBattery(){
+
+	testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyHighestBattery"
+
+	//Events
+	/////////////////////////// 		Connected|   			   Battery|Wake Reason|   connectSuccess|  			  Fake Time|    Error| 	Mute|
+	local eventA = createSingleEvent(		 true, HIGHEST_BATTERY + 0.001,   WR_TIMER, 		   false,		   			  0, 	  true, 	true/*mute*/);
+	local eventB = createSingleEvent(		false, HIGHEST_BATTERY + 0.001,   WR_TIMER, 		   false,		  			  0, 	  true, 	true/*mute*/);
+	local eventC = createSingleEvent(		false, HIGHEST_BATTERY + 0.001,   WR_TIMER, 		   false, HIGHEST_FREQUENCY - 1, 	  true, 	true/*mute*/);
+	local eventD = createSingleEvent(		false, HIGHEST_BATTERY + 0.001,   WR_TIMER, 		   false, HIGHEST_FREQUENCY + 1, 	  true, 	true/*mute*/);
+
+	//Device Results 
+	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
+	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
+	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				2);
+	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
+
+	//Sequence
+	//////////////////
+
+	//1
+	expectedResultsArray.append(deviceResultsA)
+	runMainSequenceArray.append(eventA)
+	//2
+	expectedResultsArray.append(deviceResultsB)
+	runMainSequenceArray.append(eventB)
+	//3
+	expectedResultsArray.append(deviceResultsC)
+	runMainSequenceArray.append(eventC)
+	//4
+	expectedResultsArray.append(deviceResultsD)
+	runMainSequenceArray.append(eventD)
+
+}
+
+
 
 successes <- []
 failures <- []
