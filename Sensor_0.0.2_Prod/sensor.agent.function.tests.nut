@@ -163,6 +163,98 @@ function notConnectedAndStoringReadingsThenSend(){
 	
 }
 
+
+
+
+
+
+
+const WR_BOOT = 0;
+const WR_TIMER = 1;
+const WR_SW_RESET = 2;
+const WR_BUTTON = 3;
+const WR_NEW_SQUIRREL = 4;
+const WR_SQUIRREL_ERROR = 5;
+const WR_NEW_FW = 6;
+const WR_BLINKUP = 9;
+const WR_SW_RESTART = 10; //Planned addition in os 36, gotta get ready, yo
+
+
+
+//Sequence 3
+//some of these are unrealistic and could potentially be removed from testing
+function differentWakeReasonsConnected(){
+
+	testNameChangeArray[runMainSequenceArray.len()] <- "notConnectedAndStoringReadingsThenSend"
+
+	//Events
+	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
+	local eventA = createSingleEvent(	    true,	 	3.31,    WR_BOOT, 		     	true,		   0, 	 false, 	true/*mute*/);
+	local eventB = createSingleEvent(	    true, 		3.31,    WR_TIMER, 		        true, 		   0, 	 false,		true/*mute*/);
+	local eventC = createSingleEvent(	    true, 		3.31,    WR_SW_RESET, 		    true, 		   0, 	 false, 	true/*mute*/);
+	local eventD = createSingleEvent(	    true, 		3.31,    WR_BUTTON, 		    true, 		   0, 	 false, 	true/*mute*/);
+	local eventE = createSingleEvent(	    true, 		3.31,    WR_NEW_SQUIRREL, 	    true, 		   0, 	 false, 	true/*mute*/);
+	local eventF = createSingleEvent(	    true,	 	3.31,    WR_SQUIRREL_ERROR, 	true,		   0, 	 false, 	true/*mute*/);
+	local eventG = createSingleEvent(	    true,	 	3.31,    WR_NEW_FW, 		    true,		   0, 	 false, 	true/*mute*/);
+	local eventH = createSingleEvent(	    true,	 	3.31,    WR_BLINKUP 		    true,		   0, 	 false, 	true/*mute*/);
+	//this wakereason not supported yet:
+	//local eventI = createSingleEvent(	    true,	 	3.31,    WR_SW_RESTART 		    true,		   0, 	 false, 	true/*mute*/);
+	
+	//Device Results 
+	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+	local deviceResultsA = createDeviceResults(	   600,		WR_BOOT, 				0);
+	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				0);
+	local deviceResultsC = createDeviceResults(	   600,		WR_SW_RESET, 			0);
+	local deviceResultsD = createDeviceResults(	   600,		WR_BUTTON, 				0);
+	local deviceResultsE = createDeviceResults(	   600,		WR_NEW_SQUIRREL, 		0);
+	local deviceResultsF = createDeviceResults(	   600,		WR_SQUIRREL_ERROR, 		0);
+	local deviceResultsG = createDeviceResults(	   600,		WR_NEW_FW, 				0);
+	local deviceResultsH = createDeviceResults(	   600,		WR_BLINKUP, 			0);
+	//this wakereason not supported yet:
+	//local deviceResultsI = createDeviceResults(	   600,		WR_SW_RESTART, 		0);
+
+	//Sequence
+	//////////////////
+
+	//1
+	expectedResultsArray.append(deviceResultsA)
+	runMainSequenceArray.append(eventA)
+	
+	//2
+	expectedResultsArray.append(deviceResultsB)
+	runMainSequenceArray.append(eventB)
+	
+	//3
+	expectedResultsArray.append(deviceResultsC)
+	runMainSequenceArray.append(eventC)
+	
+	//4
+	expectedResultsArray.append(deviceResultsD)
+	runMainSequenceArray.append(eventD)
+
+	//5
+	expectedResultsArray.append(deviceResultsE)
+	runMainSequenceArray.append(eventE)
+
+	//6
+	expectedResultsArray.append(deviceResultsF)
+	runMainSequenceArray.append(eventF)
+	
+	//7
+	expectedResultsArray.append(deviceResultsG)
+	runMainSequenceArray.append(eventG)
+	
+	//8
+	expectedResultsArray.append(deviceResultsH)
+	runMainSequenceArray.append(eventH)
+	
+	//9
+	//NOT SUPPORTED YET:
+	//expectedResultsArray.append(deviceResultsI)
+	//runMainSequenceArray.append(eventI)
+}
+
+
 successes <- []
 failures <- []
 function logResults(a = "a" , b = "b"){
@@ -240,6 +332,7 @@ connectedOrConnectingAndSendingData();
 exampleSequence();
 notConnectedAndStoringReadingsThenSend();
 exampleSequence();
+differentWakeReasonsConnected();
 
 //Start running the tests:
 runMainLoop();
