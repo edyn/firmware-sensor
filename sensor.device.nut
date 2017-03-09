@@ -912,15 +912,11 @@ function connect(callback, timeout) {
           }
           callback(connectionStatus)
         } catch(error) {
-          if(connectionStatus){
-            server.error("\terror in callback from function 'connect'")
-            logglyError({
+          server.error("\terror in callback from function 'connect'")
+          logglyError({
               "message" : "Error in connect's callback function",
               "Error" : error
-            });
-          } else {
-            nv.wakeFromError = true;
-          }
+          });
           //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
           power.enter_deep_sleep_running("error in callback from connect");
         }
@@ -1643,7 +1639,6 @@ function regularOperation(){
 // create non-volatile storage if it doesn't exist
 if (!("nv" in getroottable() && "data" in nv)) {
     nv<-{
-        wakeFromError = false,
         data = [],
         data_sent = null,
         running_state = true, PMRegB=[0x00,0x00],
