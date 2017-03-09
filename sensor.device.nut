@@ -721,7 +721,7 @@ class power {
     //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
     //Implementing Electric Imp's sleeping fix
     redLed.blink(0.1,6);
-    if (debug == true) server.log("Deep sleep (failed) call because: "+reason)
+    if (debug == true) server.error("\tDeep sleep (failed) call because: "+reason)
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) server.log("Starting deep sleep (failed).");
@@ -759,7 +759,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
             return
         }
     } catch (error) {
-        server.log(error)
+        server.error("\t" + error)
         logglyError({
             "error" : error,
             "function" : "forcedLogglyConnect",
@@ -791,7 +791,7 @@ function logglyGeneral(logTable = {}, forceConnect = false, level = "INFO"){
         }, logglyConnectTimeout);
     }
   } catch (error) {
-    server.log("Loggly " + level +  " Error: " + error);
+    server.error("\tLoggly " + level +  " Error: " + error);
   }
 }
 
@@ -877,7 +877,7 @@ function onConnectedTimeout(state) {
     // power.enter_deep_sleep_ship_store("Conservatively going into ship
     // and store mode after failing to connect to server.");
     if (debug == true) {
-      server.log("Gave a chance to blink up, then tried to connect to server but failed.");
+      server.error("\tGave a chance to blink up, then tried to connect to server but failed.");
     }
     power.enter_deep_sleep_failed("Sleeping after failing to connect to server after a button press.");
   }
@@ -902,7 +902,7 @@ function connect(callback, timeout) {
           callback(connectionStatus)
         } catch(error) {
           if(connectionStatus){
-            server.log("error in callback from function 'connect'")
+            server.error("\terror in callback from function 'connect'")
             logglyError({
               "message" : "Error in connect's callback function",
               "Error" : error
@@ -995,12 +995,13 @@ function send_data(status) {
     }
 
     else {
-      if (debug == true) server.log("Error: Server connected, but no success.");
+      server.error("\tError: Server connected but failed to send data");
     }
   }
-
+  //urgent todo: this doesn't seem to belong here AT ALL:
   else {
-    if (debug == true) server.log("Tried to connect to server to send data but failed.");
+    //guaranteed that this won't work:
+    if (debug == true) server.error("\tTried to connect to server to send data but failed.");
     power.enter_deep_sleep_failed("Sleeping after failing to connect to server for sending data.");
   }
   if(sendFullRead)
@@ -1020,7 +1021,7 @@ function send_data(status) {
     }
     else
     {
-        server.log("did not send")
+        server.error("\tdid not send")
     }
   }
 
@@ -1125,7 +1126,7 @@ function startControlFlow()
             break
 //Below this should NEVER happen, but is there to be safe
         case null:
-            server.log("Bad Wakereason");
+            server.error("\tBad Wakereason");
             break
     }//endswitch
     return branching
@@ -1187,7 +1188,7 @@ function interruptPin() {
         }
     }//end of try
     catch(error){
-        server.log(error);
+        server.error("\t" + error);
         blinkAll(2,2);
         //error occurred in interrupt, control=4 and run main
         power.enter_deep_sleep_running("Interrupt Error");
@@ -1304,14 +1305,14 @@ function regularOperation(){
           }
           //will show up only when it's probably true:
           if(powerManager.reg_3==null){
-            server.log("Possible damage to the LTC or I2C busses.");
+            server.error("\tPossible damage to the LTC or I2C busses.");
           }
       }else{
           imp.sleep(0.1)
       };
       }
       catch(error){
-          server.log("LTC SAMPLING ERROR");
+          server.error("\tLTC SAMPLING ERROR");
       }
 
       //server.log("PM PASS");
@@ -1335,11 +1336,11 @@ function regularOperation(){
             }
             //will show up only when it's probably true:
             if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32){
-              server.log("Possible damage to the Humidity/Temperature Sensor or I2C busses.");
+              server.error("\tPossible damage to the Humidity/Temperature Sensor or I2C busses.");
             }
         }
       } catch(error){
-        server.log("Hum/Temp Error");
+        server.error("\tHum/Temp Error");
       }
 
       //server.log("Humidity/Temperature Pass")
@@ -1513,7 +1514,8 @@ function main() {
 
 function disconnectHandler(reason) {
   if (reason != SERVER_CONNECTED){
-    if (debug == true) server.log("Unexpectedly lost wifi connection.");
+    //guaranteed not to run (how could it ever?):
+    if (debug == true) server.error("\tUnexpectedly lost wifi connection.");
     power.enter_deep_sleep_failed("Unexpectedly lost wifi connection.");
   }
 }
@@ -1547,7 +1549,7 @@ try{
       server.connect(
           function(connectStatus){
             if(connectStatus){
-              server.log("waking from unknown error")
+              server.error("\twaking from unknown error")
               logglyError({
                   "message" : "waking from unknown error"
               });
@@ -1570,9 +1572,9 @@ try{
   }
 } catch (error) {
     if(server.isconnected()){
-      server.log(error)
+      server.error("\t" + error)
       logglyError({
-        "message" : "error in main!", 
+        "message" : "error in main!",
         "error" : error
       });
     } else {
