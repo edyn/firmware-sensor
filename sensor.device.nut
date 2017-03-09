@@ -1409,7 +1409,7 @@ function sendStoredErrors(){
 }
 
 //functions that are useful for testing NV safety:
-//todo: remove these comments from production code and make them available in a test document"
+//todo before releasing functional tests: remove these comments from production code and make them available in a test document"
 
 //local testNVSafetyLoop(){
 //    local z = 0
