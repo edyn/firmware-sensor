@@ -261,11 +261,14 @@ function send_data_json_node(data) {
   //failed send to backend
   if (res.statuscode < 200 || res.statuscode > 203) {
     // TODO: retry?
-    server.error("Error sending message to Postgres database.");
+    server.error("\tError sending message to Postgres database.");
     local logglyWarnTable = failedSendTable(readings_url, res.body, res.statuscode);
     logglyLog(logglyWarnTable, "Warning");
   } else {
-    server.log("Data sent successfully to Postgres database.");
+    logglyLog({
+      "message": "Readings sent successfully to Postgres database"
+    }, "Log");
+    server.log("Readings sent successfully to Postgres database");
   }
 }
 
@@ -485,7 +488,7 @@ function processAndSendDeviceData(deviceData){
         logglyLog({
             "function" : "processAndSendDeviceData",
             "message" : "a sub function may have failed",
-            "errorMessage" : error
+            "error" : error
         }, "Error");
     }
 }
@@ -577,29 +580,50 @@ device.on("fullRes",function(data)
 }
 )
 
+const INTERNAL_AUTH = "rVV8JJgZ1konzq8Bj9BR"
 
 // Accept requests to open/close the valve
 http.onrequest(function (request, response) {
     try {
         response.header("Access-Control-Allow-Origin", "*");
-
+        if("path" in request){
+            if(request.path == "/device-type" || request.path == "/device-type/"){
+                if("internal-auth" in request.headers){
+                    if(request.headers["internal-auth"] == INTERNAL_AUTH){
+                        response.send(200, http.jsonencode({"deviceType" : "sensor"}));
+                        return
+                    } else {
+                        response.send(403, http.jsonencode({"error" : "Bad Password"}));
+                        return
+                    }
+                } else {
+                    response.send(403, http.jsonencode({"error" : "Missing Password"}));
+                    return
+                }
+            }
+        }
+ 
         if ("fullRes" in request.query) {
         // if it was, send the value of it to the device
             device.send("fullRes", request.query["fullRes"]);
             fullResSet = true
+            response.send(200, "OK");
             server.log("Full Res Set to True")
+            return
         }
 
         //note that on the sensor the only action you can take is restarting (or high res)
         if("password" in request.query){
           if(request.query["password"] == agentBackendSettingsPassword){
             if("restartAgent" in request.query){
+              response.send(200, "OK");
               server.restart();
+              return
             }
           }
         }
         // send a response back to whoever made the request
-        response.send(200, "OK");
+        response.send(403, http.jsonencode({"error" : "no arguments given"));
     } catch (ex) {
         response.send(500, "Error: " + ex);
     }
