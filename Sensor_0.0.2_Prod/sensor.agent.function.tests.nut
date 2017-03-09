@@ -386,6 +386,69 @@ function differentWakeReasonsUnsuccessfulConnectionAttempt(){
 	//runMainSequenceArray.append(eventI)
 }
 
+function throwMainErrorConnected(){
+
+	testNameChangeArray[runMainSequenceArray.len()] <- "connectedOrConnectingAndSendingData"
+
+	//Events
+	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
+	local eventA = createSingleEvent(		true,	 	3.31,    WR_TIMER, 		     	true,		   0, 	  true, 	true/*mute*/);
+
+	//Device Results 
+	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
+
+	//Sequence
+	//////////////////
+
+	//1 (r2)
+	expectedResultsArray.append(deviceResultsA)
+	runMainSequenceArray.append(eventA)
+
+}
+
+function throwMainErrorSuccessfulConnection(){
+
+	testNameChangeArray[runMainSequenceArray.len()] <- "connectedOrConnectingAndSendingData"
+
+	//Events
+	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
+	local eventA = createSingleEvent(		true,	 	3.31,    WR_TIMER, 		     	true,		   0, 	  true, 	true/*mute*/);
+
+	//Device Results 
+	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
+
+	//Sequence
+	//////////////////
+
+	//1 (r2)
+	expectedResultsArray.append(deviceResultsA)
+	runMainSequenceArray.append(eventA)
+
+}
+
+function throwMainErrorFailedConnection(){
+
+	testNameChangeArray[runMainSequenceArray.len()] <- "connectedOrConnectingAndSendingData"
+
+	//Events
+	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
+	local eventA = createSingleEvent(		true,	 	3.31,    WR_TIMER, 		     	true,		   0, 	  true, 	true/*mute*/);
+
+	//Device Results 
+	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
+
+	//Sequence
+	//////////////////
+
+	//1 (r2)
+	expectedResultsArray.append(deviceResultsA)
+	runMainSequenceArray.append(eventA)
+
+}
+
 
 successes <- []
 failures <- []

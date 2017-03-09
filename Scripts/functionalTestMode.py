@@ -41,6 +41,7 @@ wholeDeviceUnitFile=""
 
 #Simple Replace:
 replace(deviceFile, "server.sleepfor(inputTime)", 'mostRecentDeepSleepCall = inputTime;\nsendResults()');
+replace(deviceFile,'server.log("main")', 'if(throwError){THROWANERROR};')
 replace(deviceFile, "server.log(", "if(!mute)server.log(")
 replace(deviceFile, "WDTimer<-imp.wakeup(", "//WDTimer<-imp.wakeup(");
 replace(deviceFile, "mainWithSafety();//Run Main", "//mainWithSafety();//Run Main")
@@ -62,8 +63,6 @@ replace(deviceFile, 'server.connect(','server.log("disconnecting");\nserver.disc
 
 replace(deviceFile, "source.voltage()","fakeBattery")
 
-#I guess we might add this to the sensor:
-replace(deviceFile,'server.log("main")', 'if(throwError){THROWANERROR};')
 
 
 #Agent File Editing
