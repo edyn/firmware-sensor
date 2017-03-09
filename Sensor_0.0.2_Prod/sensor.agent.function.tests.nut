@@ -502,6 +502,185 @@ function testSendFrequencyHighestBattery(){
 
 }
 
+function testSendFrequencyHighBattery(){
+
+	testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyHighBattery"
+
+	//Events
+	/////////////////////////// 		Connected|   			   Battery|Wake Reason|   connectSuccess|  			  Fake Time|    Error| 	Mute|
+	local eventA = createSingleEvent(		 true,    HIGH_BATTERY + 0.001,   WR_TIMER, 		   false,		   			  0, 	  true, 	true/*mute*/);
+	local eventB = createSingleEvent(		false,    HIGH_BATTERY + 0.001,   WR_TIMER, 		   false,		  			  0, 	  true, 	true/*mute*/);
+	local eventC = createSingleEvent(		false,    HIGH_BATTERY + 0.001,   WR_TIMER, 		   false, 	 HIGH_FREQUENCY - 1, 	  true, 	true/*mute*/);
+	local eventD = createSingleEvent(		false,    HIGH_BATTERY + 0.001,   WR_TIMER, 		   false, 	 HIGH_FREQUENCY + 1, 	  true, 	true/*mute*/);
+
+	//Device Results 
+	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
+	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
+	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				2);
+	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
+
+	//Sequence
+	//////////////////
+
+	//1
+	expectedResultsArray.append(deviceResultsA)
+	runMainSequenceArray.append(eventA)
+	//2
+	expectedResultsArray.append(deviceResultsB)
+	runMainSequenceArray.append(eventB)
+	//3
+	expectedResultsArray.append(deviceResultsC)
+	runMainSequenceArray.append(eventC)
+	//4
+	expectedResultsArray.append(deviceResultsD)
+	runMainSequenceArray.append(eventD)
+
+}
+
+function testSendFrequencyMediumBattery(){
+
+	testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyMediumBattery"
+
+	//Events
+	/////////////////////////// 		Connected|   			   Battery|Wake Reason|   connectSuccess|  			  Fake Time|    Error| 	Mute|
+	local eventA = createSingleEvent(		 true,  MEDIUM_BATTERY + 0.001,   WR_TIMER, 		   false,		   			  0, 	  true, 	true/*mute*/);
+	local eventB = createSingleEvent(		false,  MEDIUM_BATTERY + 0.001,   WR_TIMER, 		   false,		  			  0, 	  true, 	true/*mute*/);
+	local eventC = createSingleEvent(		false,  MEDIUM_BATTERY + 0.001,   WR_TIMER, 		   false,  MEDIUM_FREQUENCY - 1, 	  true, 	true/*mute*/);
+	local eventD = createSingleEvent(		false,  MEDIUM_BATTERY + 0.001,   WR_TIMER, 		   false,  MEDIUM_FREQUENCY + 1, 	  true, 	true/*mute*/);
+
+	//Device Results 
+	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
+	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
+	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				2);
+	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
+
+	//Sequence
+	//////////////////
+
+	//1
+	expectedResultsArray.append(deviceResultsA)
+	runMainSequenceArray.append(eventA)
+	//2
+	expectedResultsArray.append(deviceResultsB)
+	runMainSequenceArray.append(eventB)
+	//3
+	expectedResultsArray.append(deviceResultsC)
+	runMainSequenceArray.append(eventC)
+	//4
+	expectedResultsArray.append(deviceResultsD)
+	runMainSequenceArray.append(eventD)
+
+}
+
+function testSendFrequencyLowBattery(){
+
+	testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyLowBattery"
+
+	//Events
+	/////////////////////////// 		Connected|   			   Battery|Wake Reason|   connectSuccess|  			  Fake Time|    Error| 	Mute|
+	local eventA = createSingleEvent(		 true,     LOW_BATTERY + 0.001,   WR_TIMER, 		   false,		   			  0, 	  true, 	true/*mute*/);
+	local eventB = createSingleEvent(		false,     LOW_BATTERY + 0.001,   WR_TIMER, 		   false,		  			  0, 	  true, 	true/*mute*/);
+	local eventC = createSingleEvent(		false,     LOW_BATTERY + 0.001,   WR_TIMER, 		   false,     LOW_FREQUENCY - 1, 	  true, 	true/*mute*/);
+	local eventD = createSingleEvent(		false,     LOW_BATTERY + 0.001,   WR_TIMER, 		   false,     LOW_FREQUENCY + 1, 	  true, 	true/*mute*/);
+
+	//Device Results 
+	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
+	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
+	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				2);
+	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
+
+	//Sequence
+	//////////////////
+
+	//1
+	expectedResultsArray.append(deviceResultsA)
+	runMainSequenceArray.append(eventA)
+	//2
+	expectedResultsArray.append(deviceResultsB)
+	runMainSequenceArray.append(eventB)
+	//3
+	expectedResultsArray.append(deviceResultsC)
+	runMainSequenceArray.append(eventC)
+	//4
+	expectedResultsArray.append(deviceResultsD)
+	runMainSequenceArray.append(eventD)
+
+}
+
+function testSendFrequencyLowerBattery(){
+
+	testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyLowerBattery"
+
+	//Events
+	/////////////////////////// 		Connected|   			   Battery|Wake Reason|   connectSuccess|  			  Fake Time|    Error| 	Mute|
+	local eventA = createSingleEvent(		 true, LOWER_BATTERY + 0.001,   WR_TIMER, 		   false,		   			  0, 	  true, 	true/*mute*/);
+	local eventB = createSingleEvent(		false, LOWER_BATTERY + 0.001,   WR_TIMER, 		   false,		  			  0, 	  true, 	true/*mute*/);
+	local eventC = createSingleEvent(		false, LOWER_BATTERY + 0.001,   WR_TIMER, 		   false,   LOWER_FREQUENCY - 1, 	  true, 	true/*mute*/);
+	local eventD = createSingleEvent(		false, LOWER_BATTERY + 0.001,   WR_TIMER, 		   false,   LOWER_FREQUENCY + 1, 	  true, 	true/*mute*/);
+
+	//Device Results 
+	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
+	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
+	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				2);
+	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
+
+	//Sequence
+	//////////////////
+
+	//1
+	expectedResultsArray.append(deviceResultsA)
+	runMainSequenceArray.append(eventA)
+	//2
+	expectedResultsArray.append(deviceResultsB)
+	runMainSequenceArray.append(eventB)
+	//3
+	expectedResultsArray.append(deviceResultsC)
+	runMainSequenceArray.append(eventC)
+	//4
+	expectedResultsArray.append(deviceResultsD)
+	runMainSequenceArray.append(eventD)
+
+}
+
+function testSendFrequencyHighestBattery(){
+
+	testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyLowestBattery"
+
+	//Events
+	/////////////////////////// 		Connected|   			   Battery|Wake Reason|   connectSuccess|  			  Fake Time|    Error| 	Mute|
+	local eventA = createSingleEvent(		 true,   LOWER_BATTERY - 0.001,   WR_TIMER, 		   false,		   			  0, 	  true, 	true/*mute*/);
+	local eventB = createSingleEvent(		false,   LOWER_BATTERY - 0.001,   WR_TIMER, 		   false,		  			  0, 	  true, 	true/*mute*/);
+	local eventC = createSingleEvent(		false,   LOWER_BATTERY - 0.001,   WR_TIMER, 		   false, HIGHEST_FREQUENCY - 1, 	  true, 	true/*mute*/);
+	local eventD = createSingleEvent(		false,   LOWER_BATTERY - 0.001,   WR_TIMER, 		   false, HIGHEST_FREQUENCY + 1, 	  true, 	true/*mute*/);
+
+	//Device Results 
+	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
+	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
+	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				2);
+	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
+
+	//Sequence
+	//////////////////
+
+	//1
+	expectedResultsArray.append(deviceResultsA)
+	runMainSequenceArray.append(eventA)
+	//2
+	expectedResultsArray.append(deviceResultsB)
+	runMainSequenceArray.append(eventB)
+	//3
+	expectedResultsArray.append(deviceResultsC)
+	runMainSequenceArray.append(eventC)
+	//4
+	expectedResultsArray.append(deviceResultsD)
+	runMainSequenceArray.append(eventD)
+
+}
 
 
 successes <- []
