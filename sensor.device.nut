@@ -26,9 +26,7 @@ const INTERVAL_SLEEP_FAILED_S = 600; // sample sensors this often
 // const INTERVAL_SLEEP_MAX_S = 2419198; // maximum sleep allowed by Imp is ~28 days
 const INTERVAL_SLEEP_SHIP_STORE_S = 2419198;
 const POLL_ITERATION_MAX = 5; // maximum number of iterations for sensor polling loop
-// const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
 // New setting now that we're recording register values
-const NV_ENTRIES_MAX = 19; // maximum NV entry space is about 55, based on testing
 const TZ_OFFSET = -25200; // 7 hours for PDT
 const blinkupTime = 90;
 //Loggly Timeout Variable:
@@ -48,6 +46,10 @@ const LOW_BATTERY = 3.24;         //Volts
 const LOWER_BATTERY = 3.195;        //Volts
 
 const CONNECTION_TIME_ON_ERROR_WAKEUP = 30;
+
+const NV_SIZE_LIMIT = 2900; //bytes, value taken from valve code
+const STORED_ERRORS_MAX = 3; //stored errors
+
 
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
@@ -805,7 +807,7 @@ function logglyWarn(logTable = {}, forceConnect = false){
 
 //TODO: make server logging optional part of logglyerror
 function logglyError(logTable = {}, forceConnect = false){
-  logglyGeneral(logTable, forceConnect, "ERROR");
+    logglyGeneral(logTable, forceConnect, "ERROR");
 }
 
 
@@ -891,6 +893,10 @@ function connect(callback, timeout) {
     if (debug == true) server.log("Server connected");
     // We're already connected, so execute the callback
     nv.pastConnect=true;
+    logFreeNVMemory();
+    if(nv.storedErrors.len()){
+      sendStoredErrors();
+    }
     callback(SERVER_CONNECTED);
   }
   else {
@@ -899,17 +905,18 @@ function connect(callback, timeout) {
     server.connect(
       function(connectionStatus){
         try{
+          logFreeNVMemory();
+          //always send errors if possible
+          if(nv.storedErrors.len()){
+            sendStoredErrors();
+          }
           callback(connectionStatus)
         } catch(error) {
-          if(connectionStatus){
-            server.error("\terror in callback from function 'connect'")
-            logglyError({
+          server.error("\terror in callback from function 'connect'")
+          logglyError({
               "message" : "Error in connect's callback function",
               "Error" : error
-            });
-          } else {
-            nv.wakeFromError = true;
-          }
+          });
           //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
           power.enter_deep_sleep_running("error in callback from connect");
         }
@@ -1212,6 +1219,233 @@ function blinkupFor(timer=90){
     imp.enableblinkup(false);
 }
 
+//table size estimator, accurate 'to within 100 bytes' (not very accurate)
+//because of this 100 byte resolution, we should avoid writing to the nv when it's size is 3800-3900 bytes
+function estimateSize(v) {
+    if(v == null){
+      return 0;
+    }
+    // Every table as a 4 byte size, then the entries, then a null, count
+    // size and trailing null to start with
+    local t = 4+1;
+    foreach(a,b in v) {
+        if (typeof v == "table") {
+            // BSON entries have type, name (cstring), then data
+            // Here we count the type and name with terminating nill
+            t += 1+a.len()+1;
+        } else {
+            // It's an array, there's a type byte per entry
+            t += 1;
+        }
+        switch(typeof b) {
+            case "table":
+            case "array":
+            t += estimateSize(b);
+            break;
+            case "integer":
+            case "float":
+            t += 4;
+            break;
+            case "bool":
+            t+=1;
+            break;
+            case "string":
+            t += 4+b.len()+1;
+            break;
+        }
+    }
+    return t;
+}
+
+//future todo: you could determine how many and which readings to throw away before removing any
+function trimStoredNVReadingsEvenly(inputDataSize){
+    //recalculate each time and check for readings:
+    try{
+        while((NV_SIZE_LIMIT - estimateSize(nv)) < inputDataSize && nv.data.len()){
+            local indexToRemove = 0;
+            local smallestTimeGap = 1893484800; //60 year time gap, so large it guarantees ANY real time gap is smaller
+            //collect gaps if there's more than one reading
+            if(nv.data.len() > 1){
+                for(local i = 1; i < nv.data.len(); i++){
+                    local currentIndexGap = nv.data[i].ts - nv.data[i - 1].ts;
+                    if(currentIndexGap < smallestTimeGap){
+                        smallestTimeGap = currentIndexGap;
+                        indexToRemove = i;
+                    }
+                }
+            }
+            //never remove the first reading (we can if we want to)
+            if(indexToRemove == 0){
+                return false
+            }
+            nv.data.remove(indexToRemove);
+        }
+        return true;
+    } catch (error){
+        //cannot risk saving this to nv! just return false I guess
+        server.log("error in trimStoredNVReadingsEvenly: " + error);
+        return false
+    }
+}
+
+function saveReadingToNV(reading){
+    try{
+        local readingSize = estimateSize(reading);
+        local nvSize = estimateSize(nv);
+        local saveReadingTable = {}
+        saveReadingTable = clone(reading);
+        //trim the nv table if there isn't enough room:
+        if(trimStoredNVReadingsEvenly(readingSize)){
+            nv.data.append(saveReadingTable);
+        } else {
+            //can't log this in any way dealing the the NV table safely
+            server.log("failed to make room for reading");
+        }
+    } catch (error) {
+        server.log(error)
+        logglyError({
+            "error" : error,
+            "function" : "saveReadingToNV",
+            "message" : "Error saving a reading to NV on failed connection"
+        });
+        power.enter_deep_sleep_running("error in saving nv reading to table")
+    }
+}
+
+function collectReadingData(){
+    local tempReading ={
+        ts = theCurrentTimestamp,
+        t = humidityTemperatureSensor.temperature,
+        h = humidityTemperatureSensor.humidity,
+        l = solar.voltage(),
+        m = lastLastReading*(3.0/65536.0),
+        b = source.voltage(),
+        c = timeDiffTwo*(1.0/samplerHzA),
+        r = imp.rssi(),
+        w = hardware.wakereason()
+    }
+    return tempReading
+}
+
+//only useful if you're connected
+function logFreeNVMemory(){
+    try{
+        local nvSize = estimateSize(nv);
+        local freeNV = NV_SIZE_LIMIT - nvSize;
+        local numberReadings = nv.data.len();
+        local readingsSize = estimateSize(nv.data);
+        local averageReadingSize = 0.0;
+        if(numberReadings){
+            averageReadingSize = readingsSize / numberReadings;
+        }
+        server.log("REMAINING NV MEMORY: " + freeNV);
+        logglyLog({
+            "freeNVMemory" : freeNV,
+            "readingsSize" : readingsSize,
+            "numberReadings" : numberReadings,
+            "averageReadingSize" : averageReadingSize,
+            "non-readings size" : nvSize - readingsSize
+        });
+    } catch(error){
+        server.log("error in logFreeNVMemory: " + error)
+        return
+    }
+}
+
+function pushError(errorTable){
+    local numberStoredErrors = nv.storedErrors.len();
+    //less than maximum number stored are in the nv table:
+    //trim the nv readings if there isn't enough room since errors are more important:
+    if(trimStoredNVReadingsEvenly(estimateSize(errorTable))){
+        if(numberStoredErrors < STORED_ERRORS_MAX){
+            nv.storedErrors.append(errorTable);
+        } else {
+            //record if the circular buffer is full
+            if(numberStoredErrors < STORED_ERRORS_MAX + 1){
+                //this technically makes the length of STORED_ERRORS_MAX above STORED_ERRORS_MAX but it's important.
+                nv.storedErrors.append({
+                    "error" : "More than " + STORED_ERRORS_MAX + " errors since sendStoredErrors last succeeded"
+                });
+            }
+            //iterate the circular buffer
+            nv.storedErrors[nv.storedErrorsCircularIndex] = errorTable;
+            nv.storedErrorsCircularIndex += 1;
+            if(nv.storedErrorsCircularIndex >= STORED_ERRORS_MAX){
+                nv.storedErrorsCircularIndex = 0;
+            }
+        }
+    }
+}
+
+function checkForStoredErrors(){
+  return nv.storedErrors.len();
+}
+
+function sendStoredErrors(){
+    try{
+        local numberErrors = nv.storedErrors.len();
+        //if len returns 0, numberReadings is interpreted as false
+        if(numberErrors){
+            if(server.isconnected()){
+                //the reason for 2 for loops is so that we can do the "safe" version of recording first
+                for (local errIterator = 0; errIterator < numberErrors; errIterator++){
+                    server.log(nv.storedErrors[errIterator]);
+                }
+                //and the "dangerous" version second, 
+                //as logglyError could be throwing errors, but server.log probably isn't
+                for (local errIterator = 0; errIterator < numberErrors; errIterator++){
+                    logglyError(nv.storedErrors[errIterator]);
+                }
+                if(server.flush(20)){
+                    nv.storedErrors = [];
+                }
+            }
+        }
+    } catch (error) {
+        //we don't want this to stop operations for the whole device, so this catch needs to be super safe
+        //it's better to not send errors at all than create new ones
+        server.log("ERROR SENDING STORED ERRORS: " + error)
+    }
+}
+
+//functions that are useful for testing NV safety:
+//todo before releasing functional tests: remove these comments from production code and make them available in a test document"
+
+//local testNVSafetyLoop(){
+//    local z = 0
+//    local y = 0
+//    while(1){
+//        testNVSafety()
+//        if(z < 100) {
+//            z++
+//            if(!(z%10)){
+//              logFreeNVMemory();
+//            }
+//        } else {
+//            server.log("DONE WITH RUN NUMBER " + y)
+//            y++
+//            nv.data = []
+//            sendStoredErrors();
+//        }
+//    }
+//}
+
+//function testNVSafety(){
+//  local roll = 1.0 * math.rand() / RAND_MAX;
+//  if(roll < 0.25){
+//        local newReading = collectReadingData();
+//        saveReadingToNV(newReading);
+//  } else if(roll < 0.5) {
+//        local newReading = {"ts" : time(), "ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD" : "ABCD"}
+//        saveReadingToNV(newReading);
+//  } else if (roll < 0.75) {
+//        pushError({"message" : "ABCD", "a" : "b", "c" : "d", "e" : "f" , "g" : "h"})
+//  } else {
+//        pushError({"ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD" : "ABCD"});
+//  }
+//  logFreeNVMemory();
+//}
+
 function regularOperation(){
 
       if (debug == true) server.log("Device booted.");
@@ -1349,48 +1583,16 @@ function regularOperation(){
       //End Sampling
       //Begin Saving
 
-        // nv space is limited to 4kB and will not notify of failure
-        // discard every second entry if over MAX entries
-        // TODO: combine similar data points instead of discarding them
-        if (nv.data.len() > NV_ENTRIES_MAX) {
-          local i = 1;
-          while(i < nv.data.len()) {
-            nv.data.remove(i);
-            i += 2;
-          }
-        }
-
         // store sensor data in non-volatile storage
-        //0.1
-        //testing or not
+        //suspend charging
         powerManager.suspendCharging();
         local batvol = source.voltage();
         //uncomment this sleep to get the light reading value change:
         imp.sleep(0.1);
-        if(runTest){
-            nv.data.push({
-              ts = theCurrentTimestamp,
-              t = humidityTemperatureSensor.temperature,
-              h = humidityTemperatureSensor.humidity,
-              l = solar.voltage(),
-              m = soil.voltage(),
-              b = source.voltage()
-              testResults=unitTest()
-            });
-        }else{
-              nv.data.push({
-              ts = theCurrentTimestamp,
-              t = humidityTemperatureSensor.temperature,
-              h = humidityTemperatureSensor.humidity,
-              l = solar.voltage(),
-              m = lastLastReading*(3.0/65536.0),
-              b = source.voltage(),
-              c = timeDiffTwo*(1.0/samplerHzA),
-              r = imp.rssi(),
-              w = hardware.wakereason()
-              });
-              //server.log("DEVICE SIDE CAPACITANCE:"+nv.data.top().c);
-        }
+        local newReading = collectReadingData();
+        saveReadingToNV(newReading);
+
+        //resume charging
         powerManager.resumeCharging();
 
       // End Saving
@@ -1441,12 +1643,13 @@ function regularOperation(){
 // create non-volatile storage if it doesn't exist
 if (!("nv" in getroottable() && "data" in nv)) {
     nv<-{
-        wakeFromError = false,
         data = [],
         data_sent = null,
         running_state = true, PMRegB=[0x00,0x00],
         PMRegC=[0x00,0x00],
-        pastConnect=false
+        pastConnect=false,
+        storedErrors = [],
+        storedErrorsCircularIndex = 0
     };
 }
 
@@ -1540,46 +1743,57 @@ function wakeCallHandle(time=null,func=null) {
 function WatchDog(){
     power.enter_deep_sleep_failed("watchdog")
 }
+
+function mainWithSafety(){
+  imp.wakeup(1.0,
+    function(){
+        try{
+            main();
+        } catch (error){
+            logglyError({
+                "message" : "error in main on forced connect!", 
+                "error" : error,
+                "timestamp" : time
+            });
+                //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
+                power.enter_deep_sleep_running("error in main");
+            }
+        }
+    );
+}
+
 WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
 try{
-  if(!nv.wakeFromError){
-    main();
-  } else {
-    if(!server.isconnected()){
-      server.connect(
-          function(connectStatus){
-            if(connectStatus){
-              server.error("\twaking from unknown error")
-              logglyError({
-                  "message" : "waking from unknown error"
-              });
-              //reset ONLY if we successfully connect and log
-              nv.wakeFromError = false;
+    local numberOfErrors = checkForStoredErrors();
+    if(!numberOfErrors){
+        main();
+    } else {
+        if(server.isconnected()){
+            //adding a little safety:
+            try{
+                sendStoredErrors();
+                mainWithSafety();
+            } catch (error){
+                server.log("error in sendStoredErrors: " + error);
             }
-            //run main no matter what
-            main();
-          },
-        CONNECTION_TIME_ON_ERROR_WAKEUP)
-    } else {
-      logglyError({
-        "message" : "waking from unknown error"
-      });
-      //reset ONLY if we successfully connect and log
-      nv.wakeFromError = false;
+        } else {
+            server.connect(function(connectionStatus){
+                //adding a little safety:
+                try{
+                    sendStoredErrors();
+                } catch (error){
+                    server.log("error in sendStoredErrors: " + error);
+                } 
+                mainWithSafety();
+            }, CONNECTION_TIME_ON_ERROR_WAKEUP); 
+        }
     }
-    //run main no matter what
-    main();
-  }
 } catch (error) {
-    if(server.isconnected()){
-      server.error("\t" + error)
-      logglyError({
-        "message" : "error in main!",
-        "error" : error
-      });
-    } else {
-      nv.wakeFromError = true;
-    }
+    logglyError({
+        "message" : "error in main!", 
+        "error" : error,
+        "timestamp" : time()
+    });
     //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
     power.enter_deep_sleep_running("error in main");
 }
