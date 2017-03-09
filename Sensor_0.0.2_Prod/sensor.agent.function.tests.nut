@@ -163,29 +163,11 @@ function notConnectedAndStoringReadingsThenSend(){
 	
 }
 
-
-
-
-
-
-
-const WR_BOOT = 0;
-const WR_TIMER = 1;
-const WR_SW_RESET = 2;
-const WR_BUTTON = 3;
-const WR_NEW_SQUIRREL = 4;
-const WR_SQUIRREL_ERROR = 5;
-const WR_NEW_FW = 6;
-const WR_BLINKUP = 9;
-const WR_SW_RESTART = 10; //Planned addition in os 36, gotta get ready, yo
-
-
-
 //Sequence 3
 //some of these are unrealistic and could potentially be removed from testing
 function differentWakeReasonsConnected(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "notConnectedAndStoringReadingsThenSend"
+	testNameChangeArray[runMainSequenceArray.len()] <- "differentWakeReasonsConnected"
 
 	//Events
 	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
