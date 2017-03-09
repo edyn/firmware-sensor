@@ -413,7 +413,7 @@ function throwMainErrorSuccessfulConnection(){
 
 	//Events
 	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
-	local eventA = createSingleEvent(		true,	 	3.31,    WR_TIMER, 		     	true,		   0, 	  true, 	true/*mute*/);
+	local eventA = createSingleEvent(		false,	 	3.31,    WR_TIMER, 		     	true,		   0, 	  true, 	true/*mute*/);
 
 	//Device Results 
 	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
@@ -434,7 +434,7 @@ function throwMainErrorFailedConnection(){
 
 	//Events
 	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
-	local eventA = createSingleEvent(		true,	 	3.31,    WR_TIMER, 		     	true,		   0, 	  true, 	true/*mute*/);
+	local eventA = createSingleEvent(		false,	 	3.31,    WR_TIMER, 		       false,		   0, 	  true, 	true/*mute*/);
 
 	//Device Results 
 	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
