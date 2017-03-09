@@ -1737,6 +1737,25 @@ function wakeCallHandle(time=null,func=null) {
 function WatchDog(){
     power.enter_deep_sleep_failed("watchdog")
 }
+
+function mainWithSafety(){
+  imp.wakeup(1.0,
+    function(){
+        try{
+            main();
+        } catch (error){
+            logglyError({
+                "message" : "error in main on forced connect!", 
+                "error" : error,
+                "timestamp" : time
+            });
+                //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
+                power.enter_deep_sleep_running("error in main");
+            }
+        }
+    );
+}
+
 WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
 try{
     if(!nv.storedErrors.len()){
@@ -1746,6 +1765,7 @@ try{
             //adding a little safety:
             try{
                 sendStoredErrors();
+                mainWithSafety();
             } catch (error){
                 server.log("error in sendStoredErrors: " + error);
             }
@@ -1757,21 +1777,7 @@ try{
                 } catch (error){
                     server.log("error in sendStoredErrors: " + error);
                 } 
-                imp.wakeup(1.0,
-                    function(){
-                        try{
-                            main();
-                        } catch (error){
-                            logglyError({
-                                "message" : "error in main on forced connect!", 
-                                "error" : error,
-                                "timestamp" : time
-                            });
-                          //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
-                          power.enter_deep_sleep_running("error in main");
-                        }
-                    }
-                );
+                mainWithSafety();
             }, CONNECTION_TIME_ON_ERROR_WAKEUP); 
         }
     }
@@ -1779,7 +1785,7 @@ try{
     logglyError({
         "message" : "error in main!", 
         "error" : error,
-        "timestamp" : time
+        "timestamp" : time()
     });
     //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
     power.enter_deep_sleep_running("error in main");
