@@ -63,7 +63,7 @@ replace(deviceFile, 'server.connect(','server.log("disconnecting");\nserver.disc
 replace(deviceFile, "source.voltage()","fakeBattery")
 
 #I guess we might add this to the sensor:
-replace(deviceFile,'server.log("main")', '{}\nif(throwError){THROWANERROR};')
+replace(deviceFile,'server.log("main")', 'if(throwError){THROWANERROR};')
 
 
 #Agent File Editing

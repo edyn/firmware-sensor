@@ -1658,6 +1658,9 @@ if (!("nv" in getroottable() && "data" in nv)) {
 function main() {
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
 
+    //used for functional tests:
+    server.log("main");
+
     if(control==0){
       control=startControlFlow();
       //1 = cold boot (0), software reset (2), new squirrel code AKA new impOS //version (4), squirrel error (5), firmware upgrade (6) and default case //(shouldn't happen)
