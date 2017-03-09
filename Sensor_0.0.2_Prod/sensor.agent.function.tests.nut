@@ -765,6 +765,19 @@ exampleSequence();
 differentWakeReasonsSuccessfulConnectionAttempt();
 exampleSequence();
 differentWakeReasonsUnsuccessfulConnectionAttempt();
+exampleSequence();
+throwMainErrorConnected();
+exampleSequence();
+throwMainErrorSuccessfulConnection();
+exampleSequence();
+throwMainErrorFailedConnection();
+exampleSequence();
+testSendFrequencyHighestBattery();
+testSendFrequencyHighBattery();
+testSendFrequencyMediumBattery();
+testSendFrequencyLowBattery();
+testSendFrequencyLowerBattery();
+testSendFrequencyLowestBattery();
 //Start running the tests:
 runMainLoop();
 
