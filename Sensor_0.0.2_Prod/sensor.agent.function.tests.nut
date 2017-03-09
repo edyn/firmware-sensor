@@ -388,7 +388,7 @@ function differentWakeReasonsUnsuccessfulConnectionAttempt(){
 
 function throwMainErrorConnected(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "connectedOrConnectingAndSendingData"
+	testNameChangeArray[runMainSequenceArray.len()] <- "throwMainErrorConnected"
 
 	//Events
 	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
@@ -409,7 +409,7 @@ function throwMainErrorConnected(){
 
 function throwMainErrorSuccessfulConnection(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "connectedOrConnectingAndSendingData"
+	testNameChangeArray[runMainSequenceArray.len()] <- "throwMainErrorSuccessfulConnection"
 
 	//Events
 	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
@@ -430,7 +430,7 @@ function throwMainErrorSuccessfulConnection(){
 
 function throwMainErrorFailedConnection(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "connectedOrConnectingAndSendingData"
+	testNameChangeArray[runMainSequenceArray.len()] <- "throwMainErrorFailedConnection"
 
 	//Events
 	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
