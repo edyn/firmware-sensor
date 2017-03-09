@@ -98,7 +98,7 @@ function logglyLog(logTable = {"message" : "empty log table passed to logglyLog"
     try{
         if(type(logTable) != type({})){
             loggly.warn({"agentWarning" : "non-table passed to logglyLog"});
-            server.error("/tNON TABLE PASSED TO LOGGLYLOG!")
+            server.error("\tNON TABLE PASSED TO LOGGLYLOG!")
         } else {
             logTable = addLogglyDefaults(logTable);
             if(serverLog){
