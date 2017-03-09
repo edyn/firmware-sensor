@@ -98,7 +98,7 @@ function logglyLog(logTable = {"message" : "empty log table passed to logglyLog"
     try{
         if(type(logTable) != type({})){
             loggly.warn({"agentWarning" : "non-table passed to logglyLog"});
-            server.log("NON TABLE PASSED TO LOGGLYLOG!")
+            server.error("\tNON TABLE PASSED TO LOGGLYLOG!")
         } else {
             logTable = addLogglyDefaults(logTable);
             if(serverLog){
@@ -117,7 +117,7 @@ function logglyLog(logTable = {"message" : "empty log table passed to logglyLog"
             }
         }
     } catch (error) {
-        server.log("error in logglyLog")
+        server.error("\terror in logglyLog")
         loggly.error({
             "function" : "logglyLog",
             "error" : error
@@ -143,7 +143,7 @@ function recordBackendSettings(){
         local res = req.sendsync();
         //TODO: make generic handling function for HTTP requests
         if(res.statuscode < 200 || res.statuscode > 204){
-            server.log("Failed to save backend settings to firebase")
+            server.error("\tFailed to save backend settings to firebase")
             logglyLog(
                 {
                     "message" : "Failed to save backend settings",
@@ -154,7 +154,7 @@ function recordBackendSettings(){
             server.log("Saved backend settings to firebase")
         }
     } catch(error) {
-        server.log("error in saveBackendSettings: " + error)
+        server.error("\terror in saveBackendSettings: " + error)
     }
 }
 
@@ -168,7 +168,7 @@ function loadBackendSettings(){
         local res = req.sendsync();
         //TODO: make generic handling function for HTTP requests
         if(res.statuscode < 200 || res.statuscode > 204){
-            server.log("Failed to load backend settings " + res.statuscode)
+            server.error("\tFailed to load backend settings " + res.statuscode)
             logglyLog(
                 {
                     "message" : "Failed to load backend settings",
@@ -203,7 +203,7 @@ function loadBackendSettings(){
             }
         }
     } catch(error) {
-        server.log("error in loadBackendSettings: " + error)
+        server.error("\terror in loadBackendSettings: " + error)
     }
 }
 
@@ -261,11 +261,14 @@ function send_data_json_node(data) {
   //failed send to backend
   if (res.statuscode < 200 || res.statuscode > 203) {
     // TODO: retry?
-    server.log("Error sending message to Postgres database.");
+    server.error("\tError sending message to Postgres database.");
     local logglyWarnTable = failedSendTable(readings_url, res.body, res.statuscode);
     logglyLog(logglyWarnTable, "Warning");
   } else {
-    server.log("Data sent successfully to Postgres database.");
+    logglyLog({
+      "message": "Readings sent successfully to Postgres database"
+    }, "Log");
+    server.log("Readings sent successfully to Postgres database");
   }
 }
 
@@ -275,10 +278,10 @@ function processResponse(incomingDataTable) {
   if (incomingDataTable.statuscode != 200) {
     // TODO: retry?
     // server.log("error sending message: " + res.body);
-    server.log("API status code: " + res.statuscode);
+    server.error("\tAPI status code: " + res.statuscode);
     // server.log(res.body);
     // server.log("error sending message: " + res.body.slice(0,40));
-    server.log("Error saving device location in DB.");
+    server.error("\tError saving device location in DB.");
     local logglyWarnTable = failedSendTable(res.statuscode);
     logglyLog(logglyWarnTable, "Warning");
   }
@@ -577,29 +580,50 @@ device.on("fullRes",function(data)
 }
 )
 
+const INTERNAL_AUTH = "rVV8JJgZ1konzq8Bj9BR"
 
 // Accept requests to open/close the valve
 http.onrequest(function (request, response) {
     try {
         response.header("Access-Control-Allow-Origin", "*");
-
+        if("path" in request){
+            if(request.path == "/device-type" || request.path == "/device-type/"){
+                if("internal-auth" in request.headers){
+                    if(request.headers["internal-auth"] == INTERNAL_AUTH){
+                        response.send(200, http.jsonencode({"deviceType" : "sensor"}));
+                        return
+                    } else {
+                        response.send(403, http.jsonencode({"error" : "Bad Password"}));
+                        return
+                    }
+                } else {
+                    response.send(403, http.jsonencode({"error" : "Missing Password"}));
+                    return
+                }
+            }
+        }
+ 
         if ("fullRes" in request.query) {
         // if it was, send the value of it to the device
             device.send("fullRes", request.query["fullRes"]);
             fullResSet = true
+            response.send(200, "OK");
             server.log("Full Res Set to True")
+            return
         }
 
         //note that on the sensor the only action you can take is restarting (or high res)
         if("password" in request.query){
           if(request.query["password"] == agentBackendSettingsPassword){
             if("restartAgent" in request.query){
+              response.send(200, "OK");
               server.restart();
+              return
             }
           }
         }
         // send a response back to whoever made the request
-        response.send(200, "OK");
+        response.send(403, http.jsonencode({"error" : "no arguments given"));
     } catch (ex) {
         response.send(500, "Error: " + ex);
     }
