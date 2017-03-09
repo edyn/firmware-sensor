@@ -654,8 +654,8 @@ function testSendFrequencyHighestBattery(){
 	/////////////////////////// 		Connected|   			   Battery|Wake Reason|   connectSuccess|  			  Fake Time|    Error| 	Mute|
 	local eventA = createSingleEvent(		 true,   LOWER_BATTERY - 0.001,   WR_TIMER, 		   false,		   			  0, 	  true, 	true/*mute*/);
 	local eventB = createSingleEvent(		false,   LOWER_BATTERY - 0.001,   WR_TIMER, 		   false,		  			  0, 	  true, 	true/*mute*/);
-	local eventC = createSingleEvent(		false,   LOWER_BATTERY - 0.001,   WR_TIMER, 		   false, HIGHEST_FREQUENCY - 1, 	  true, 	true/*mute*/);
-	local eventD = createSingleEvent(		false,   LOWER_BATTERY - 0.001,   WR_TIMER, 		   false, HIGHEST_FREQUENCY + 1, 	  true, 	true/*mute*/);
+	local eventC = createSingleEvent(		false,   LOWER_BATTERY - 0.001,   WR_TIMER, 		   false,  LOWEST_FREQUENCY - 1, 	  true, 	true/*mute*/);
+	local eventD = createSingleEvent(		false,   LOWER_BATTERY - 0.001,   WR_TIMER, 		   false,  LOWEST_FREQUENCY + 1, 	  true, 	true/*mute*/);
 
 	//Device Results 
 	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
