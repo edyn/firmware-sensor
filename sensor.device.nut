@@ -1377,6 +1377,10 @@ function pushError(errorTable){
     }
 }
 
+function checkForStoredErrors(){
+  return nv.storedErrors.len();
+}
+
 function sendStoredErrors(){
     try{
         local numberErrors = nv.storedErrors.len();
@@ -1760,7 +1764,8 @@ function mainWithSafety(){
 
 WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
 try{
-    if(!nv.storedErrors.len()){
+    local numberOfErrors = checkForStoredErrors();
+    if(!numberOfErrors){
         main();
     } else {
         if(server.isconnected()){
