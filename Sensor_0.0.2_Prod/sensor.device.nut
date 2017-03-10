@@ -1084,63 +1084,80 @@ function toHexStr(firstByte="0",secondByte="0")
 function unitTest()
 {
 }
+
+const TAKE_READING_AND_BLINKUP = 1;
+const TAKE_READING_NO_BLINKUP = 2;
+
+
+
 //0.0.1.2
 function startControlFlow()
 {
     wakeR=hardware.wakereason();
-    local branching=0;
+    local branching = "unknown";
     switch(wakeR)
     {
-//1
+        //Wake reasons with a blinkup phase
+
         case WAKEREASON_POWER_ON:
-            branching=1;
+            branching = TAKE_READING_AND_BLINKUP;
             break
+
+        case WAKEREASON_PIN1:
+            branching = TAKE_READING_AND_BLINKUP;
+            break
+
+
+        //Wake reasons that don't have a blinkup phase
+
         case WAKEREASON_SW_RESET:
-            branching=1;
+            branching = TAKE_READING_NO_BLINKUP;
             //This DOES try to force connection
             logglyError({
               "error" : "Waking From Software Reset (OS level Error, could be memory related)"
             });
             break
+
         case WAKEREASON_NEW_SQUIRREL:
-            branching=1;
+            branching = TAKE_READING_NO_BLINKUP;
             break
+
         case WAKEREASON_NEW_FIRMWARE:
-            branching=1;
+            branching = TAKE_READING_NO_BLINKUP;
             break
+
         case WAKEREASON_SQUIRREL_ERROR:
-            branching=2;
+            branching = TAKE_READING_AND_BLINKUP;
             //This DOES try to force connection
             logglyError({
               "error" : "Waking From Squirrel Runtime Error"
             }, true);
             break
 
-        //unlikely/impossible cases, but still 1
-        case WAKEREASON_SNOOZE:
-            branching=1;
-            break
-        case WAKEREASON_HW_RESET:
-            branching=1;
-            break
-
-//2
         case WAKEREASON_TIMER:
-            branching=2;
+            branching = TAKE_READING_NO_BLINKUP;
             break
 
-//3
-        case WAKEREASON_PIN1:
-            branching=3;
-            break
-
-//5
         case WAKEREASON_BLINKUP:
-            branching=5;
+            branching = TAKE_READING_NO_BLINKUP;
             break
-//Below this should NEVER happen, but is there to be safe
+
+        //unlikely/impossible cases (arbitrarily no blinkup)
+
+        case WAKEREASON_SNOOZE:
+            branching = TAKE_READING_NO_BLINKUP;
+            break
+
+        case WAKEREASON_HW_RESET:
+            branching = TAKE_READING_NO_BLINKUP;
+            break
+
         case null:
+            branching = TAKE_READING_NO_BLINKUP;
             server.error("\tBad Wakereason");
+            logglyError({
+              "error" : "wake reason is null"
+            });
             break
     }//endswitch
     return branching
