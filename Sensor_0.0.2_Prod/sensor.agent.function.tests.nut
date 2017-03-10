@@ -643,7 +643,7 @@ function testSendFrequencyLowerBattery(){
 
 }
 
-function testSendFrequencyHighestBattery(){
+function testSendFrequencyLowestBattery(){
 
     testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyLowestBattery"
 
