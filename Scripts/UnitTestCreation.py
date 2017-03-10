@@ -5,13 +5,13 @@ from tempfile import mkstemp
 from shutil import move
 from os import remove, close
 mypath=os.path.dirname(os.path.abspath(__file__))
-agentFile=mypath+"/valve.agent.nut"
-agentTests=mypath+"/valve.agent.tests.nut"
-agentConcat=mypath+"/valve.agent.unit.nut"
+agentFile=mypath+"/sensor.agent.nut"
+agentTests=mypath+"/sensor.agent.tests.nut"
+agentConcat=mypath+"/sensor.agent.unit.nut"
 
-deviceFile=mypath+"/valve.device.nut"
-deviceTests=mypath+"/valve.device.tests.nut"
-deviceConcat=mypath+"/valve.device.unit.nut"
+deviceFile=mypath+"/sensor.device.nut"
+deviceTests=mypath+"/sensor.device.tests.nut"
+deviceConcat=mypath+"/sensor.device.unit.nut"
 
 #with open(agentConcat, 'w+') as fin:
 #    agentTestsText=fin.read()
