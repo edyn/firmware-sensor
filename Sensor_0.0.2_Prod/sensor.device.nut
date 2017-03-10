@@ -1590,10 +1590,6 @@ function regularOperation(){
 
       server.log("Memory free after configurations: " + imp.getmemoryfree());
 
-      ///
-      // End of Configurations
-      ///
-
       if (ship_and_store == true) {
         power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
       }
@@ -1627,7 +1623,6 @@ function regularOperation(){
         // store sensor data in non-volatile storage
         //suspend charging
         powerManager.suspendCharging();
-        local batvol = source.voltage();
         //uncomment this sleep to get the light reading value change:
         imp.sleep(0.1);
         local newReading = collectReadingData();
