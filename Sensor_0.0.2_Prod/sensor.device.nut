@@ -1684,7 +1684,7 @@ function main() {
     server.log("main");
 
     branchSelect = determineBranchFromWakeReason();
-    hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
+    
     if(branchSelect == 1){
         if(server.isconnected()){
             //might be able to remove this sleep all together
