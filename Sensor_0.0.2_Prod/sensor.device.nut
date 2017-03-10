@@ -1678,7 +1678,7 @@ if (!("nv" in getroottable() && "data" in nv)) {
 }
 
 function main() {
-    hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
+    hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){});
 
     //used for functional tests:
     server.log("main");
