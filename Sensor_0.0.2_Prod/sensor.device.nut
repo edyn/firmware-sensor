@@ -1228,6 +1228,18 @@ function allLedsOff(){
     blueLed.off();
 }
 
+function blinkupLoop(duration = 90, count = 0, callbackOnCompletion = function(){deepSleepFortime(INTERVAL_SENSOR_SAMPLE_S)}){
+    if(count < duration){
+        imp.wakeup(1,
+            function(){
+                blinkupLoop(duration, count + 1, callbackOnCompletion)
+            }
+        )
+    } else {
+      callbackOnCompletion();
+    }
+}
+
 function blinkupFor(timer=90){
     allLedsOn();
     imp.enableblinkup(true);
