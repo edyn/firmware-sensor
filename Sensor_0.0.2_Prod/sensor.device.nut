@@ -1635,50 +1635,34 @@ function regularOperation(){
         //We sacrifice *a little* nv memory for no reason because of this.
         saveReadingToNV(newReading);
         return
-        
-      // End Saving
-      //Begin Sending
-
-        //Send sensor data
-        if (isServerRefreshNeeded(nv.data_sent, nv.data.top())) {
-          if (debug == true) server.log("Server refresh needed");
-          if(server.isconnected()){
-              send_data();
-          } else {
-              //TODO: THIS IS NOT SAFE (no try/catch):
-              connect(send_data, TIMEOUT_SERVER_S);
-          }
-                // if (debug == true) server.log("Sending location information
-                // without prompting.");
-            // connect(send_loc, TIMEOUT_SERVER_S);
-        }
-
-        // ///
-        // all the important time-sensitive decisions based on current state
-        // go here
-        // ///
-
-        // // checking source voltage not necessary in the first pass
-        // // since power will be cut to the imp below Vout of 3.1 V
-        // if (source.voltage() < 3.19) {
-        //   power.enter_deep_sleep_running("Low system voltage.");
-        // }
-        // if temperature is too hot
-        // if temperatuer is too cold
-
-        else {
-          server.log("Not time to send");
-          if (ship_and_store == true) {
-            power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-          }
-          else {
-            // not time to send. sleep until next sensor sampling.
-            power.enter_deep_sleep_running("Not time yet");
-          }
-        }
     }
     //end regularOperation
 
+
+function sendOrSaveReading(forcedConnection = false, inputCallback = function(){}){
+
+        //Send sensor data
+        local serverRefresh = isServerRefreshNeeded(nv.data_sent, nv.data.top())
+
+        //this will always evaluate true if the device is already connected.
+        if (forcedConnection || serverRefresh) {  
+            //TODO: THIS IS NOT SAFE (no try/catch):
+            connect(
+                function(){
+                    if(server.isconnected()){
+                        sendStoredErrors();
+                        send_data();
+                        inputCallback();
+                    } else {
+                        inputCallback();
+                    }
+                }
+            , TIMEOUT_SERVER_S);
+        } else {
+            inputCallback();
+        }
+    }
+}
 
 // create non-volatile storage if it doesn't exist
 if (!("nv" in getroottable() && "data" in nv)) {
