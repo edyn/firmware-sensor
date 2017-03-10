@@ -729,7 +729,7 @@ class power {
     redLed.blink(0.1,6);
     //TODO: change inputTime to be the input of the function
     local inputTime = INTERVAL_SLEEP_FAILED_S;
-    server.log("Deep sleep (failed) call because: " + reason);
+    if (debug == true) server.error("\tDeep sleep (failed) call because: "+reason)
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) server.log("Starting deep sleep (failed).");
@@ -767,7 +767,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
             return
         }
     } catch (error) {
-        server.log(error)
+        server.error("\t" + error)
         logglyError({
             "error" : error,
             "function" : "forcedLogglyConnect",
@@ -799,7 +799,7 @@ function logglyGeneral(logTable = {}, forceConnect = false, level = "INFO"){
         }, logglyConnectTimeout);
     }
   } catch (error) {
-    server.log("Loggly " + level +  " Error: " + error);
+    server.error("\tLoggly " + level +  " Error: " + error);
   }
 }
 
@@ -885,7 +885,7 @@ function onConnectedTimeout(state) {
     // power.enter_deep_sleep_ship_store("Conservatively going into ship
     // and store mode after failing to connect to server.");
     if (debug == true) {
-      server.log("Gave a chance to blink up, then tried to connect to server but failed.");
+      server.error("\tGave a chance to blink up, then tried to connect to server but failed.");
     }
     power.enter_deep_sleep_failed("Sleeping after failing to connect to server after a button press.");
   }
@@ -919,15 +919,11 @@ function connect(callback, timeout) {
           }
           callback(connectionStatus)
         } catch(error) {
-          if(connectionStatus){
-            server.log("error in callback from function 'connect'")
-            logglyError({
+          server.error("\terror in callback from function 'connect'")
+          logglyError({
               "message" : "Error in connect's callback function",
               "Error" : error
-            });
-          } else {
-            nv.wakeFromError = true;
-          }
+          });
           //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
           power.enter_deep_sleep_running("error in callback from connect");
         }
@@ -1013,12 +1009,13 @@ function send_data(status) {
     }
 
     else {
-      if (debug == true) server.log("Error: Server connected, but no success.");
+      server.error("\tError: Server connected but failed to send data");
     }
   }
-
+  //urgent todo: this doesn't seem to belong here AT ALL:
   else {
-    if (debug == true) server.log("Tried to connect to server to send data but failed.");
+    //guaranteed that this won't work:
+    if (debug == true) server.error("\tTried to connect to server to send data but failed.");
     power.enter_deep_sleep_failed("Sleeping after failing to connect to server for sending data.");
   }
   if(sendFullRead)
@@ -1038,7 +1035,7 @@ function send_data(status) {
     }
     else
     {
-        server.log("did not send")
+        server.error("\tdid not send")
     }
   }
 
@@ -1143,7 +1140,7 @@ function startControlFlow()
             break
 //Below this should NEVER happen, but is there to be safe
         case null:
-            server.log("Bad Wakereason");
+            server.error("\tBad Wakereason");
             break
     }//endswitch
     return branching
@@ -1205,7 +1202,7 @@ function interruptPin() {
         }
     }//end of try
     catch(error){
-        server.log(error);
+        server.error("\t" + error);
         blinkAll(2,2);
         //error occurred in interrupt, control=4 and run main
         power.enter_deep_sleep_running("Interrupt Error");
@@ -1387,6 +1384,10 @@ function pushError(errorTable){
     }
 }
 
+function checkForStoredErrors(){
+  return nv.storedErrors.len();
+}
+
 function sendStoredErrors(){
     try{
         local numberErrors = nv.storedErrors.len();
@@ -1415,7 +1416,7 @@ function sendStoredErrors(){
 }
 
 //functions that are useful for testing NV safety:
-//todo: remove these comments from production code and make them available in a test document"
+//todo before releasing functional tests: remove these comments from production code and make them available in a test document"
 
 //local testNVSafetyLoop(){
 //    local z = 0
@@ -1545,14 +1546,14 @@ function regularOperation(){
           }
           //will show up only when it's probably true:
           if(powerManager.reg_3==null){
-            server.log("Possible damage to the LTC or I2C busses.");
+            server.error("\tPossible damage to the LTC or I2C busses.");
           }
       }else{
           imp.sleep(0.1)
       };
       }
       catch(error){
-          server.log("LTC SAMPLING ERROR");
+          server.error("\tLTC SAMPLING ERROR");
       }
 
       //server.log("PM PASS");
@@ -1576,11 +1577,11 @@ function regularOperation(){
             }
             //will show up only when it's probably true:
             if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32){
-              server.log("Possible damage to the Humidity/Temperature Sensor or I2C busses.");
+              server.error("\tPossible damage to the Humidity/Temperature Sensor or I2C busses.");
             }
         }
       } catch(error){
-        server.log("Hum/Temp Error");
+        server.error("\tHum/Temp Error");
       }
 
       //server.log("Humidity/Temperature Pass")
@@ -1608,7 +1609,12 @@ function regularOperation(){
         //Send sensor data
         if (isServerRefreshNeeded(nv.data_sent, nv.data.top())) {
           if (debug == true) server.log("Server refresh needed");
-          connect(send_data, TIMEOUT_SERVER_S);
+          if(server.isconnected()){
+              send_data();
+          } else {
+              //TODO: THIS IS NOT SAFE (no try/catch):
+              connect(send_data, TIMEOUT_SERVER_S);
+          }
                 // if (debug == true) server.log("Sending location information
                 // without prompting.");
             // connect(send_loc, TIMEOUT_SERVER_S);
@@ -1644,7 +1650,6 @@ function regularOperation(){
 // create non-volatile storage if it doesn't exist
 if (!("nv" in getroottable() && "data" in nv)) {
     nv<-{
-        wakeFromError = false,
         data = [],
         data_sent = null,
         running_state = true, PMRegB=[0x00,0x00],
@@ -1721,7 +1726,8 @@ function main() {
 
 function disconnectHandler(reason) {
   if (reason != SERVER_CONNECTED){
-    if (debug == true) server.log("Unexpectedly lost wifi connection.");
+    //guaranteed not to run (how could it ever?):
+    if (debug == true) server.error("\tUnexpectedly lost wifi connection.");
     power.enter_deep_sleep_failed("Unexpectedly lost wifi connection.");
   }
 }
@@ -1746,51 +1752,58 @@ function wakeCallHandle(time=null,func=null) {
 function WatchDog(){
     power.enter_deep_sleep_failed("watchdog")
 }
-WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
 
 function mainWithSafety(){
-    try{
-      if(!nv.wakeFromError){
-        main();
-      } else {
-        if(!server.isconnected()){
-          server.connect(
-              function(connectStatus){
-                if(server.isconnected()){
-                  server.log("waking from unknown error")
-                  logglyError({
-                      "message" : "waking from unknown error"
-                  });
-                  //reset ONLY if we successfully connect and log
-                  nv.wakeFromError = false;
-                }
-                //run main no matter what
-                main();
-              },
-            CONNECTION_TIME_ON_ERROR_WAKEUP)
-        } else {
-          logglyError({
-            "message" : "waking from unknown error"
-          });
-          //reset ONLY if we successfully connect and log
-          nv.wakeFromError = false;
+  imp.wakeup(1.0,
+    function(){
+        try{
+            main();
+        } catch (error){
+            logglyError({
+                "message" : "error in main on forced connect!", 
+                "error" : error,
+                "timestamp" : time
+            });
+                //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
+                power.enter_deep_sleep_running("error in main");
+            }
         }
-        //run main no matter what
-        main();
-      }
-    } catch (error) {
-        if(server.isconnected()){
-          server.log(error)
-          logglyError({
-            "message" : "error in main!", 
-            "error" : error
-          });
-        } else {
-          nv.wakeFromError = true;
-        }
-        //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
-        power.enter_deep_sleep_running("error in main");
-    }
+    );
 }
 
-mainWithSafety();//Run Main
+WDTimer<-imp.wakeup(300,WatchDog);//end next wake call
+
+try{
+    local numberOfErrors = checkForStoredErrors();
+    if(!numberOfErrors){
+        main();
+    } else {
+        if(server.isconnected()){
+            //adding a little safety:
+            try{
+                sendStoredErrors();
+                mainWithSafety();
+            } catch (error){
+                server.log("error in sendStoredErrors: " + error);
+            }
+        } else {
+            server.connect(function(connectionStatus){
+                //adding a little safety:
+                try{
+                    sendStoredErrors();
+                } catch (error){
+                    server.log("error in sendStoredErrors: " + error);
+                } 
+                mainWithSafety();
+            }, CONNECTION_TIME_ON_ERROR_WAKEUP); 
+        }
+    }
+} catch (error) {
+    logglyError({
+        "message" : "error in main!", 
+        "error" : error,
+        "timestamp" : time()
+    });
+    //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
+    power.enter_deep_sleep_running("error in main");
+}
