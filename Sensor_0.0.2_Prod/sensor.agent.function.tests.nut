@@ -7,10 +7,10 @@ currentTestName <- "0"
 
 //function that runs over and over, once for each event in a sequence:
 function runMain(runTable){
-	mainRunNumber += 1;
-	server.log("\n\nMAIN RUN NUMBER: " + (mainRunNumber - 1))
-	server.log(http.jsonencode({"wakeReason" : runTable.wakeReason, "online" : runTable.online, "battery" : runTable.battery, "fakeTime" : runTable.fakeTime, "mute" : runTable.mute}))
-	device.send("runMain", {"wakeReason" : runTable.wakeReason, "connectSuccess" : runTable.connectSuccess, "online" : runTable.online, "battery" : runTable.battery, "fakeTime" : runTable.fakeTime, "mute" : runTable.mute, "throwError" : runTable.throwError});
+    mainRunNumber += 1;
+    server.log("\n\nMAIN RUN NUMBER: " + (mainRunNumber - 1))
+    server.log(http.jsonencode({"wakeReason" : runTable.wakeReason, "online" : runTable.online, "battery" : runTable.battery, "fakeTime" : runTable.fakeTime, "mute" : runTable.mute}))
+    device.send("runMain", {"wakeReason" : runTable.wakeReason, "connectSuccess" : runTable.connectSuccess, "online" : runTable.online, "battery" : runTable.battery, "fakeTime" : runTable.fakeTime, "mute" : runTable.mute, "throwError" : runTable.throwError});
 }
 
 //adding null as as first index so this table is 1 indexed
@@ -37,20 +37,17 @@ const WR_SW_RESTART = 10; //Planned addition in os 36, gotta get ready, yo
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function createDeviceResults(lastSleep, wakeReason, storedReadings){
-	return ({"lastSleep" : lastSleep, "wakeReason" : wakeReason, "storedReadings" : storedReadings});
+    return ({"lastSleep" : lastSleep, "wakeReason" : wakeReason, "storedReadings" : storedReadings});
 }
 
 function createSingleEvent(online, battery, wakeReason, connectSuccess, fakeTime, throwError, mute){
-	return ({"online" : online, "battery" : battery, "wakeReason" : wakeReason, "connectSuccess" : connectSuccess, "fakeTime" : fakeTime, "mute" : mute, "throwError" : throwError});
+    return ({"online" : online, "battery" : battery, "wakeReason" : wakeReason, "connectSuccess" : connectSuccess, "fakeTime" : fakeTime, "mute" : mute, "throwError" : throwError});
 }
 
 // an "event" is a single main run for the device
-// a "watering" is a single schedule object as sent from the backend
 // a single "device results" is some information from the device like how many stored readings it had
-// a single "watering results" is the results that the agent would send to the backend during or after a watering (even if the watering didn't happen)
-// a "checkIn" is all four of these being appended to their respective arrays
-// a "sequence" is multiple "checkIn"s that form a narrative
-//most time series will focus more or less around the time 2200, as it is 1000 + 1200 seconds (20 minutes)
+// a "sequence" is multiple "event/results" that form a narrative
+//most time series will focus more or less around the time 0, as it is easy to calculate things relative to 0
 
 jsonNull <- http.jsonencode([]);
 
@@ -58,182 +55,182 @@ jsonNull <- http.jsonencode([]);
 //useful for clearing out the 'data last sent timestamp'
 function exampleSequence(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "exampleSequence"
+    testNameChangeArray[runMainSequenceArray.len()] <- "exampleSequence"
 
-	//Events
-	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|      Fake Time|    Error| 	Mute|
-	local eventA = createSingleEvent(		 true, 	 	3.31,    WR_TIMER,				true,			   0, 	 false, 	true/*mute*/);
+    //Events
+    ///////////////////////////         Connected|   Battery| Wake Reason|    connectSuccess|      Fake Time|    Error|     Mute|
+    local eventA = createSingleEvent(        true,      3.31,    WR_TIMER,              true,              0,    false,     true/*mute*/);
 
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
-	
-	//Sequence
-	//////////////////
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,     WR_TIMER,               0);
+    
+    //Sequence
+    //////////////////
 
-	//1 (r2)
-	expectedResultsArray.append(deviceResultsA)
-	runMainSequenceArray.append(eventA)
+    //1 (r2)
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
 }
 
 //Sequence 1
 function connectedOrConnectingAndSendingData(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "connectedOrConnectingAndSendingData"
+    testNameChangeArray[runMainSequenceArray.len()] <- "connectedOrConnectingAndSendingData"
 
-	//Events
-	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
-	local eventA = createSingleEvent(		true,	 	3.31,    WR_TIMER, 		     	true,		   0, 	 false, 	true/*mute*/);
-	local eventB = createSingleEvent(		true, 		3.31,    WR_TIMER, 		     	true, (3600*6*1), 	 false,		true/*mute*/);
-	local eventC = createSingleEvent(	   false, 		3.31,    WR_TIMER, 			 	true, (3600*6*2), 	 false, 	true/*mute*/);
-	local eventD = createSingleEvent(	   false, 		3.31,    WR_TIMER, 			 	true, (3600*6*3), 	 false, 	true/*mute*/);
+    //Events
+    ///////////////////////////         Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error|     Mute|
+    local eventA = createSingleEvent(        true,      3.31,    WR_TIMER,              true,          0,    false,     true/*mute*/);
+    local eventB = createSingleEvent(        true,      3.31,    WR_TIMER,              true, (3600*6*1),    false,     true/*mute*/);
+    local eventC = createSingleEvent(       false,      3.31,    WR_TIMER,              true, (3600*6*2),    false,     true/*mute*/);
+    local eventD = createSingleEvent(       false,      3.31,    WR_TIMER,              true, (3600*6*3),    false,     true/*mute*/);
 
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
-	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				0);
-	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				0);
-	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
-	local deviceResultsE = createDeviceResults(	   600,		WR_TIMER, 				0);
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,     WR_TIMER,               0);
+    local deviceResultsB = createDeviceResults(    600,     WR_TIMER,               0);
+    local deviceResultsC = createDeviceResults(    600,     WR_TIMER,               0);
+    local deviceResultsD = createDeviceResults(    600,     WR_TIMER,               0);
+    local deviceResultsE = createDeviceResults(    600,     WR_TIMER,               0);
 
-	//Sequence
-	//////////////////
+    //Sequence
+    //////////////////
 
-	//1 (r2)
-	expectedResultsArray.append(deviceResultsA)
-	runMainSequenceArray.append(eventA)
-	
-	//2 (r3)
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventB)
-	
-	//3 (r4)
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventC)
-	
-	//4 (r5)
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventD)
-	
+    //1 (r2)
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
+    
+    //2 (r3)
+    expectedResultsArray.append(deviceResultsB)
+    runMainSequenceArray.append(eventB)
+    
+    //3 (r4)
+    expectedResultsArray.append(deviceResultsB)
+    runMainSequenceArray.append(eventC)
+    
+    //4 (r5)
+    expectedResultsArray.append(deviceResultsB)
+    runMainSequenceArray.append(eventD)
+    
 }
 
 //Sequence 2
 function notConnectedAndStoringReadingsThenSend(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "notConnectedAndStoringReadingsThenSend"
+    testNameChangeArray[runMainSequenceArray.len()] <- "notConnectedAndStoringReadingsThenSend"
 
-	//Events
-	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
-	local eventA = createSingleEvent(	    true,	 	3.31,    WR_TIMER, 		     	true,		   0, 	 false, 	true/*mute*/);
-	local eventB = createSingleEvent(	   false, 		3.31,    WR_TIMER, 		       false, (3600*6*1), 	 false,		true/*mute*/);
-	local eventC = createSingleEvent(	   false, 		3.31,    WR_TIMER, 			   false, (3600*6*2), 	 false, 	true/*mute*/);
-	local eventD = createSingleEvent(	   false, 		3.31,    WR_TIMER, 			   false, (3600*6*3), 	 false, 	true/*mute*/);
-	local eventE = createSingleEvent(	   false, 		3.31,    WR_TIMER, 			    true, (3600*6*4), 	 false, 	true/*mute*/);
+    //Events
+    ///////////////////////////         Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error|     Mute|
+    local eventA = createSingleEvent(        true,      3.31,    WR_TIMER,              true,           0,   false,     true/*mute*/);
+    local eventB = createSingleEvent(       false,      3.31,    WR_TIMER,             false,  (3600*6*1),   false,     true/*mute*/);
+    local eventC = createSingleEvent(       false,      3.31,    WR_TIMER,             false,  (3600*6*2),   false,     true/*mute*/);
+    local eventD = createSingleEvent(       false,      3.31,    WR_TIMER,             false,  (3600*6*3),   false,     true/*mute*/);
+    local eventE = createSingleEvent(       false,      3.31,    WR_TIMER,              true,  (3600*6*4),   false,     true/*mute*/);
 
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
-	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
-	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				2);
-	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				3);
-	local deviceResultsE = createDeviceResults(	   600,		WR_TIMER, 				0);
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,     WR_TIMER,               0);
+    local deviceResultsB = createDeviceResults(    600,     WR_TIMER,               1);
+    local deviceResultsC = createDeviceResults(    600,     WR_TIMER,               2);
+    local deviceResultsD = createDeviceResults(    600,     WR_TIMER,               3);
+    local deviceResultsE = createDeviceResults(    600,     WR_TIMER,               0);
 
-	//Sequence
-	//////////////////
+    //Sequence
+    //////////////////
 
-	//1
-	expectedResultsArray.append(deviceResultsA)
-	runMainSequenceArray.append(eventA)
-	
-	//2
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventB)
-	
-	//3
-	expectedResultsArray.append(deviceResultsC)
-	runMainSequenceArray.append(eventC)
-	
-	//4
-	expectedResultsArray.append(deviceResultsD)
-	runMainSequenceArray.append(eventD)
+    //1
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
+    
+    //2
+    expectedResultsArray.append(deviceResultsB)
+    runMainSequenceArray.append(eventB)
+    
+    //3
+    expectedResultsArray.append(deviceResultsC)
+    runMainSequenceArray.append(eventC)
+    
+    //4
+    expectedResultsArray.append(deviceResultsD)
+    runMainSequenceArray.append(eventD)
 
-	//5
-	expectedResultsArray.append(deviceResultsE)
-	runMainSequenceArray.append(eventE)
-	
+    //5
+    expectedResultsArray.append(deviceResultsE)
+    runMainSequenceArray.append(eventE)
+    
 }
 
 //Sequence 3
 //some of these are unrealistic and could potentially be removed from testing
 function differentWakeReasonsConnected(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "differentWakeReasonsConnected"
+    testNameChangeArray[runMainSequenceArray.len()] <- "differentWakeReasonsConnected"
 
-	//Events
-	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
-	local eventA = createSingleEvent(	    true,	 	3.31,    WR_BOOT, 		     	true,		   0, 	 false, 	true/*mute*/);
-	local eventB = createSingleEvent(	    true, 		3.31,    WR_TIMER, 		        true, 		   0, 	 false,		true/*mute*/);
-	local eventC = createSingleEvent(	    true, 		3.31,    WR_SW_RESET, 		    true, 		   0, 	 false, 	true/*mute*/);
-	local eventD = createSingleEvent(	    true, 		3.31,    WR_BUTTON, 		    true, 		   0, 	 false, 	true/*mute*/);
-	local eventE = createSingleEvent(	    true, 		3.31,    WR_NEW_SQUIRREL, 	    true, 		   0, 	 false, 	true/*mute*/);
-	local eventF = createSingleEvent(	    true,	 	3.31,    WR_SQUIRREL_ERROR, 	true,		   0, 	 false, 	true/*mute*/);
-	local eventG = createSingleEvent(	    true,	 	3.31,    WR_NEW_FW, 		    true,		   0, 	 false, 	true/*mute*/);
-	local eventH = createSingleEvent(	    true,	 	3.31,    WR_BLINKUP 		    true,		   0, 	 false, 	true/*mute*/);
-	//this wakereason not supported yet:
-	//local eventI = createSingleEvent(	    true,	 	3.31,    WR_SW_RESTART 		    true,		   0, 	 false, 	true/*mute*/);
-	
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	local deviceResultsA = createDeviceResults(	   600,		WR_BOOT, 				0);
-	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				0);
-	local deviceResultsC = createDeviceResults(	   600,		WR_SW_RESET, 			0);
-	local deviceResultsD = createDeviceResults(	   600,		WR_BUTTON, 				0);
-	local deviceResultsE = createDeviceResults(	   600,		WR_NEW_SQUIRREL, 		0);
-	local deviceResultsF = createDeviceResults(	   600,		WR_SQUIRREL_ERROR, 		0);
-	local deviceResultsG = createDeviceResults(	   600,		WR_NEW_FW, 				0);
-	local deviceResultsH = createDeviceResults(	   600,		WR_BLINKUP, 			0);
-	//this wakereason not supported yet:
-	//local deviceResultsI = createDeviceResults(	   600,		WR_SW_RESTART, 		0);
+    //Events
+    ///////////////////////////         Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error|     Mute|
+    local eventA = createSingleEvent(        true,      3.31,     WR_BOOT,              true,          0,    false,     true/*mute*/);
+    local eventB = createSingleEvent(        true,      3.31,    WR_TIMER,              true,          0,    false,     true/*mute*/);
+    local eventC = createSingleEvent(        true,      3.31, WR_SW_RESET,              true,          0,    false,     true/*mute*/);
+    local eventD = createSingleEvent(        true,      3.31,   WR_BUTTON,              true,          0,    false,     true/*mute*/);
+    local eventE = createSingleEvent(        true,      3.31,WR_NEW_SQUIRREL,           true,          0,    false,     true/*mute*/);
+    local eventF = createSingleEvent(        true,      3.31,WR_SQUIRREL_ERROR,         true,          0,    false,     true/*mute*/);
+    local eventG = createSingleEvent(        true,      3.31,   WR_NEW_FW,              true,          0,    false,     true/*mute*/);
+    local eventH = createSingleEvent(        true,      3.31,  WR_BLINKUP,              true,          0,    false,     true/*mute*/);
+    //this wakereason not supported yet:
+    //local eventI = createSingleEvent(        true,         3.31,    WR_SW_RESTART             true,           0,      false,     true/*mute*/);
+    
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,      WR_BOOT,               0);
+    local deviceResultsB = createDeviceResults(    600,     WR_TIMER,               0);
+    local deviceResultsC = createDeviceResults(    600,  WR_SW_RESET,               0);
+    local deviceResultsD = createDeviceResults(    600,    WR_BUTTON,               0);
+    local deviceResultsE = createDeviceResults(    600,WR_NEW_SQUIRREL,             0);
+    local deviceResultsF = createDeviceResults(    600,WR_SQUIRREL_ERROR,           0);
+    local deviceResultsG = createDeviceResults(    600,    WR_NEW_FW,               0);
+    local deviceResultsH = createDeviceResults(    600,   WR_BLINKUP,               0);
+    //this wakereason not supported yet:
+    //local deviceResultsI = createDeviceResults(       600,        WR_SW_RESTART,         0);
 
-	//Sequence
-	//////////////////
+    //Sequence
+    //////////////////
 
-	//1
-	expectedResultsArray.append(deviceResultsA)
-	runMainSequenceArray.append(eventA)
-	
-	//2
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventB)
-	
-	//3
-	expectedResultsArray.append(deviceResultsC)
-	runMainSequenceArray.append(eventC)
-	
-	//4
-	expectedResultsArray.append(deviceResultsD)
-	runMainSequenceArray.append(eventD)
+    //1
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
+    
+    //2
+    expectedResultsArray.append(deviceResultsB)
+    runMainSequenceArray.append(eventB)
+    
+    //3
+    expectedResultsArray.append(deviceResultsC)
+    runMainSequenceArray.append(eventC)
+    
+    //4
+    expectedResultsArray.append(deviceResultsD)
+    runMainSequenceArray.append(eventD)
 
-	//5
-	expectedResultsArray.append(deviceResultsE)
-	runMainSequenceArray.append(eventE)
+    //5
+    expectedResultsArray.append(deviceResultsE)
+    runMainSequenceArray.append(eventE)
 
-	//6
-	expectedResultsArray.append(deviceResultsF)
-	runMainSequenceArray.append(eventF)
-	
-	//7
-	expectedResultsArray.append(deviceResultsG)
-	runMainSequenceArray.append(eventG)
-	
-	//8
-	expectedResultsArray.append(deviceResultsH)
-	runMainSequenceArray.append(eventH)
-	
-	//9
-	//NOT SUPPORTED YET:
-	//expectedResultsArray.append(deviceResultsI)
-	//runMainSequenceArray.append(eventI)
+    //6
+    expectedResultsArray.append(deviceResultsF)
+    runMainSequenceArray.append(eventF)
+    
+    //7
+    expectedResultsArray.append(deviceResultsG)
+    runMainSequenceArray.append(eventG)
+    
+    //8
+    expectedResultsArray.append(deviceResultsH)
+    runMainSequenceArray.append(eventH)
+    
+    //9
+    //NOT SUPPORTED YET:
+    //expectedResultsArray.append(deviceResultsI)
+    //runMainSequenceArray.append(eventI)
 }
 
 
@@ -242,73 +239,73 @@ function differentWakeReasonsConnected(){
 //others which are commented out are known failures
 function differentWakeReasonsSuccessfulConnectionAttempt(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "differentWakeReasonsSuccessfulConnectionAttempt"
+    testNameChangeArray[runMainSequenceArray.len()] <- "differentWakeReasonsSuccessfulConnectionAttempt"
 
-	//Events
-	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
-	//local eventA = createSingleEvent(	   false,	 	3.31,    WR_BOOT, 		     	true,		   0, 	 false, 	true/*mute*/);
-	local eventB = createSingleEvent(	   false, 		3.31,    WR_TIMER, 		        true, 		   0, 	 false,		true/*mute*/);
-	//local eventC = createSingleEvent(	   false, 		3.31,    WR_SW_RESET, 		    true, 		   0, 	 false, 	true/*mute*/);
-	local eventD = createSingleEvent(	   false, 		3.31,    WR_BUTTON, 		    true, 		   0, 	 false, 	true/*mute*/);
-	//local eventE = createSingleEvent(	   false, 		3.31,    WR_NEW_SQUIRREL, 	    true, 		   0, 	 false, 	true/*mute*/);
-	local eventF = createSingleEvent(	   false,	 	3.31,    WR_SQUIRREL_ERROR, 	true,		   0, 	 false, 	true/*mute*/);
-	//local eventG = createSingleEvent(	   false,	 	3.31,    WR_NEW_FW, 		    true,		   0, 	 false, 	true/*mute*/);
-	local eventH = createSingleEvent(	   false,	 	3.31,    WR_BLINKUP 		    true,		   0, 	 false, 	true/*mute*/);
-	//this wakereason not supported yet:
-	//local eventI = createSingleEvent(	    true,	 	3.31,    WR_SW_RESTART 		    true,		   0, 	 false, 	true/*mute*/);
-	
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	//local deviceResultsA = createDeviceResults(	   600,		WR_BOOT, 				0);
-	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				0);
-	//local deviceResultsC = createDeviceResults(	   600,		WR_SW_RESET, 			0);
-	local deviceResultsD = createDeviceResults(	   600,		WR_BUTTON, 				0);
-	//local deviceResultsE = createDeviceResults(	   600,		WR_NEW_SQUIRREL, 		0);
-	local deviceResultsF = createDeviceResults(	   600,		WR_SQUIRREL_ERROR, 		0);
-	//local deviceResultsG = createDeviceResults(	   600,		WR_NEW_FW, 				0);
-	local deviceResultsH = createDeviceResults(	   600,		WR_BLINKUP, 			0);
-	//this wakereason not supported yet:
-	//local deviceResultsI = createDeviceResults(	   600,		WR_SW_RESTART, 		0);
+    //Events
+    ///////////////////////////         Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error|     Mute|
+    local eventA = createSingleEvent(       false,      3.31,     WR_BOOT,              true,          0,     false,     true/*mute*/);
+    local eventB = createSingleEvent(       false,      3.31,    WR_TIMER,              true,          0,     false,     true/*mute*/);
+    local eventC = createSingleEvent(       false,      3.31, WR_SW_RESET,              true,          0,     false,     true/*mute*/);
+    local eventD = createSingleEvent(       false,      3.31,   WR_BUTTON,              true,          0,     false,     true/*mute*/);
+    local eventE = createSingleEvent(       false,      3.31,WR_NEW_SQUIRREL,           true,          0,     false,     true/*mute*/);
+    local eventF = createSingleEvent(       false,      3.31,WR_SQUIRREL_ERROR,         true,          0,     false,     true/*mute*/);
+    local eventG = createSingleEvent(       false,      3.31,   WR_NEW_FW,              true,          0,     false,     true/*mute*/);
+    local eventH = createSingleEvent(       false,      3.31,  WR_BLINKUP,              true,          0,     false,     true/*mute*/);
+    //this wakereason not supported yet:
+    //local eventI = createSingleEvent(        true,         3.31,    WR_SW_RESTART             true,           0,      false,     true/*mute*/);
+    
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,      WR_BOOT,               0);
+    local deviceResultsB = createDeviceResults(    600,     WR_TIMER,               0);
+    local deviceResultsC = createDeviceResults(    600,  WR_SW_RESET,               0);
+    local deviceResultsD = createDeviceResults(    600,    WR_BUTTON,               0);
+    local deviceResultsE = createDeviceResults(    600,WR_NEW_SQUIRREL,             0);
+    local deviceResultsF = createDeviceResults(    600,WR_SQUIRREL_ERROR,           0);
+    local deviceResultsG = createDeviceResults(    600,    WR_NEW_FW,               0);
+    local deviceResultsH = createDeviceResults(    600,   WR_BLINKUP,               0);
+    //this wakereason not supported yet:
+    //local deviceResultsI = createDeviceResults(       600,        WR_SW_RESTART,         0);
 
-	//Sequence
-	//////////////////
+    //Sequence
+    //////////////////
 
-	//1
-	//expectedResultsArray.append(deviceResultsA)
-	//runMainSequenceArray.append(eventA)
-	
-	//2
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventB)
-	
-	//3
-	//expectedResultsArray.append(deviceResultsC)
-	//runMainSequenceArray.append(eventC)
-	
-	//4
-	expectedResultsArray.append(deviceResultsD)
-	runMainSequenceArray.append(eventD)
+    //1
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
+    
+    //2
+    expectedResultsArray.append(deviceResultsB)
+    runMainSequenceArray.append(eventB)
+    
+    //3
+    expectedResultsArray.append(deviceResultsC)
+    runMainSequenceArray.append(eventC)
+    
+    //4
+    expectedResultsArray.append(deviceResultsD)
+    runMainSequenceArray.append(eventD)
 
-	//5
-	//expectedResultsArray.append(deviceResultsE)
-	//runMainSequenceArray.append(eventE)
+    //5
+    expectedResultsArray.append(deviceResultsE)
+    runMainSequenceArray.append(eventE)
 
-	//6
-	expectedResultsArray.append(deviceResultsF)
-	runMainSequenceArray.append(eventF)
-	
-	//7
-	//expectedResultsArray.append(deviceResultsG)
-	//runMainSequenceArray.append(eventG)
-	
-	//8
-	expectedResultsArray.append(deviceResultsH)
-	runMainSequenceArray.append(eventH)
-	
-	//9
-	//NOT SUPPORTED YET:
-	//expectedResultsArray.append(deviceResultsI)
-	//runMainSequenceArray.append(eventI)
+    //6
+    expectedResultsArray.append(deviceResultsF)
+    runMainSequenceArray.append(eventF)
+    
+    //7
+    expectedResultsArray.append(deviceResultsG)
+    runMainSequenceArray.append(eventG)
+    
+    //8
+    expectedResultsArray.append(deviceResultsH)
+    runMainSequenceArray.append(eventH)
+    
+    //9
+    //NOT SUPPORTED YET:
+    //expectedResultsArray.append(deviceResultsI)
+    //runMainSequenceArray.append(eventI)
 }
 
 
@@ -317,135 +314,135 @@ function differentWakeReasonsSuccessfulConnectionAttempt(){
 //others which are commented out are known failures
 function differentWakeReasonsUnsuccessfulConnectionAttempt(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "differentWakeReasonsUnsuccessfulConnectionAttempt"
+    testNameChangeArray[runMainSequenceArray.len()] <- "differentWakeReasonsUnsuccessfulConnectionAttempt"
 
-	//Events
-	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
-	//local eventA = createSingleEvent(	   false,	 	3.31,    WR_BOOT, 		     	true,		   0, 	 false, 	true/*mute*/);
-	local eventB = createSingleEvent(	   false, 		3.31,    WR_TIMER, 		       false, 		   0, 	 false,		true/*mute*/);
-	//local eventC = createSingleEvent(	   false, 		3.31,    WR_SW_RESET, 		    true, 		   0, 	 false, 	true/*mute*/);
-	local eventD = createSingleEvent(	   false, 		3.31,    WR_BUTTON, 		   false, 		   0, 	 false, 	true/*mute*/);
-	//local eventE = createSingleEvent(	   false, 		3.31,    WR_NEW_SQUIRREL, 	    true, 		   0, 	 false, 	true/*mute*/);
-	local eventF = createSingleEvent(	   false,	 	3.31,    WR_SQUIRREL_ERROR,    false,		   0, 	 false, 	true/*mute*/);
-	//local eventG = createSingleEvent(	   false,	 	3.31,    WR_NEW_FW, 		    true,		   0, 	 false, 	true/*mute*/);
-	local eventH = createSingleEvent(	   false,	 	3.31,    WR_BLINKUP 		   false,		   0, 	 false, 	true/*mute*/);
-	//this wakereason not supported yet:
-	//local eventI = createSingleEvent(	    true,	 	3.31,    WR_SW_RESTART 		    true,		   0, 	 false, 	true/*mute*/);
-	
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	//local deviceResultsA = createDeviceResults(	   600,		WR_BOOT, 				0);
-	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
-	//local deviceResultsC = createDeviceResults(	   600,		WR_SW_RESET, 			0);
-	local deviceResultsD = createDeviceResults(	   600,		WR_BUTTON, 				2);
-	//local deviceResultsE = createDeviceResults(	   600,		WR_NEW_SQUIRREL, 		0);
-	local deviceResultsF = createDeviceResults(	   600,		WR_SQUIRREL_ERROR, 		3);
-	//local deviceResultsG = createDeviceResults(	   600,		WR_NEW_FW, 				0);
-	local deviceResultsH = createDeviceResults(	   600,		WR_BLINKUP, 			4);
-	//this wakereason not supported yet:
-	//local deviceResultsI = createDeviceResults(	   600,		WR_SW_RESTART, 		0);
+    //Events
+    ///////////////////////////         Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error|     Mute|
+    local eventA = createSingleEvent(       false,      3.31,     WR_BOOT,             false,          0,    false,     true/*mute*/);
+    local eventB = createSingleEvent(       false,      3.31,    WR_TIMER,             false,          0,    false,     true/*mute*/);
+    local eventC = createSingleEvent(       false,      3.31, WR_SW_RESET,             false,          0,    false,     true/*mute*/);
+    local eventD = createSingleEvent(       false,      3.31,   WR_BUTTON,             false,          0,    false,     true/*mute*/);
+    local eventE = createSingleEvent(       false,      3.31,WR_NEW_SQUIRREL,          false,          0,    false,     true/*mute*/);
+    local eventF = createSingleEvent(       false,      3.31,WR_SQUIRREL_ERROR,        false,          0,    false,     true/*mute*/);
+    local eventG = createSingleEvent(       false,      3.31,   WR_NEW_FW,             false,          0,    false,     true/*mute*/);
+    local eventH = createSingleEvent(       false,      3.31,  WR_BLINKUP,             false,          0,    false,     true/*mute*/);
+    //this wakereason not supported yet:
+    //local eventI = createSingleEvent(        true,         3.31,    WR_SW_RESTART             true,           0,      false,     true/*mute*/);
+    
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,      WR_BOOT,               0);
+    local deviceResultsB = createDeviceResults(    600,     WR_TIMER,               1);
+    local deviceResultsC = createDeviceResults(    600,  WR_SW_RESET,               0);
+    local deviceResultsD = createDeviceResults(    600,    WR_BUTTON,               2);
+    local deviceResultsE = createDeviceResults(    600,WR_NEW_SQUIRREL,             0);
+    local deviceResultsF = createDeviceResults(    600,WR_SQUIRREL_ERROR,           3);
+    local deviceResultsG = createDeviceResults(    600,    WR_NEW_FW,               0);
+    local deviceResultsH = createDeviceResults(    600,   WR_BLINKUP,               4);
+    //this wakereason not supported yet:
+    //local deviceResultsI = createDeviceResults(       600,        WR_SW_RESTART,         0);
 
-	//Sequence
-	//////////////////
+    //Sequence
+    //////////////////
 
-	//1
-	//expectedResultsArray.append(deviceResultsA)
-	//runMainSequenceArray.append(eventA)
-	
-	//2
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventB)
-	
-	//3
-	//expectedResultsArray.append(deviceResultsC)
-	//runMainSequenceArray.append(eventC)
-	
-	//4
-	expectedResultsArray.append(deviceResultsD)
-	runMainSequenceArray.append(eventD)
+    //1
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
+    
+    //2
+    expectedResultsArray.append(deviceResultsB)
+    runMainSequenceArray.append(eventB)
+    
+    //3
+    expectedResultsArray.append(deviceResultsC)
+    runMainSequenceArray.append(eventC)
+    
+    //4
+    expectedResultsArray.append(deviceResultsD)
+    runMainSequenceArray.append(eventD)
 
-	//5
-	//expectedResultsArray.append(deviceResultsE)
-	//runMainSequenceArray.append(eventE)
+    //5
+    expectedResultsArray.append(deviceResultsE)
+    runMainSequenceArray.append(eventE)
 
-	//6
-	expectedResultsArray.append(deviceResultsF)
-	runMainSequenceArray.append(eventF)
-	
-	//7
-	//expectedResultsArray.append(deviceResultsG)
-	//runMainSequenceArray.append(eventG)
-	
-	//8
-	expectedResultsArray.append(deviceResultsH)
-	runMainSequenceArray.append(eventH)
-	
-	//9
-	//NOT SUPPORTED YET:
-	//expectedResultsArray.append(deviceResultsI)
-	//runMainSequenceArray.append(eventI)
+    //6
+    expectedResultsArray.append(deviceResultsF)
+    runMainSequenceArray.append(eventF)
+    
+    //7
+    expectedResultsArray.append(deviceResultsG)
+    runMainSequenceArray.append(eventG)
+    
+    //8
+    expectedResultsArray.append(deviceResultsH)
+    runMainSequenceArray.append(eventH)
+    
+    //9
+    //NOT SUPPORTED YET:
+    //expectedResultsArray.append(deviceResultsI)
+    //runMainSequenceArray.append(eventI)
 }
 
 function throwMainErrorConnected(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "throwMainErrorConnected"
+    testNameChangeArray[runMainSequenceArray.len()] <- "throwMainErrorConnected"
 
-	//Events
-	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
-	local eventA = createSingleEvent(		true,	 	3.31,    WR_TIMER, 		     	true,		   0, 	  true, 	true/*mute*/);
+    //Events
+    ///////////////////////////         Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error|     Mute|
+    local eventA = createSingleEvent(        true,      3.31,    WR_TIMER,              true,          0,     true,     true/*mute*/);
 
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,     WR_TIMER,               0);
 
-	//Sequence
-	//////////////////
+    //Sequence
+    //////////////////
 
-	//1 (r2)
-	expectedResultsArray.append(deviceResultsA)
-	runMainSequenceArray.append(eventA)
+    //1 (r2)
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
 
 }
 
 function throwMainErrorSuccessfulConnection(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "throwMainErrorSuccessfulConnection"
+    testNameChangeArray[runMainSequenceArray.len()] <- "throwMainErrorSuccessfulConnection"
 
-	//Events
-	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
-	local eventA = createSingleEvent(		false,	 	3.31,    WR_TIMER, 		     	true,		   0, 	  true, 	true/*mute*/);
+    //Events
+    ///////////////////////////         Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error|     Mute|
+    local eventA = createSingleEvent(       false,      3.31,    WR_TIMER,              true,          0,     true,     true/*mute*/);
 
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,     WR_TIMER,               0);
 
-	//Sequence
-	//////////////////
+    //Sequence
+    //////////////////
 
-	//1 (r2)
-	expectedResultsArray.append(deviceResultsA)
-	runMainSequenceArray.append(eventA)
+    //1 (r2)
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
 
 }
 
 function throwMainErrorFailedConnection(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "throwMainErrorFailedConnection"
+    testNameChangeArray[runMainSequenceArray.len()] <- "throwMainErrorFailedConnection"
 
-	//Events
-	/////////////////////////// 		Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error| 	Mute|
-	local eventA = createSingleEvent(		false,	 	3.31,    WR_TIMER, 		       false,		   0, 	  true, 	true/*mute*/);
+    //Events
+    ///////////////////////////         Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error|     Mute|
+    local eventA = createSingleEvent(       false,      3.31,    WR_TIMER,             false,          0,     true,     true/*mute*/);
 
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,     WR_TIMER,               0);
 
-	//Sequence
-	//////////////////
+    //Sequence
+    //////////////////
 
-	//1 (r2)
-	expectedResultsArray.append(deviceResultsA)
-	runMainSequenceArray.append(eventA)
+    //1 (r2)
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
 
 }
 
@@ -468,217 +465,217 @@ const LOWER_BATTERY = 3.195;        //Volts
 
 function testSendFrequencyHighestBattery(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyHighestBattery"
+    testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyHighestBattery"
 
-	//Events
-	/////////////////////////// 		Connected|   			   Battery|Wake Reason|   connectSuccess|  			  Fake Time|    Error| 	Mute|
-	local eventA = createSingleEvent(		 true, HIGHEST_BATTERY + 0.001,   WR_TIMER, 		    true,		   			  0, 	 true, 	true/*mute*/);
-	local eventB = createSingleEvent(		false, HIGHEST_BATTERY + 0.001,   WR_TIMER, 		    true,		  			  0, 	 true, 	true/*mute*/);
-	local eventC = createSingleEvent(		false, HIGHEST_BATTERY + 0.001,   WR_TIMER, 		    true, HIGHEST_FREQUENCY - 1, 	 true, 	true/*mute*/);
-	local eventD = createSingleEvent(		false, HIGHEST_BATTERY + 0.001,   WR_TIMER, 		    true, HIGHEST_FREQUENCY + 1, 	 true, 	true/*mute*/);
+    //Events
+    ///////////////////////////         Connected|                  Battery|Wake Reason|   connectSuccess|                Fake Time|    Error|     Mute|
+    local eventA = createSingleEvent(        true,  HIGHEST_BATTERY + 0.001,   WR_TIMER,             true,                        0,     true,     true/*mute*/);
+    local eventB = createSingleEvent(       false,  HIGHEST_BATTERY + 0.001,   WR_TIMER,             true,                        0,     true,     true/*mute*/);
+    local eventC = createSingleEvent(       false,  HIGHEST_BATTERY + 0.001,   WR_TIMER,             true,    HIGHEST_FREQUENCY - 1,     true,     true/*mute*/);
+    local eventD = createSingleEvent(       false,  HIGHEST_BATTERY + 0.001,   WR_TIMER,             true,    HIGHEST_FREQUENCY + 1,     true,     true/*mute*/);
 
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
-	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
-	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				2);
-	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,     WR_TIMER,               0);
+    local deviceResultsB = createDeviceResults(    600,     WR_TIMER,               1);
+    local deviceResultsC = createDeviceResults(    600,     WR_TIMER,               2);
+    local deviceResultsD = createDeviceResults(    600,     WR_TIMER,               0);
 
-	//Sequence
-	//////////////////
+    //Sequence
+    //////////////////
 
-	//1
-	expectedResultsArray.append(deviceResultsA)
-	runMainSequenceArray.append(eventA)
-	//2
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventB)
-	//3
-	expectedResultsArray.append(deviceResultsC)
-	runMainSequenceArray.append(eventC)
-	//4
-	expectedResultsArray.append(deviceResultsD)
-	runMainSequenceArray.append(eventD)
+    //1
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
+    //2
+    expectedResultsArray.append(deviceResultsB)
+    runMainSequenceArray.append(eventB)
+    //3
+    expectedResultsArray.append(deviceResultsC)
+    runMainSequenceArray.append(eventC)
+    //4
+    expectedResultsArray.append(deviceResultsD)
+    runMainSequenceArray.append(eventD)
 
 }
 
 function testSendFrequencyHighBattery(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyHighBattery"
+    testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyHighBattery"
 
-	//Events
-	/////////////////////////// 		Connected|   			   Battery|Wake Reason|   connectSuccess|  			  Fake Time|    Error| 	Mute|
-	local eventA = createSingleEvent(		 true,    HIGH_BATTERY + 0.001,   WR_TIMER, 		    true,		   			  0, 	 true, 	true/*mute*/);
-	local eventB = createSingleEvent(		false,    HIGH_BATTERY + 0.001,   WR_TIMER, 		    true,		  			  0, 	 true, 	true/*mute*/);
-	local eventC = createSingleEvent(		false,    HIGH_BATTERY + 0.001,   WR_TIMER, 		    true, 	 HIGH_FREQUENCY - 1, 	 true, 	true/*mute*/);
-	local eventD = createSingleEvent(		false,    HIGH_BATTERY + 0.001,   WR_TIMER, 		    true, 	 HIGH_FREQUENCY + 1,     true, 	true/*mute*/);
+    //Events
+    ///////////////////////////         Connected|                  Battery|Wake Reason|   connectSuccess|                Fake Time|    Error|     Mute|
+    local eventA = createSingleEvent(         true,    HIGH_BATTERY + 0.001,   WR_TIMER,             true,                        0,      true,     true/*mute*/);
+    local eventB = createSingleEvent(        false,    HIGH_BATTERY + 0.001,   WR_TIMER,             true,                        0,      true,     true/*mute*/);
+    local eventC = createSingleEvent(        false,    HIGH_BATTERY + 0.001,   WR_TIMER,             true,       HIGH_FREQUENCY - 1,      true,     true/*mute*/);
+    local eventD = createSingleEvent(        false,    HIGH_BATTERY + 0.001,   WR_TIMER,             true,       HIGH_FREQUENCY + 1,      true,     true/*mute*/);
 
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
-	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
-	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				2);
-	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,     WR_TIMER,               0);
+    local deviceResultsB = createDeviceResults(    600,     WR_TIMER,               1);
+    local deviceResultsC = createDeviceResults(    600,     WR_TIMER,               2);
+    local deviceResultsD = createDeviceResults(    600,     WR_TIMER,               0);
 
-	//Sequence
-	//////////////////
+    //Sequence
+    //////////////////
 
-	//1
-	expectedResultsArray.append(deviceResultsA)
-	runMainSequenceArray.append(eventA)
-	//2
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventB)
-	//3
-	expectedResultsArray.append(deviceResultsC)
-	runMainSequenceArray.append(eventC)
-	//4
-	expectedResultsArray.append(deviceResultsD)
-	runMainSequenceArray.append(eventD)
+    //1
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
+    //2
+    expectedResultsArray.append(deviceResultsB)
+    runMainSequenceArray.append(eventB)
+    //3
+    expectedResultsArray.append(deviceResultsC)
+    runMainSequenceArray.append(eventC)
+    //4
+    expectedResultsArray.append(deviceResultsD)
+    runMainSequenceArray.append(eventD)
 
 }
 
 function testSendFrequencyMediumBattery(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyMediumBattery"
+    testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyMediumBattery"
 
-	//Events
-	/////////////////////////// 		Connected|   			   Battery|Wake Reason|   connectSuccess|  			  Fake Time|    Error| 	Mute|
-	local eventA = createSingleEvent(		 true,  MEDIUM_BATTERY + 0.001,   WR_TIMER, 		    true,		   			  0, 	 true, 	true/*mute*/);
-	local eventB = createSingleEvent(		false,  MEDIUM_BATTERY + 0.001,   WR_TIMER, 		    true,		  			  0, 	 true, 	true/*mute*/);
-	local eventC = createSingleEvent(		false,  MEDIUM_BATTERY + 0.001,   WR_TIMER, 		    true,  MEDIUM_FREQUENCY - 1, 	 true, 	true/*mute*/);
-	local eventD = createSingleEvent(		false,  MEDIUM_BATTERY + 0.001,   WR_TIMER, 		    true,  MEDIUM_FREQUENCY + 1, 	 true, 	true/*mute*/);
+    //Events
+    ///////////////////////////         Connected|                  Battery|Wake Reason|   connectSuccess|                Fake Time|    Error|     Mute|
+    local eventA = createSingleEvent(         true,  MEDIUM_BATTERY + 0.001,   WR_TIMER,             true,                        0,     true,     true/*mute*/);
+    local eventB = createSingleEvent(        false,  MEDIUM_BATTERY + 0.001,   WR_TIMER,             true,                        0,     true,     true/*mute*/);
+    local eventC = createSingleEvent(        false,  MEDIUM_BATTERY + 0.001,   WR_TIMER,             true,     MEDIUM_FREQUENCY - 1,     true,     true/*mute*/);
+    local eventD = createSingleEvent(        false,  MEDIUM_BATTERY + 0.001,   WR_TIMER,             true,     MEDIUM_FREQUENCY + 1,     true,     true/*mute*/);
 
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
-	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
-	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				2);
-	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,     WR_TIMER,               0);
+    local deviceResultsB = createDeviceResults(    600,     WR_TIMER,               1);
+    local deviceResultsC = createDeviceResults(    600,     WR_TIMER,               2);
+    local deviceResultsD = createDeviceResults(    600,     WR_TIMER,               0);
 
-	//Sequence
-	//////////////////
+    //Sequence
+    //////////////////
 
-	//1
-	expectedResultsArray.append(deviceResultsA)
-	runMainSequenceArray.append(eventA)
-	//2
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventB)
-	//3
-	expectedResultsArray.append(deviceResultsC)
-	runMainSequenceArray.append(eventC)
-	//4
-	expectedResultsArray.append(deviceResultsD)
-	runMainSequenceArray.append(eventD)
+    //1
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
+    //2
+    expectedResultsArray.append(deviceResultsB)
+    runMainSequenceArray.append(eventB)
+    //3
+    expectedResultsArray.append(deviceResultsC)
+    runMainSequenceArray.append(eventC)
+    //4
+    expectedResultsArray.append(deviceResultsD)
+    runMainSequenceArray.append(eventD)
 
 }
 
 function testSendFrequencyLowBattery(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyLowBattery"
+    testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyLowBattery"
 
-	//Events
-	/////////////////////////// 		Connected|   			   Battery|Wake Reason|   connectSuccess|  			  Fake Time|     Error| 	Mute|
-	local eventA = createSingleEvent(		 true,     LOW_BATTERY + 0.001,   WR_TIMER, 		    true,		   			  0, 	  true, 	true/*mute*/);
-	local eventB = createSingleEvent(		false,     LOW_BATTERY + 0.001,   WR_TIMER, 		    true,		  			  0, 	  true, 	true/*mute*/);
-	local eventC = createSingleEvent(		false,     LOW_BATTERY + 0.001,   WR_TIMER, 		    true,     LOW_FREQUENCY - 1, 	  true, 	true/*mute*/);
-	local eventD = createSingleEvent(		false,     LOW_BATTERY + 0.001,   WR_TIMER, 		    true,     LOW_FREQUENCY + 1, 	  true, 	true/*mute*/);
+    //Events
+    ///////////////////////////         Connected|                  Battery|Wake Reason|   connectSuccess|                Fake Time|     Error|     Mute|
+    local eventA = createSingleEvent(         true,     LOW_BATTERY + 0.001,   WR_TIMER,             true,                         0,       true,     true/*mute*/);
+    local eventB = createSingleEvent(        false,     LOW_BATTERY + 0.001,   WR_TIMER,             true,                        0,       true,     true/*mute*/);
+    local eventC = createSingleEvent(        false,     LOW_BATTERY + 0.001,   WR_TIMER,             true,     LOW_FREQUENCY - 1,       true,     true/*mute*/);
+    local eventD = createSingleEvent(        false,     LOW_BATTERY + 0.001,   WR_TIMER,             true,     LOW_FREQUENCY + 1,       true,     true/*mute*/);
 
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
-	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
-	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				2);
-	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,        WR_TIMER,                 0);
+    local deviceResultsB = createDeviceResults(    600,        WR_TIMER,                 1);
+    local deviceResultsC = createDeviceResults(    600,        WR_TIMER,                 2);
+    local deviceResultsD = createDeviceResults(    600,        WR_TIMER,                 0);
 
-	//Sequence
-	//////////////////
+    //Sequence
+    //////////////////
 
-	//1
-	expectedResultsArray.append(deviceResultsA)
-	runMainSequenceArray.append(eventA)
-	//2
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventB)
-	//3
-	expectedResultsArray.append(deviceResultsC)
-	runMainSequenceArray.append(eventC)
-	//4
-	expectedResultsArray.append(deviceResultsD)
-	runMainSequenceArray.append(eventD)
+    //1
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
+    //2
+    expectedResultsArray.append(deviceResultsB)
+    runMainSequenceArray.append(eventB)
+    //3
+    expectedResultsArray.append(deviceResultsC)
+    runMainSequenceArray.append(eventC)
+    //4
+    expectedResultsArray.append(deviceResultsD)
+    runMainSequenceArray.append(eventD)
 
 }
 
 function testSendFrequencyLowerBattery(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyLowerBattery"
+    testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyLowerBattery"
 
-	//Events
-	/////////////////////////// 		Connected|   			   Battery|Wake Reason|   connectSuccess|  			  Fake Time|     Error| 	Mute|
-	local eventA = createSingleEvent(		 true,   LOWER_BATTERY + 0.001,   WR_TIMER, 		    true,		   			  0, 	  true, 	true/*mute*/);
-	local eventB = createSingleEvent(		false,   LOWER_BATTERY + 0.001,   WR_TIMER, 		    true,		  			  0, 	  true, 	true/*mute*/);
-	local eventC = createSingleEvent(		false,   LOWER_BATTERY + 0.001,   WR_TIMER, 		    true,   LOWER_FREQUENCY - 1, 	  true, 	true/*mute*/);
-	local eventD = createSingleEvent(		false,   LOWER_BATTERY + 0.001,   WR_TIMER, 		    true,   LOWER_FREQUENCY + 1, 	  true, 	true/*mute*/);
+    //Events
+    ///////////////////////////         Connected|                  Battery|Wake Reason|   connectSuccess|                Fake Time|     Error|     Mute|
+    local eventA = createSingleEvent(        true,    LOWER_BATTERY + 0.001,   WR_TIMER,             true,                         0,     true,     true/*mute*/);
+    local eventB = createSingleEvent(       false,    LOWER_BATTERY + 0.001,   WR_TIMER,             true,                         0,     true,     true/*mute*/);
+    local eventC = createSingleEvent(       false,    LOWER_BATTERY + 0.001,   WR_TIMER,             true,       LOWER_FREQUENCY - 1,     true,     true/*mute*/);
+    local eventD = createSingleEvent(       false,    LOWER_BATTERY + 0.001,   WR_TIMER,             true,       LOWER_FREQUENCY + 1,     true,     true/*mute*/);
 
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
-	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
-	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				2);
-	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,     WR_TIMER,               0);
+    local deviceResultsB = createDeviceResults(    600,     WR_TIMER,               1);
+    local deviceResultsC = createDeviceResults(    600,     WR_TIMER,               2);
+    local deviceResultsD = createDeviceResults(    600,     WR_TIMER,               0);
 
-	//Sequence
-	//////////////////
+    //Sequence
+    //////////////////
 
-	//1
-	expectedResultsArray.append(deviceResultsA)
-	runMainSequenceArray.append(eventA)
-	//2
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventB)
-	//3
-	expectedResultsArray.append(deviceResultsC)
-	runMainSequenceArray.append(eventC)
-	//4
-	expectedResultsArray.append(deviceResultsD)
-	runMainSequenceArray.append(eventD)
+    //1
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
+    //2
+    expectedResultsArray.append(deviceResultsB)
+    runMainSequenceArray.append(eventB)
+    //3
+    expectedResultsArray.append(deviceResultsC)
+    runMainSequenceArray.append(eventC)
+    //4
+    expectedResultsArray.append(deviceResultsD)
+    runMainSequenceArray.append(eventD)
 
 }
 
 function testSendFrequencyHighestBattery(){
 
-	testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyLowestBattery"
+    testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyLowestBattery"
 
-	//Events
-	/////////////////////////// 		Connected|   			   Battery|Wake Reason|   connectSuccess|  			  Fake Time|     Error| 	Mute|
-	local eventA = createSingleEvent(		 true,   LOWER_BATTERY - 0.001,   WR_TIMER, 		    true,		   			  0, 	  true, 	true/*mute*/);
-	local eventB = createSingleEvent(		false,   LOWER_BATTERY - 0.001,   WR_TIMER, 		    true,		  			  0, 	  true, 	true/*mute*/);
-	local eventC = createSingleEvent(		false,   LOWER_BATTERY - 0.001,   WR_TIMER, 		    true,  LOWEST_FREQUENCY - 1, 	  true, 	true/*mute*/);
-	local eventD = createSingleEvent(		false,   LOWER_BATTERY - 0.001,   WR_TIMER, 		    true,  LOWEST_FREQUENCY + 1, 	  true, 	true/*mute*/);
+    //Events
+    ///////////////////////////         Connected|                  Battery|Wake Reason|   connectSuccess|                Fake Time|     Error|     Mute|
+    local eventA = createSingleEvent(        true,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,                        0,      true,     true/*mute*/);
+    local eventB = createSingleEvent(       false,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,                        0,      true,     true/*mute*/);
+    local eventC = createSingleEvent(       false,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,     LOWEST_FREQUENCY - 1,      true,     true/*mute*/);
+    local eventD = createSingleEvent(       false,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,     LOWEST_FREQUENCY + 1,      true,     true/*mute*/);
 
-	//Device Results 
-	////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-	local deviceResultsA = createDeviceResults(	   600,		WR_TIMER, 				0);
-	local deviceResultsB = createDeviceResults(	   600,		WR_TIMER, 				1);
-	local deviceResultsC = createDeviceResults(	   600,		WR_TIMER, 				2);
-	local deviceResultsD = createDeviceResults(	   600,		WR_TIMER, 				0);
+    //Device Results 
+    ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
+    local deviceResultsA = createDeviceResults(    600,     WR_TIMER,               0);
+    local deviceResultsB = createDeviceResults(    600,     WR_TIMER,               1);
+    local deviceResultsC = createDeviceResults(    600,     WR_TIMER,               2);
+    local deviceResultsD = createDeviceResults(    600,     WR_TIMER,               0);
 
-	//Sequence
-	//////////////////
+    //Sequence
+    //////////////////
 
-	//1
-	expectedResultsArray.append(deviceResultsA)
-	runMainSequenceArray.append(eventA)
-	//2
-	expectedResultsArray.append(deviceResultsB)
-	runMainSequenceArray.append(eventB)
-	//3
-	expectedResultsArray.append(deviceResultsC)
-	runMainSequenceArray.append(eventC)
-	//4
-	expectedResultsArray.append(deviceResultsD)
-	runMainSequenceArray.append(eventD)
+    //1
+    expectedResultsArray.append(deviceResultsA)
+    runMainSequenceArray.append(eventA)
+    //2
+    expectedResultsArray.append(deviceResultsB)
+    runMainSequenceArray.append(eventB)
+    //3
+    expectedResultsArray.append(deviceResultsC)
+    runMainSequenceArray.append(eventC)
+    //4
+    expectedResultsArray.append(deviceResultsD)
+    runMainSequenceArray.append(eventD)
 
 }
 
@@ -686,16 +683,16 @@ function testSendFrequencyHighestBattery(){
 successes <- []
 failures <- []
 function logResults(a = "a" , b = "b"){
-	server.log("\n\n\n\n\n\n\n\nDone running all tests (here are some results)")
-	local errors = expectedResultsArray.len() - 1 - (successes.len() + failures.len())
-	server.log("Successes: " + successes.len())
-	server.log("Failures: " + failures.len())
-	server.log("Errors: " + errors)
-	for(local z = 0; z < failures.len(); z++){
-		server.log("\n FAILURE #" + z)
-		server.log(failures[z])
-	}
-	imp.wakeup(10,logResults)
+    server.log("\n\n\n\n\n\n\n\nDone running all tests (here are some results)")
+    local errors = expectedResultsArray.len() - 1 - (successes.len() + failures.len())
+    server.log("Successes: " + successes.len())
+    server.log("Failures: " + failures.len())
+    server.log("Errors: " + errors)
+    for(local z = 0; z < failures.len(); z++){
+        server.log("\n FAILURE #" + z)
+        server.log(failures[z])
+    }
+    imp.wakeup(10,logResults)
 }
 
 ////////////////
@@ -704,48 +701,48 @@ function logResults(a = "a" , b = "b"){
 
 runDelay <- 15.0;
 function runMainLoop(){
-	if(mainRunNumber in testNameChangeArray){
-		testName = testNameChangeArray[mainRunNumber];
-	}
-	if(mainRunNumber < runMainSequenceArray.len()){
-		local nextRunTable = runMainSequenceArray[mainRunNumber];
-		server.log ("\n\nRUNNING MAIN SEQUENCE " + mainRunNumber + "/" + (runMainSequenceArray.len()-1) +  "\nrunnining with parameters:\n" + "\nconnected: " + nextRunTable.online  + "\nbattery: " + nextRunTable.battery)
-		runMain(nextRunTable)
-	} else {
-		logResults();	
-	}
+    if(mainRunNumber in testNameChangeArray){
+        testName = testNameChangeArray[mainRunNumber];
+    }
+    if(mainRunNumber < runMainSequenceArray.len()){
+        local nextRunTable = runMainSequenceArray[mainRunNumber];
+        server.log ("\n\nRUNNING MAIN SEQUENCE " + mainRunNumber + "/" + (runMainSequenceArray.len()-1) +  "\nrunnining with parameters:\n" + "\nconnected: " + nextRunTable.online  + "\nbattery: " + nextRunTable.battery)
+        runMain(nextRunTable)
+    } else {
+        logResults();    
+    }
 }
 server.log("delaying start, clear the console!");
 imp.sleep(3);
 
 function processDeviceResults(results){
-	server.log("DEVICE RESULTS:\n" + http.jsonencode(results))
-	local mainIndex = results.mainRun;
-	local failureString = ""
-	local lastSleep = results.lastSleep;
-	if("lastSleep" in expectedResultsArray[mainIndex]){
-		//equals to
-		if(expectedResultsArray[mainIndex].lastSleep != results.lastSleep){
-			server.log("FAIL LAST SLEEP ON MAIN RUN " + mainIndex)
-			failureString = failureString + testName + " fail lastSleep in event " + mainIndex + ", expected: " + expectedResultsArray[mainIndex].lastSleep + ", actual: " + results.lastSleep + "\n"
-		}
-	}
-	if(results.wakeReason != expectedResultsArray[mainIndex].wakeReason){
-		server.log("FAIL WAKE REASON ON MAIN RUN " + mainIndex)
-		failureString = failureString + testName + " fail wakeReason in event " + mainIndex + ", expected: " + expectedResultsArray[mainIndex].wakeReason + ", actual: " + results.wakeReason+ "\n"
-	}
-	if(results.storedReadings != expectedResultsArray[mainIndex].storedReadings){
-		server.log("FAIL stored readings ON MAIN RUN " + mainIndex)
-		failureString = failureString + testName + " fail storedReadings in event " + mainIndex + ", expected at least: " + expectedResultsArray[mainIndex].storedReadings + ", actual: " + results.storedReadings+ "\n"
-	}
-	if(failureString.len()){
-		server.log(failureString)
-		failures.append(failureString)
-	} else {
-		server.log("\n\nEVENT " + mainIndex + " " + testName + " SUCCESS\n\n")
-		successes.append(mainIndex)
-	}
-	imp.wakeup(1, runMainLoop);
+    server.log("DEVICE RESULTS:\n" + http.jsonencode(results))
+    local mainIndex = results.mainRun;
+    local failureString = ""
+    local lastSleep = results.lastSleep;
+    if("lastSleep" in expectedResultsArray[mainIndex]){
+        //equals to
+        if(expectedResultsArray[mainIndex].lastSleep != results.lastSleep){
+            server.log("FAIL LAST SLEEP ON MAIN RUN " + mainIndex)
+            failureString = failureString + testName + " fail lastSleep in event " + mainIndex + ", expected: " + expectedResultsArray[mainIndex].lastSleep + ", actual: " + results.lastSleep + "\n"
+        }
+    }
+    if(results.wakeReason != expectedResultsArray[mainIndex].wakeReason){
+        server.log("FAIL WAKE REASON ON MAIN RUN " + mainIndex)
+        failureString = failureString + testName + " fail wakeReason in event " + mainIndex + ", expected: " + expectedResultsArray[mainIndex].wakeReason + ", actual: " + results.wakeReason+ "\n"
+    }
+    if(results.storedReadings != expectedResultsArray[mainIndex].storedReadings){
+        server.log("FAIL stored readings ON MAIN RUN " + mainIndex)
+        failureString = failureString + testName + " fail storedReadings in event " + mainIndex + ", expected at least: " + expectedResultsArray[mainIndex].storedReadings + ", actual: " + results.storedReadings+ "\n"
+    }
+    if(failureString.len()){
+        server.log(failureString)
+        failures.append(failureString)
+    } else {
+        server.log("\n\nEVENT " + mainIndex + " " + testName + " SUCCESS\n\n")
+        successes.append(mainIndex)
+    }
+    imp.wakeup(1, runMainLoop);
 }
 
 device.on("deviceResults", processDeviceResults);
@@ -784,8 +781,8 @@ runMainLoop();
 http.onrequest(logResults)
 
 device.on("jsonLog", function (data)  {
-	server.log("JSON LOG:")
-	server.log(http.jsonencode(data))
+    server.log("JSON LOG:")
+    server.log(http.jsonencode(data))
 });
 
 
