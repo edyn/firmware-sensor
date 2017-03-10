@@ -210,6 +210,7 @@ def getFeature():
 	subprocess.call([shellCall], shell = True)
 	staging = "Feature"
 
+#TODO: add FFW making for sensor
 def makeFFW(ArgumentList):
 	copyfile(WorkingPath+"/"+device+"_"+versionNumber+"_Prod/Valve_0.0.1_FFW/"+device+".agent.FFW.nut", WorkingPath+"/" +device+".agent.FFW.nut")
 	copyfile(WorkingPath+"/"+device+"_"+versionNumber+"_Prod/Valve_0.0.1_FFW/"+device+".device.FFW.nut", WorkingPath+"/"+device+".device.FFW.nut")
