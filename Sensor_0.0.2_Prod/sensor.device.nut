@@ -1683,12 +1683,19 @@ function main() {
     //used for functional tests:
     server.log("main");
 
-    branchSelect = determineBranchFromWakeReason();
+    local branchSelect = determineBranchFromWakeReason();
+    local forceConnectionAttempt = determineForcedConnectionFromWakeReason();
 
     if(branchSelect == TAKE_READING_AND_BLINKUP){
+        takeReading();
+        sendOrSaveReading(forceConnectionAttempt);
+        blinkupFor(BLINKUP_TIME, deepSleepFortime(REGULAR_SLEEP_INTERVAL));
 
     } else if (branchSelect == TAKE_READING_NO_BLINKUP){
+        takeReading();
+        sendOrSaveReading(forceConnectionAttempt, function(){deepSleepFortime(REGULAR_SLEEP_INTERVAL)});
 
+    //None of the above, Error:
     } else {
       //should never happen but we'll log it
       logglyError({
@@ -1696,54 +1703,8 @@ function main() {
           "branch" : branchSelect, 
           "timestamp" : time()
       });
-    }
-
-//below this will mostly be removed
-
-    if(branchSelect == 1){
-        if(server.isconnected()){
-            //might be able to remove this sleep all together
-            imp.sleep(1)
-            regularOperation()
-        }
-
-    //blinkupfor should happen before regular operation, but we can fix
-    //that later
-        blinkupFor(blinkupTime)
-    }
-
-    else if(branchSelect == 2){
-        regularOperation()
-    }
-    //3 =Pin Wakeup, do some configurations
-    else if(branchSelect == 3){
-      hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-      source.configure();
-      local counterI2C=0;
-      powerManager <- PowerManager(hardware.i2c89);
-      greenLed.configure();
-      blueLed.configure();
-      redLed.configure();
-      //blueLed.blink(1,3);
-      hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
-      interruptPin();
-
-    }//end control 3
-    //control 5 is blinkup
-    else if (branchSelect == 5){
-        //TODO: review how blinkup is handled, it's pretty weird
-        if(server.isconnected()){
-            logglyLog({"message: " : "New Blinkup"});
-            blueLed.configure()
-            //blueLed.blink(2,2)
-            server.log("Is connected")
-            regularOperation()
-        } else {
-            blueLed.configure()
-            //blueLed.blink(1,4)
-            server.log("not connected")
-            blinkupFor(blinkupTime)
-        }
+      takeReading();
+      sendOrSaveReading(true, function(){deepSleepFortime(REGULAR_SLEEP_INTERVAL)});
     }
 }//end main
 
