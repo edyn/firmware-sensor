@@ -1683,14 +1683,7 @@ function main() {
     //used for functional tests:
     server.log("main");
 
-    if(branchSelect == 0){
-      branchSelect = determineBranchFromWakeReason();
-      //1 = cold boot (0), software reset (2), new squirrel code AKA new impOS //version (4), squirrel error (5), firmware upgrade (6) and default case //(shouldn't happen)
-      //2 = wake from deep sleep (1)
-      //3 = pinWakeup (3)
-      //4 = interrupt has run before
-      //5 = blinkUp Successful (9)
-    }//end control 0
+    branchSelect = determineBranchFromWakeReason();
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
     if(branchSelect == 1){
         if(server.isconnected()){
