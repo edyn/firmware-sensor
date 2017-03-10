@@ -1040,18 +1040,6 @@ function send_data(status) {
         server.error("\tdid not send")
     }
   }
-
-  else{
-        server.log(sendFullRead)
-        server.log("NOT FULL RES")
-  }
-  if (ship_and_store == true) {
-    power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-  }
-  else {
-    // Sleep until next sensor sampling
-    power.enter_deep_sleep_running("Finished sending JSON data.");
-  }
 }
 
 function blinkAll(duration, count = 1) {
@@ -1694,7 +1682,6 @@ function main() {
 
     } else if (branchSelect == TAKE_READING_NO_BLINKUP){
         sendOrSaveReading(forceConnectionAttempt, function(){deepSleepFortime(REGULAR_SLEEP_INTERVAL)});
-
     //None of the above, Error:
     } else {
       //should never happen but we'll log it
