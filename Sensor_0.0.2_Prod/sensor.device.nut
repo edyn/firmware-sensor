@@ -50,6 +50,8 @@ const CONNECTION_TIME_ON_ERROR_WAKEUP = 30;
 const NV_SIZE_LIMIT = 2900; //bytes, value taken from valve code
 const STORED_ERRORS_MAX = 3; //stored errors
 
+const I2C_MAXIMUM_TRIES = 6;
+
 const LOG_DETAILED_MOISTURE_DATA = false;
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
@@ -1500,6 +1502,76 @@ function configureHardware(){
 
 }
 
+function samplePowerManager(){
+    try{
+        powerManager.sample();
+        imp.sleep(0.1);
+        if(powerManager.reg_3==null){
+            local counterI2C=1;
+            while(powerManager.reg_3 == null && counterI2C < I2C_MAXIMUM_TRIES){
+                //arbitrary, possibly unnecessary sleeps that might make it more
+                //stable
+                //"check redundancies twice"
+
+                server.log("POWER MANAGER FAIL # " + counterI2C);
+                server.log(powerManager.reg_3)
+                imp.sleep(0.01);
+                hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+                imp.sleep(0.1);
+                powerManager.sample();
+                imp.sleep(0.1);
+                counterI2C+=1;
+            }
+            if(powerManager.reg_3==null){
+                logglyError({
+                    "message" : "temp/hum sample fail",
+                    "timestamp" : time()
+                })
+            }
+        }else{
+            imp.sleep(0.1)
+        };
+    }
+    catch(error){
+        server.error("\tLTC SAMPLING ERROR");
+    }
+}
+
+function sampleTemperatureAndHumidity(){
+    try{
+        humidityTemperatureSensor.sample();
+        if(humidityTemperatureSensor.humidity == 0 || humidityTemperatureSensor.temperature == 32){
+            local counterI2C = 1;
+            while((humidityTemperatureSensor.humidity == 0 || humidityTemperatureSensor.temperature == 32) && counterI2C < I2C_MAXIMUM_TRIES){
+                //arbitrary, possibly unnecessary sleeps that might make it more stable
+                //"check redundancies twice"
+                server.log("HUMIDITY TEMPERATURE FAIL # " + counterI2C)
+                server.log(humidityTemperatureSensor.humidity)
+                server.log(humidityTemperatureSensor.temperature)
+                imp.sleep(0.01);
+                hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+                imp.sleep(0.1);
+                humidityTemperatureSensor.sample();
+                imp.sleep(0.1);
+                counterI2C+=1;
+            }
+            if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32){
+                logglyError({
+                    "message" : "temp/hum sample fail",
+                    "timestamp" : time()
+                })
+            }
+        }
+    } catch(error){
+        server.error("\tHum/Temp Error");
+        logglyError({
+          "message" : "sampleTemperatureAndHumidity error",
+          "error" : error,
+          "timestamp" : time()
+        })
+    }
+}
+
 
 function regularOperation(){
 
@@ -1540,64 +1612,11 @@ function regularOperation(){
       capSense(true);
 
       lastLastReading=lastLastReading*(0.666)
-      powerManager.sample();
-      try{
-      imp.sleep(0.1);
-      if(powerManager.reg_3==null){
-          local counterI2C=1;
-          while(powerManager.reg_3==null && counterI2C<6){
-              //arbitrary, possibly unnecessary sleeps that might make it more
-              //stable
-              //"check redundancies twice"
 
-              server.log("POWER MANAGER FAIL # " + counterI2C);
-              server.log(powerManager.reg_3)
-              imp.sleep(0.01);
-              hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-              imp.sleep(0.1);
-              powerManager.sample();
-              imp.sleep(0.1);
-              counterI2C+=1;
-          }
-          //will show up only when it's probably true:
-          if(powerManager.reg_3==null){
-            server.error("\tPossible damage to the LTC or I2C busses.");
-          }
-      }else{
-          imp.sleep(0.1)
-      };
-      }
-      catch(error){
-          server.error("\tLTC SAMPLING ERROR");
-      }
+      samplePowerManager();
 
-      //server.log("PM PASS");
-      humidityTemperatureSensor.sample();
-      try{
-        if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32){
-            local counterI2C=1;
-            while((humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32) && counterI2C<6){
-                //arbitrary, possibly unnecessary sleeps that might make it more stable
-                //"check redundancies twice"
-                server.log("HUMIDITY TEMPERATURE FAIL # " + counterI2C)
-
-                server.log(humidityTemperatureSensor.humidity)
-                server.log(humidityTemperatureSensor.temperature)
-                imp.sleep(0.01);
-                hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-                imp.sleep(0.1);
-                humidityTemperatureSensor.sample();
-                imp.sleep(0.1);
-                counterI2C+=1;
-            }
-            //will show up only when it's probably true:
-            if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32){
-              server.error("\tPossible damage to the Humidity/Temperature Sensor or I2C busses.");
-            }
-        }
-      } catch(error){
-        server.error("\tHum/Temp Error");
-      }
+      sampleTemperatureAndHumidity();
+      
 
       //server.log("Humidity/Temperature Pass")
       server.log("Memory free after sampling: " + imp.getmemoryfree());
