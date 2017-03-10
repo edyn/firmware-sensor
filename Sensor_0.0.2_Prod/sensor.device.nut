@@ -74,7 +74,7 @@ nextWakeCall<-null;
 shallow<-false;
 whenWake<- 0;
 intlast<- 0;
-control<-0;
+branchSelect <- 0;
 intertime<-0;
 //0.0.2.2
 //Capacitance Sensing
@@ -1091,7 +1091,7 @@ const TAKE_READING_NO_BLINKUP = 2;
 
 
 //0.0.1.2
-function startControlFlow()
+function determineBranchFromWakeReason()
 {
     wakeR=hardware.wakereason();
     local branching = "unknown";
@@ -1167,7 +1167,7 @@ function startControlFlow()
 //new interrupt handler, to prevent interruptPin() from running twice
 function interrupthandle()
 {
-    if(control!=3)
+    if(branchSelect != 3)
     {
         interruptPin();
     }
@@ -1182,7 +1182,7 @@ function interrupthandle()
 function interruptPin() {
 
     try{
-      control=4;
+      branchSelect = 4;
       hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
         //explanation of the below if statement:
         //Intertiem is recorded at the end of the interrupt
@@ -1683,8 +1683,8 @@ function main() {
     //used for functional tests:
     server.log("main");
 
-    if(control==0){
-      control=startControlFlow();
+    if(branchSelect == 0){
+      branchSelect = determineBranchFromWakeReason();
       //1 = cold boot (0), software reset (2), new squirrel code AKA new impOS //version (4), squirrel error (5), firmware upgrade (6) and default case //(shouldn't happen)
       //2 = wake from deep sleep (1)
       //3 = pinWakeup (3)
@@ -1692,7 +1692,7 @@ function main() {
       //5 = blinkUp Successful (9)
     }//end control 0
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
-    if(control==1){
+    if(branchSelect == 1){
         if(server.isconnected()){
             //might be able to remove this sleep all together
             imp.sleep(1)
@@ -1704,11 +1704,11 @@ function main() {
         blinkupFor(blinkupTime)
     }
 
-    else if(control==2){
+    else if(branchSelect == 2){
         regularOperation()
     }
     //3 =Pin Wakeup, do some configurations
-    else if(control==3){
+    else if(branchSelect == 3){
       hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
       source.configure();
       local counterI2C=0;
@@ -1722,7 +1722,7 @@ function main() {
 
     }//end control 3
     //control 5 is blinkup
-    else if (control==5){
+    else if (branchSelect == 5){
         //TODO: review how blinkup is handled, it's pretty weird
         if(server.isconnected()){
             logglyLog({"message: " : "New Blinkup"});
