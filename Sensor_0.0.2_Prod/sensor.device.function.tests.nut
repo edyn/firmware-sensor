@@ -23,7 +23,7 @@ function sendResults(){
 				server.log("no message in stored error #" + x)
 			}
 			if("Error" in nv.storedErrors[x]){
-				server.log("Error in stored error: " + nv.storedErrors[x].valveError)
+				server.log("Error in stored error: " + nv.storedErrors[x].error)
 			} else {
 				server.log("no Error in stored error #" + x)
 			}
