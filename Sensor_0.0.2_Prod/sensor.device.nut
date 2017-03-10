@@ -1470,6 +1470,37 @@ function sendStoredErrors(){
 //  logFreeNVMemory();
 //}
 
+function configureHardware(){
+
+    //Set pin to wake the device if it's sleeping
+    hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){});
+
+    //Set I2C clock speed
+    hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+
+    //LED configurations
+    greenLed.configure();
+    redLed.configure();
+    blueLed.configure();
+
+    //Sensor configurations
+    soil.configure();
+    solar.configure();
+    source.configure();
+
+    // Create PowerManager object
+    powerManager <- PowerManager(hardware.i2c89);
+    powerManager.setDefs();
+
+    //Create humidityTemperatureSensor object
+    humidityTemperatureSensor <- HumidityTemperatureSensor();
+
+    //Configure Capacitive sensing:
+    configCapSense();
+
+}
+
+
 function regularOperation(){
 
       if (debug == true) server.log("Device booted.");
@@ -1484,39 +1515,6 @@ function regularOperation(){
       ///
       // Register the disconnect handler
       server.onunexpecteddisconnect(disconnectHandler);
-
-      //set the pin interrupt
-      hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
-
-      ///
-      // End of event handlers
-      ///
-
-      ////////////////////
-      // Configurations //
-      ////////////////////
-
-      hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-
-      //LED configurations
-      greenLed.configure();
-      redLed.configure();
-      blueLed.configure();
-
-      // sensor configurations
-      soil.configure();
-      solar.configure();
-      source.configure();
-
-      // Create PowerManager object
-      powerManager <- PowerManager(hardware.i2c89);
-      powerManager.setDefs();
-
-      //Create humidityTemperatureSensor object
-      humidityTemperatureSensor <- HumidityTemperatureSensor();
-
-      //Configure Capacitive sensing:
-      configCapSense();
 
       server.log("Memory free after configurations: " + imp.getmemoryfree());
 
@@ -1678,13 +1676,14 @@ if (!("nv" in getroottable() && "data" in nv)) {
 }
 
 function main() {
-    hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){});
 
     //used for functional tests:
     server.log("main");
 
     local branchSelect = determineBranchFromWakeReason();
     local forceConnectionAttempt = determineForcedConnectionFromWakeReason();
+
+    configureHardware();
 
     if(branchSelect == TAKE_READING_AND_BLINKUP){
         takeReading();
