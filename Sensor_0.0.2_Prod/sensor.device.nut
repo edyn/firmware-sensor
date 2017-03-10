@@ -1216,20 +1216,23 @@ function interruptPin() {
     }//end catch
 }
 
+function allLedsOn(){
+    redLed.on();
+    greenLed.on();
+    blueLed.on();
+}
+
+function allLedsOff(){
+    greenLed.off();
+    redLed.off();
+    blueLed.off();
+}
+
 function blinkupFor(timer=90){
-    greenLed.configure();
-    blueLed.configure();
-    redLed.configure();
-    // Enable blinkup for 30s
+    allLedsOn();
     imp.enableblinkup(true);
-    blueLed.on()
-    redLed.on()
-    greenLed.on()
-    //change the sleep to 90
     imp.sleep(timer);
-    blueLed.off()
-    redLed.off()
-    greenLed.off()
+    allLedsOff();
     imp.enableblinkup(false);
 }
 
