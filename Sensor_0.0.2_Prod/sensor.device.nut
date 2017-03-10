@@ -1684,7 +1684,22 @@ function main() {
     server.log("main");
 
     branchSelect = determineBranchFromWakeReason();
-    
+
+    if(branchSelect == TAKE_READING_AND_BLINKUP){
+
+    } else if (branchSelect == TAKE_READING_NO_BLINKUP){
+
+    } else {
+      //should never happen but we'll log it
+      logglyError({
+          "message" : "invalid branch",
+          "branch" : branchSelect, 
+          "timestamp" : time()
+      });
+    }
+
+//below this will mostly be removed
+
     if(branchSelect == 1){
         if(server.isconnected()){
             //might be able to remove this sleep all together
