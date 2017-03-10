@@ -1228,7 +1228,7 @@ function allLedsOff(){
     blueLed.off();
 }
 
-function blinkupLoop(duration = 90, count = 0, callbackOnCompletion = function(){deepSleepFortime(INTERVAL_SENSOR_SAMPLE_S)}){
+function blinkupLoop(duration = 90, count = 1, callbackOnCompletion = function(){deepSleepFortime(INTERVAL_SENSOR_SAMPLE_S)}){
     if(count < duration){
         imp.wakeup(1,
             function(){
@@ -1236,16 +1236,15 @@ function blinkupLoop(duration = 90, count = 0, callbackOnCompletion = function()
             }
         )
     } else {
-      callbackOnCompletion();
+        allLedsOff();
+        callbackOnCompletion();
     }
 }
 
-function blinkupFor(timer=90){
+function blinkupFor(timer=90, callback = function(){}){
     allLedsOn();
     imp.enableblinkup(true);
-    imp.sleep(timer);
-    allLedsOff();
-    imp.enableblinkup(false);
+    blinkupLoop(duration, 0, callback)
 }
 
 //table size estimator, accurate 'to within 100 bytes' (not very accurate)
