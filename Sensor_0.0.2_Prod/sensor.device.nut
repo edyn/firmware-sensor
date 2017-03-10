@@ -52,7 +52,7 @@ const STORED_ERRORS_MAX = 3; //stored errors
 
 const I2C_MAXIMUM_TRIES = 6;
 
-const LOG_DETAILED_MOISTURE_DATA = false;
+const LOG_DETAILED_MOISTURE_DATA = 0;
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
