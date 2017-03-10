@@ -1080,6 +1080,18 @@ const TAKE_READING_NO_BLINKUP = 2;
 
 
 
+
+function determineForcedConnectionFromWakeReason(){
+    wakeR = hardware.wakereason();
+    //I had a switch just like determineBranchFromWakeReason
+    //but I'm pretty sure you always want to try connection except for wake from timer:
+    if(wakeR == WAKEREASON_TIMER){
+      return false
+    } else {
+      return true
+    }
+}
+
 //0.0.1.2
 function determineBranchFromWakeReason()
 {
@@ -1665,6 +1677,7 @@ function sendOrSaveReading(forcedConnection = false, inputCallback = function(){
         }
     }
 }
+
 
 // create non-volatile storage if it doesn't exist
 if (!("nv" in getroottable() && "data" in nv)) {
