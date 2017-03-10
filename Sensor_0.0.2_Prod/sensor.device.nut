@@ -1626,15 +1626,19 @@ function regularOperation(){
         //uncomment this sleep to get the light reading value change:
         imp.sleep(0.1);
         local newReading = collectReadingData();
-        saveReadingToNV(newReading);
 
         //resume charging
         powerManager.resumeCharging();
 
+        //TODO: right now, because of  the way all of this is structured, we save reading to nv
+        //In the future we should return it. 
+        //We sacrifice *a little* nv memory for no reason because of this.
+        saveReadingToNV(newReading);
+        return
+        
       // End Saving
       //Begin Sending
 
-        //feature 0.2 important
         //Send sensor data
         if (isServerRefreshNeeded(nv.data_sent, nv.data.top())) {
           if (debug == true) server.log("Server refresh needed");
