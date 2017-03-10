@@ -50,7 +50,7 @@ const CONNECTION_TIME_ON_ERROR_WAKEUP = 30;
 const NV_SIZE_LIMIT = 2900; //bytes, value taken from valve code
 const STORED_ERRORS_MAX = 3; //stored errors
 
-
+const LOG_DETAILED_MOISTURE_DATA = false;
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
@@ -202,7 +202,7 @@ function capSense(ModeSelect=true){
     timeDiffTwo=indexeNeg-kneeIndex
     highread=maxVSoil
     //debugs
-    if(false){
+    if(LOG_DETAILED_MOISTURE_DATA){
       server.log("Last Sample:")
       server.log(lastreading)
       server.log("MaxVSoil:")
