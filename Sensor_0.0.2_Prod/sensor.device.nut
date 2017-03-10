@@ -1655,28 +1655,28 @@ function regularOperation(){
 
 function sendOrSaveReading(forcedConnection = false, inputCallback = function(){}){
 
-        //Send sensor data
-        local serverRefresh = isServerRefreshNeeded(nv.data_sent, nv.data.top())
+    //Send sensor data
+    local serverRefresh = isServerRefreshNeeded(nv.data_sent, nv.data.top())
 
-        //this will always evaluate true if the device is already connected.
-        if (forcedConnection || serverRefresh) {  
-            //TODO: THIS IS NOT SAFE (no try/catch):
-            connect(
-                function(){
-                    if(server.isconnected()){
-                        sendStoredErrors();
-                        send_data();
-                        inputCallback();
-                    } else {
-                        inputCallback();
-                    }
+    //this will always evaluate true if the device is already connected.
+    if (forcedConnection || serverRefresh) {  
+        //TODO: THIS IS NOT SAFE (no try/catch):
+        connect(
+            function(){
+                if(server.isconnected()){
+                    sendStoredErrors();
+                    send_data();
+                    inputCallback();
+                } else {
+                    inputCallback();
                 }
-            , TIMEOUT_SERVER_S);
-        } else {
-            inputCallback();
-        }
+            }
+        , TIMEOUT_SERVER_S);
+    } else {
+        inputCallback();
     }
 }
+
 
 
 // create non-volatile storage if it doesn't exist
