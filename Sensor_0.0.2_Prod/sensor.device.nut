@@ -1679,6 +1679,12 @@ if (!("nv" in getroottable() && "data" in nv)) {
     };
 }
 
+//TODO:
+//determine forced connection function needs to be made
+//more try/catches in async functions
+
+
+
 function main() {
 
     //used for functional tests:
@@ -1692,7 +1698,7 @@ function main() {
 
     if(branchSelect == TAKE_READING_AND_BLINKUP){
         sendOrSaveReading(forceConnectionAttempt);
-        blinkupFor(BLINKUP_TIME, deepSleepFortime(REGULAR_SLEEP_INTERVAL));
+        blinkupFor(BLINKUP_TIME, function(){deepSleepFortime(REGULAR_SLEEP_INTERVAL)});
 
     } else if (branchSelect == TAKE_READING_NO_BLINKUP){
         sendOrSaveReading(forceConnectionAttempt, function(){deepSleepFortime(REGULAR_SLEEP_INTERVAL)});
