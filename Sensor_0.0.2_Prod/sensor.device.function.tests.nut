@@ -6,31 +6,31 @@ fakeBattery <- 3.3;
 mainRun <- 0;
 
 function sendResults(){
-			mute = false;
-			server.log("LAST SLEEP: " + mostRecentDeepSleepCall + "\nWAKE REASON: " + wakeReason)
-			if(nv.data.len()){
-				server.log("STORED READINGS: " + nv.data.len());
+	mute = false;
+	server.log("LAST SLEEP: " + mostRecentDeepSleepCall + "\nWAKE REASON: " + wakeReason)
+	if(nv.data.len()){
+		server.log("STORED READINGS: " + nv.data.len());
+	}
+	if(nv.storedErrors.len()){
+		server.log("STORED ERRORS: " + nv.storedErrors.len());
+	}
+	agent.send("deviceResults", {"mainRun" : mainRun, "lastSleep" : mostRecentDeepSleepCall,  "wakeReason" : wakeReason, "storedReadings" : nv.data.len()})
+	if(nv.storedErrors.len()){
+		for(local x = 0; x < nv.storedErrors.len(); x++){
+			if("message" in nv.storedErrors[x]){
+				server.log("message in stored error: " + nv.storedErrors[x].message)
+			} else {
+				server.log("no message in stored error #" + x)
 			}
-			if(nv.storedErrors.len()){
-				server.log("STORED ERRORS: " + nv.storedErrors.len());
+			if("Error" in nv.storedErrors[x]){
+				server.log("Error in stored error: " + nv.storedErrors[x].valveError)
+			} else {
+				server.log("no Error in stored error #" + x)
 			}
-			agent.send("deviceResults", {"mainRun" : mainRun, "lastSleep" : mostRecentDeepSleepCall,  "wakeReason" : wakeReason, "storedReadings" : nv.data.len()})
-			if(nv.storedErrors.len()){
-				for(local x = 0; x < nv.storedErrors.len(); x++){
-					if("message" in nv.storedErrors[x]){
-						server.log("message in stored error: " + nv.storedErrors[x].message)
-					} else {
-						server.log("no message in stored error #" + x)
-					}
-					if("Error" in nv.storedErrors[x]){
-						server.log("Error in stored error: " + nv.storedErrors[x].valveError)
-					} else {
-						server.log("no Error in stored error #" + x)
-					}
-				}
-			}
-			mute = true
 		}
+	}
+	mute = true
+}
 
 agent.on("runMain", 
 	function(runTable){
