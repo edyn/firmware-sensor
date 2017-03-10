@@ -1686,14 +1686,13 @@ function main() {
     local forceConnectionAttempt = determineForcedConnectionFromWakeReason();
 
     configureHardware();
+    takeReading();
 
     if(branchSelect == TAKE_READING_AND_BLINKUP){
-        takeReading();
         sendOrSaveReading(forceConnectionAttempt);
         blinkupFor(BLINKUP_TIME, deepSleepFortime(REGULAR_SLEEP_INTERVAL));
 
     } else if (branchSelect == TAKE_READING_NO_BLINKUP){
-        takeReading();
         sendOrSaveReading(forceConnectionAttempt, function(){deepSleepFortime(REGULAR_SLEEP_INTERVAL)});
 
     //None of the above, Error:
@@ -1704,7 +1703,6 @@ function main() {
           "branch" : branchSelect, 
           "timestamp" : time()
       });
-      takeReading();
       sendOrSaveReading(true, function(){deepSleepFortime(REGULAR_SLEEP_INTERVAL)});
     }
 }//end main
