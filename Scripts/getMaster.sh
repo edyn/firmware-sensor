@@ -5,7 +5,7 @@ git clone "https://github.com/edyn/firmware-"$2
 cd $1/Scripts/firmware-$2
 
 
-#git checkout master
+git checkout master
 #TODO: check if this repo is cloned here and delete it if it is
 
 
