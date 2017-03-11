@@ -50,6 +50,7 @@ const CONNECTION_TIME_ON_ERROR_WAKEUP = 30;
 const NV_SIZE_LIMIT = 2900; //bytes, value taken from valve code
 const STORED_ERRORS_MAX = 3; //stored errors
 
+const BLINKUP_TIME = 90;
 const I2C_MAXIMUM_TRIES = 6;
 
 const LOG_DETAILED_MOISTURE_DATA = 0;
@@ -1293,7 +1294,7 @@ function blinkupLoop(duration = 90, count = 1, callbackOnCompletion = function()
     }
 }
 
-function blinkupFor(timer=90, callback = function(){}){
+function blinkupFor(duration = 90, callback = function(){}){
     allLedsOn();
     imp.enableblinkup(true);
     blinkupLoop(duration, 0, callback)
@@ -1748,13 +1749,12 @@ function main() {
 
     configureHardware();
     takeReading();
-
     if(branchSelect == TAKE_READING_AND_BLINKUP){
         sendOrSaveReading(forceConnectionAttempt);
-        blinkupFor(BLINKUP_TIME, function(){deepSleepForTime(REGULAR_SLEEP_INTERVAL)});
+        blinkupFor(BLINKUP_TIME, function(){deepSleepForTime(INTERVAL_SENSOR_SAMPLE_S)});
 
     } else if (branchSelect == TAKE_READING_NO_BLINKUP){
-        sendOrSaveReading(forceConnectionAttempt, function(){deepSleepForTime(REGULAR_SLEEP_INTERVAL)});
+        sendOrSaveReading(forceConnectionAttempt, function(){deepSleepForTime(INTERVAL_SENSOR_SAMPLE_S)});
     //None of the above, Error:
     } else {
       //should never happen but we'll log it
@@ -1763,7 +1763,7 @@ function main() {
           "branch" : branchSelect, 
           "timestamp" : time()
       });
-      sendOrSaveReading(true, function(){deepSleepForTime(REGULAR_SLEEP_INTERVAL)});
+      sendOrSaveReading(true, function(){deepSleepForTime(INTERVAL_SENSOR_SAMPLE_S)});
     }
 }//end main
 
