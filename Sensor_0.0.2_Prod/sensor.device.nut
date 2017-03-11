@@ -1587,7 +1587,7 @@ function sampleTemperatureAndHumidity(){
 }
 
 
-function regularOperation(){
+function takeReading(){
 
       if (debug == true) server.log("Device booted.");
       if (debug == true) server.log("Device's unique id: " + hardware.getdeviceid());
