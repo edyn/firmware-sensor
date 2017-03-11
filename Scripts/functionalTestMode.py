@@ -54,6 +54,7 @@ replace(deviceFile, "theCurrentTimestamp", "fakeTime")
 
 #todo: this probably has a different name
 replace(deviceFile, "const blinkupTime", "const blinkupTime = 0.1;//")
+replace(deviceFile, "const BLINKUP_TIME", "const BLINKUP_TIME = 5.0;//")
 #this should work without changing it:
 replace(deviceFile, "time()", "fakeTime")
 #lol, the sensor should change to fit this, but we'll have to make due for now
