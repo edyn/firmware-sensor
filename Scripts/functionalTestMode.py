@@ -60,7 +60,7 @@ replace(deviceFile, "time()", "fakeTime")
 replace(deviceFile, "local nextConnectionTime", "local nextConnectionTime =  120//")
 #hmm this needs some further thought on the valve as well:
 replace(deviceFile, 'server.connect(','server.log("disconnecting");\nserver.disconnect();\nserverConnectCalled = true;\nif(connectSuccess){fakeWifi = true};\nserver.connect(')
-
+replace(deviceFile,"checkForErrorsAndRunMain();","//checkForErrorsAndRunMain();")
 replace(deviceFile, "source.voltage()","fakeBattery")
 
 

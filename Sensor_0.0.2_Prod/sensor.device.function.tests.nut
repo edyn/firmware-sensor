@@ -42,7 +42,7 @@ agent.on("runMain",
 		throwError = runTable.throwError;
 		connectSuccess = runTable.connectSuccess;
 		mainRun += 1;
-		control = 0;
+		branchSelect = 0;
 		serverConnectCalled = 0;
 		mainWithSafety();
 	}
