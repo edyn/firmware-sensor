@@ -9,7 +9,7 @@ function sendResults(){
 	mute = false;
 	server.log("LAST SLEEP: " + mostRecentDeepSleepCall + "\nWAKE REASON: " + wakeReason)
 	if(nv.data.len()){
-		server.log("STORED READINGS: " + nv.data.len());
+        server.log("STORED READINGS: " + nv.data.len());
 	}
 	if(nv.storedErrors.len()){
 		server.log("STORED ERRORS: " + nv.storedErrors.len());
