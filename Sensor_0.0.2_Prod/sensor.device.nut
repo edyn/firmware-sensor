@@ -680,6 +680,46 @@ class solar {
   }
 }
 
+const INVALID_SLEEP_TIME = 600.0;
+
+//function to simplify our deep sleep calls
+function deepSleepForTime(inputTime = INTERVAL_SENSOR_SAMPLE_S){
+    try{
+        if(inputTime < 1){
+            //10 minutes
+            inputTime = INVALID_SLEEP_TIME;
+        }
+        imp.onidle(function() {
+            try{
+                server.sleepfor(inputTime);
+            } catch(error){
+                //force connection:
+                logglyError({
+                    "error" : error,
+                    "function" : "deepSleepForTimeOnIdle",
+                    "message" : "Crystal likely damaged."
+                }, true); //this true is for forcedLogglyConnect
+                //below will throw an error: this catch only happens if server.sleepfor fails (look at the try)
+                imp.onidle(function() {
+                    server.disconnect();
+                    imp.wakeup(SLEEPFOR_ERROR_TIME, mainWithSafety);
+                });
+                return
+            }
+        });
+    } catch(error) {
+        logglyError({
+            "error" : error,
+            "function" : "deepSleepForTime",
+            "message" : "BAD error, deepsleepfortime has a bug!"
+        });
+        //this should be less dependent on external variables
+        imp.onidle(function() {
+            server.sleepfor(600.0);
+        });
+        return
+    }
+}
 
 // Power management
 class power {
@@ -906,7 +946,7 @@ function connect(callback, timeout) {
     if(nv.storedErrors.len()){
       sendStoredErrors();
     }
-    callback(SERVER_CONNECTED);
+    callback();
   }
   else {
     if (debug == true) server.log("Need to connect first");
@@ -919,7 +959,7 @@ function connect(callback, timeout) {
           if(nv.storedErrors.len()){
             sendStoredErrors();
           }
-          callback(connectionStatus)
+          callback()
         } catch(error) {
           server.error("\terror in callback from function 'connect'")
           logglyError({
@@ -971,7 +1011,7 @@ function isServerRefreshNeeded(lastSentData, currentData){
 
 
 // Callback for server status changes.
-function send_data(status) {
+function send_data() {
   // update last sent data (even on failure, so the next send attempt is not immediate)
   local power_manager_data=[];
   local nvDataSize = nv.data.len();
@@ -1240,7 +1280,7 @@ function allLedsOff(){
     blueLed.off();
 }
 
-function blinkupLoop(duration = 90, count = 1, callbackOnCompletion = function(){deepSleepFortime(INTERVAL_SENSOR_SAMPLE_S)}){
+function blinkupLoop(duration = 90, count = 1, callbackOnCompletion = function(){deepSleepForTime(INTERVAL_SENSOR_SAMPLE_S)}){
     if(count < duration){
         imp.wakeup(1,
             function(){
@@ -1711,10 +1751,10 @@ function main() {
 
     if(branchSelect == TAKE_READING_AND_BLINKUP){
         sendOrSaveReading(forceConnectionAttempt);
-        blinkupFor(BLINKUP_TIME, function(){deepSleepFortime(REGULAR_SLEEP_INTERVAL)});
+        blinkupFor(BLINKUP_TIME, function(){deepSleepForTime(REGULAR_SLEEP_INTERVAL)});
 
     } else if (branchSelect == TAKE_READING_NO_BLINKUP){
-        sendOrSaveReading(forceConnectionAttempt, function(){deepSleepFortime(REGULAR_SLEEP_INTERVAL)});
+        sendOrSaveReading(forceConnectionAttempt, function(){deepSleepForTime(REGULAR_SLEEP_INTERVAL)});
     //None of the above, Error:
     } else {
       //should never happen but we'll log it
@@ -1723,7 +1763,7 @@ function main() {
           "branch" : branchSelect, 
           "timestamp" : time()
       });
-      sendOrSaveReading(true, function(){deepSleepFortime(REGULAR_SLEEP_INTERVAL)});
+      sendOrSaveReading(true, function(){deepSleepForTime(REGULAR_SLEEP_INTERVAL)});
     }
 }//end main
 
@@ -1777,38 +1817,40 @@ function mainWithSafety(){
 }
 
 WDTimer<-imp.wakeup(300,WatchDog);//end next wake call
-
-try{
-    local numberOfErrors = checkForStoredErrors();
-    if(!numberOfErrors){
-        main();
-    } else {
-        if(server.isconnected()){
-            //adding a little safety:
-            try{
-                sendStoredErrors();
-                mainWithSafety();
-            } catch (error){
-                server.log("error in sendStoredErrors: " + error);
-            }
+function checkForErrorsAndRunMain(){
+    try{
+        local numberOfErrors = checkForStoredErrors();
+        if(!numberOfErrors){
+            main();
         } else {
-            server.connect(function(connectionStatus){
+            if(server.isconnected()){
                 //adding a little safety:
                 try{
                     sendStoredErrors();
+                    mainWithSafety();
                 } catch (error){
                     server.log("error in sendStoredErrors: " + error);
-                } 
-                mainWithSafety();
-            }, CONNECTION_TIME_ON_ERROR_WAKEUP); 
+                }
+            } else {
+                server.connect(function(connectionStatus){
+                    //adding a little safety:
+                    try{
+                        sendStoredErrors();
+                    } catch (error){
+                        server.log("error in sendStoredErrors: " + error);
+                    } 
+                    mainWithSafety();
+                }, CONNECTION_TIME_ON_ERROR_WAKEUP); 
+            }
         }
+    } catch (error) {
+        logglyError({
+            "message" : "error in main!", 
+            "error" : error,
+            "timestamp" : time()
+        });
+        //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
+        power.enter_deep_sleep_running("error in main");
     }
-} catch (error) {
-    logglyError({
-        "message" : "error in main!", 
-        "error" : error,
-        "timestamp" : time()
-    });
-    //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
-    power.enter_deep_sleep_running("error in main");
 }
+checkForErrorsAndRunMain();
