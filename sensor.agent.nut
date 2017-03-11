@@ -577,6 +577,7 @@ device.on("fullRes",function(data)
 }
 )
 
+const INTERNAL_AUTH = "rVV8JJgZ1konzq8Bj9BR"
 
 http.onrequest(function (request, response) {
     try {
