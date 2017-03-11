@@ -5,7 +5,7 @@
 // It forwards data from the Imp Device to the Edyn server.
 ////////////////////////////////////////////////////////////
 #require "Firebase.class.nut:1.0.0"
-#require "Loggly.class.nut:1.0.1"
+#require "Loggly.class.nut:1.1.0"
 macAgentSide <- imp.configparams.deviceid;
 
 const agentBackendSettingsPassword = "GiftShop405";

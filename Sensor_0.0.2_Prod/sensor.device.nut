@@ -50,7 +50,7 @@ const CONNECTION_TIME_ON_ERROR_WAKEUP = 30;
 const NV_SIZE_LIMIT = 2900; //bytes, value taken from valve code
 const STORED_ERRORS_MAX = 3; //stored errors
 
-
+const LOG_DETAILED_MOISTURE_DATA = false;
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
@@ -202,7 +202,7 @@ function capSense(ModeSelect=true){
     timeDiffTwo=indexeNeg-kneeIndex
     highread=maxVSoil
     //debugs
-    if(true){
+    if(LOG_DETAILED_MOISTURE_DATA){
       server.log("Last Sample:")
       server.log(lastreading)
       server.log("MaxVSoil:")
@@ -685,7 +685,9 @@ class power {
     //Old version before Electric Imp's sleeping fix
     //imp.deepsleepfor(INTERVAL_SENSOR_SAMPLE_S);
     //Implementing Electric Imp's sleeping fix
-    if (debug == true) server.log("Deep sleep (running) call because: "+reason);
+    //TODO: change inputTime to be the input of the function
+    local inputTime = INTERVAL_SENSOR_SAMPLE_S;
+    server.log("Deep sleep (running) call because: "+reason);
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) server.log("Starting deep sleep (running).");
@@ -696,7 +698,7 @@ class power {
         //  server.log("The next wake to log will be the 'data transmission' wake.");
         //}
         //blueLed.on();
-        server.sleepfor(INTERVAL_SENSOR_SAMPLE_S);
+        server.sleepfor(inputTime);
       });
     });
   }
@@ -707,12 +709,14 @@ class power {
     //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
     //Implementing Electric Imp's sleeping fix
     //blueLed.pulse();
-    if (debug == true) server.log("Deep sleep (storage) call because: "+reason)
+    //TODO: change inputTime to be the input of the function
+    local inputTime = INTERVAL_SLEEP_SHIP_STORE_S;
+    server.log("Deep sleep (storage) call because: " + reason);
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) server.log("Starting deep sleep (ship and store).");
         blueLed.on();
-        server.sleepfor(INTERVAL_SLEEP_SHIP_STORE_S);
+        server.sleepfor(inputTime);
       });
     });
   }
@@ -723,16 +727,18 @@ class power {
     //imp.deepsleepfor(INTERVAL_SLEEP_MAX_S);
     //Implementing Electric Imp's sleeping fix
     redLed.blink(0.1,6);
+    //TODO: change inputTime to be the input of the function
+    local inputTime = INTERVAL_SLEEP_FAILED_S;
     if (debug == true) server.error("\tDeep sleep (failed) call because: "+reason)
     imp.wakeup(0.5,function() {
       imp.onidle(function() {
         if (debug == true) server.log("Starting deep sleep (failed).");
         blueLed.on();
         if(imp.rssi()){
-            server.sleepfor(INTERVAL_SLEEP_FAILED_S);
+            server.sleepfor(inputTime);
         }
         else{
-            server.sleepfor(INTERVAL_SLEEP_FAILED_S);
+            server.sleepfor(inputTime);
         }
 
       });
@@ -789,7 +795,7 @@ function logglyGeneral(logTable = {}, forceConnect = false, level = "INFO"){
         //connect and send loggly stuff
         //really no reason we'd ever force a connect for a regular log...
         server.connect(function (connectStatus){
-            forcedLogglyConnect(connectStatus, logTable, "loggly" + logglyLevel);
+            forcedLogglyConnect(server.isconnected(), logTable, "loggly" + logglyLevel);
         }, logglyConnectTimeout);
     }
   } catch (error) {
@@ -886,7 +892,8 @@ function onConnectedTimeout(state) {
 }
 
 function connect(callback, timeout) {
-  // Check if we're connected before calling server.connect()
+  //using a comma in the line below to avoid 'find and replace' error
+  // Check if we're connected before calling server,connect()
   // to avoid race condition
 
   if (server.isconnected()) {
@@ -968,7 +975,7 @@ function send_data(status) {
   local nvDataSize = nv.data.len();
   nv.data_sent = nv.data.top();
 
-  if (status == SERVER_CONNECTED) {
+  if (server.isconnected()) {
     // ok: send data
     // server.log(imp.scanwifinetworks());
     //
@@ -1654,8 +1661,10 @@ if (!("nv" in getroottable() && "data" in nv)) {
 }
 
 function main() {
-
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
+
+    //used for functional tests:
+    server.log("main");
 
     if(control==0){
       control=startControlFlow();
@@ -1762,7 +1771,8 @@ function mainWithSafety(){
     );
 }
 
-WDTimer<-imp.wakeup(300,WatchDog);//end naxt wake call
+WDTimer<-imp.wakeup(300,WatchDog);//end next wake call
+
 try{
     local numberOfErrors = checkForStoredErrors();
     if(!numberOfErrors){
