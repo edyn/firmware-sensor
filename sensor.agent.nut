@@ -578,28 +578,47 @@ device.on("fullRes",function(data)
 )
 
 
-// Accept requests to open/close the valve
 http.onrequest(function (request, response) {
     try {
         response.header("Access-Control-Allow-Origin", "*");
-
+        if("path" in request){
+            if(request.path == "/device-type" || request.path == "/device-type/"){
+                if("internal-auth" in request.headers){
+                    if(request.headers["internal-auth"] == INTERNAL_AUTH){
+                        response.send(200, http.jsonencode({"deviceType" : "sensor"}));
+                        return
+                    } else {
+                        response.send(403, http.jsonencode({"error" : "Bad Password"}));
+                        return
+                    }
+                } else {
+                    response.send(403, http.jsonencode({"error" : "Missing Password"}));
+                    return
+                }
+            }
+        }
+ 
         if ("fullRes" in request.query) {
         // if it was, send the value of it to the device
             device.send("fullRes", request.query["fullRes"]);
             fullResSet = true
+            response.send(200, "OK");
             server.log("Full Res Set to True")
+            return
         }
 
         //note that on the sensor the only action you can take is restarting (or high res)
         if("password" in request.query){
           if(request.query["password"] == agentBackendSettingsPassword){
             if("restartAgent" in request.query){
+              response.send(200, "OK");
               server.restart();
+              return
             }
           }
         }
         // send a response back to whoever made the request
-        response.send(200, "OK");
+        response.send(403, http.jsonencode({"error" : "no arguments given"}));
     } catch (ex) {
         response.send(500, "Error: " + ex);
     }
