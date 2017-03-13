@@ -733,7 +733,7 @@ function processDeviceResults(results){
     }
     if(results.storedReadings != expectedResultsArray[mainIndex].storedReadings){
         server.log("FAIL stored readings ON MAIN RUN " + mainIndex)
-        failureString = failureString + testName + " fail storedReadings in event " + mainIndex + ", expected at least: " + expectedResultsArray[mainIndex].storedReadings + ", actual: " + results.storedReadings+ "\n"
+        failureString = failureString + testName + " fail storedReadings in event " + mainIndex + ", expected exactly: " + expectedResultsArray[mainIndex].storedReadings + ", actual: " + results.storedReadings+ "\n"
     }
     if(failureString.len()){
         server.log(failureString)
