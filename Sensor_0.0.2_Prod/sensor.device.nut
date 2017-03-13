@@ -1174,7 +1174,7 @@ function determineBranchFromWakeReason()
             //This DOES try to force connection
             logglyError({
               "error" : "Waking From Squirrel Runtime Error"
-            }, true);
+            });
             break
 
         case WAKEREASON_TIMER:
@@ -1821,7 +1821,7 @@ function checkForErrorsAndRunMain(){
     try{
         local numberOfErrors = checkForStoredErrors();
         if(!numberOfErrors){
-            main();
+            mainWithSafety();
         } else {
             if(server.isconnected()){
                 //adding a little safety:

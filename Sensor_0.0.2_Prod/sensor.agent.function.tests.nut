@@ -762,6 +762,7 @@ device.on("deviceResults", processDeviceResults);
 //MAKNIG THE EVENT LIST:
 //(node that exampleSequence resets the 'data last sent timestamp' to 0 so it's useful for clearing out the last results)
 
+
 exampleSequence();
 connectedOrConnectingAndSendingData();
 exampleSequence();
@@ -785,6 +786,7 @@ testSendFrequencyMediumBattery();
 testSendFrequencyLowBattery();
 testSendFrequencyLowerBattery();
 testSendFrequencyLowestBattery();
+
 //Start running the tests:
 runMainLoop();
 
