@@ -450,12 +450,22 @@ function throwMainErrorFailedConnection(){
 
 //these will need to be updated if they're ever changed on the device:
 
-const HIGHEST_FREQUENCY = 300; //60 seconds * 5
+//how it will work one day:
+
+//const HIGHEST_FREQUENCY = 300; //60 seconds * 5
 const HIGH_FREQUENCY = 600;   //60 seconds * 10
-const MEDIUM_FREQUENCY= 1800;  //60 seconds * 30
-const LOW_FREQUENCY = 3600;    //60 seconds * 60
-const LOWER_FREQUENCY = 6000; //60 seconds * 100
-const LOWEST_FREQUENCY = 7200;//60 seconds * 240
+//const MEDIUM_FREQUENCY= 1800;  //60 seconds * 30
+//const LOW_FREQUENCY = 3600;    //60 seconds * 60
+//const LOWER_FREQUENCY = 6000; //60 seconds * 100
+//const LOWEST_FREQUENCY = 7200;//60 seconds * 240
+
+//how it currently works:
+const HIGHEST_FREQUENCY = 600; //== HIGH_FREQUENCY
+const MEDIUM_FREQUENCY= 600;  //== HIGH_FREQUENCY
+const LOW_FREQUENCY = 600;    //== HIGH_FREQUENCY
+const LOWER_FREQUENCY = 600; //== HIGH_FREQUENCY
+const LOWEST_FREQUENCY = 600;//== HIGH_FREQUENCY
+
 
 const HIGHEST_BATTERY = 3.4;         //Volts
 const HIGH_BATTERY = 3.35
@@ -471,10 +481,10 @@ function testSendFrequencyHighestBattery(){
 
     //Events
     ///////////////////////////         Connected|                  Battery|Wake Reason|   connectSuccess|                Fake Time|    Error|     Mute|
-    local eventA = createSingleEvent(        true,  HIGHEST_BATTERY + 0.001,   WR_TIMER,             true,                        0,     true,     true/*mute*/);
-    local eventB = createSingleEvent(       false,  HIGHEST_BATTERY + 0.001,   WR_TIMER,             true,                        0,     true,     true/*mute*/);
-    local eventC = createSingleEvent(       false,  HIGHEST_BATTERY + 0.001,   WR_TIMER,             true,    HIGHEST_FREQUENCY - 1,     true,     true/*mute*/);
-    local eventD = createSingleEvent(       false,  HIGHEST_BATTERY + 0.001,   WR_TIMER,             true,    HIGHEST_FREQUENCY + 1,     true,     true/*mute*/);
+    local eventA = createSingleEvent(        true,  HIGHEST_BATTERY + 0.001,   WR_TIMER,             true,                        0,    false,     true/*mute*/);
+    local eventB = createSingleEvent(       false,  HIGHEST_BATTERY + 0.001,   WR_TIMER,             true,                        0,    false,     true/*mute*/);
+    local eventC = createSingleEvent(       false,  HIGHEST_BATTERY + 0.001,   WR_TIMER,             true,    HIGHEST_FREQUENCY - 1,    false,     true/*mute*/);
+    local eventD = createSingleEvent(       false,  HIGHEST_BATTERY + 0.001,   WR_TIMER,             true,    HIGHEST_FREQUENCY + 1,    false,     true/*mute*/);
 
     //Device Results 
     ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
@@ -507,10 +517,10 @@ function testSendFrequencyHighBattery(){
 
     //Events
     ///////////////////////////         Connected|                  Battery|Wake Reason|   connectSuccess|                Fake Time|    Error|     Mute|
-    local eventA = createSingleEvent(         true,    HIGH_BATTERY + 0.001,   WR_TIMER,             true,                        0,      true,     true/*mute*/);
-    local eventB = createSingleEvent(        false,    HIGH_BATTERY + 0.001,   WR_TIMER,             true,                        0,      true,     true/*mute*/);
-    local eventC = createSingleEvent(        false,    HIGH_BATTERY + 0.001,   WR_TIMER,             true,       HIGH_FREQUENCY - 1,      true,     true/*mute*/);
-    local eventD = createSingleEvent(        false,    HIGH_BATTERY + 0.001,   WR_TIMER,             true,       HIGH_FREQUENCY + 1,      true,     true/*mute*/);
+    local eventA = createSingleEvent(         true,    HIGH_BATTERY + 0.001,   WR_TIMER,             true,                        0,    false,     true/*mute*/);
+    local eventB = createSingleEvent(        false,    HIGH_BATTERY + 0.001,   WR_TIMER,             true,                        0,    false,     true/*mute*/);
+    local eventC = createSingleEvent(        false,    HIGH_BATTERY + 0.001,   WR_TIMER,             true,       HIGH_FREQUENCY - 1,    false,     true/*mute*/);
+    local eventD = createSingleEvent(        false,    HIGH_BATTERY + 0.001,   WR_TIMER,             true,       HIGH_FREQUENCY + 1,    false,     true/*mute*/);
 
     //Device Results 
     ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
@@ -543,10 +553,10 @@ function testSendFrequencyMediumBattery(){
 
     //Events
     ///////////////////////////         Connected|                  Battery|Wake Reason|   connectSuccess|                Fake Time|    Error|     Mute|
-    local eventA = createSingleEvent(         true,  MEDIUM_BATTERY + 0.001,   WR_TIMER,             true,                        0,     true,     true/*mute*/);
-    local eventB = createSingleEvent(        false,  MEDIUM_BATTERY + 0.001,   WR_TIMER,             true,                        0,     true,     true/*mute*/);
-    local eventC = createSingleEvent(        false,  MEDIUM_BATTERY + 0.001,   WR_TIMER,             true,     MEDIUM_FREQUENCY - 1,     true,     true/*mute*/);
-    local eventD = createSingleEvent(        false,  MEDIUM_BATTERY + 0.001,   WR_TIMER,             true,     MEDIUM_FREQUENCY + 1,     true,     true/*mute*/);
+    local eventA = createSingleEvent(         true,  MEDIUM_BATTERY + 0.001,   WR_TIMER,             true,                        0,    false,     true/*mute*/);
+    local eventB = createSingleEvent(        false,  MEDIUM_BATTERY + 0.001,   WR_TIMER,             true,                        0,    false,     true/*mute*/);
+    local eventC = createSingleEvent(        false,  MEDIUM_BATTERY + 0.001,   WR_TIMER,             true,     MEDIUM_FREQUENCY - 1,    false,     true/*mute*/);
+    local eventD = createSingleEvent(        false,  MEDIUM_BATTERY + 0.001,   WR_TIMER,             true,     MEDIUM_FREQUENCY + 1,    false,     true/*mute*/);
 
     //Device Results 
     ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
@@ -578,11 +588,11 @@ function testSendFrequencyLowBattery(){
     testNameChangeArray[runMainSequenceArray.len()] <- "testSendFrequencyLowBattery"
 
     //Events
-    ///////////////////////////         Connected|                  Battery|Wake Reason|   connectSuccess|                Fake Time|     Error|     Mute|
-    local eventA = createSingleEvent(         true,     LOW_BATTERY + 0.001,   WR_TIMER,             true,                         0,       true,     true/*mute*/);
-    local eventB = createSingleEvent(        false,     LOW_BATTERY + 0.001,   WR_TIMER,             true,                        0,       true,     true/*mute*/);
-    local eventC = createSingleEvent(        false,     LOW_BATTERY + 0.001,   WR_TIMER,             true,     LOW_FREQUENCY - 1,       true,     true/*mute*/);
-    local eventD = createSingleEvent(        false,     LOW_BATTERY + 0.001,   WR_TIMER,             true,     LOW_FREQUENCY + 1,       true,     true/*mute*/);
+    ///////////////////////////         Connected|                  Battery|Wake Reason|   connectSuccess|                Fake Time|      Error|     Mute|
+    local eventA = createSingleEvent(         true,     LOW_BATTERY + 0.001,   WR_TIMER,             true,                        0,      false,     true/*mute*/);
+    local eventB = createSingleEvent(        false,     LOW_BATTERY + 0.001,   WR_TIMER,             true,                        0,      false,     true/*mute*/);
+    local eventC = createSingleEvent(        false,     LOW_BATTERY + 0.001,   WR_TIMER,             true,        LOW_FREQUENCY - 1,      false,     true/*mute*/);
+    local eventD = createSingleEvent(        false,     LOW_BATTERY + 0.001,   WR_TIMER,             true,        LOW_FREQUENCY + 1,      false,     true/*mute*/);
 
     //Device Results 
     ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
@@ -615,10 +625,10 @@ function testSendFrequencyLowerBattery(){
 
     //Events
     ///////////////////////////         Connected|                  Battery|Wake Reason|   connectSuccess|                Fake Time|     Error|     Mute|
-    local eventA = createSingleEvent(        true,    LOWER_BATTERY + 0.001,   WR_TIMER,             true,                         0,     true,     true/*mute*/);
-    local eventB = createSingleEvent(       false,    LOWER_BATTERY + 0.001,   WR_TIMER,             true,                         0,     true,     true/*mute*/);
-    local eventC = createSingleEvent(       false,    LOWER_BATTERY + 0.001,   WR_TIMER,             true,       LOWER_FREQUENCY - 1,     true,     true/*mute*/);
-    local eventD = createSingleEvent(       false,    LOWER_BATTERY + 0.001,   WR_TIMER,             true,       LOWER_FREQUENCY + 1,     true,     true/*mute*/);
+    local eventA = createSingleEvent(        true,    LOWER_BATTERY + 0.001,   WR_TIMER,             true,                         0,    false,     true/*mute*/);
+    local eventB = createSingleEvent(       false,    LOWER_BATTERY + 0.001,   WR_TIMER,             true,                         0,    false,     true/*mute*/);
+    local eventC = createSingleEvent(       false,    LOWER_BATTERY + 0.001,   WR_TIMER,             true,       LOWER_FREQUENCY - 1,    false,     true/*mute*/);
+    local eventD = createSingleEvent(       false,    LOWER_BATTERY + 0.001,   WR_TIMER,             true,       LOWER_FREQUENCY + 1,    false,     true/*mute*/);
 
     //Device Results 
     ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
@@ -651,10 +661,10 @@ function testSendFrequencyLowestBattery(){
 
     //Events
     ///////////////////////////         Connected|                  Battery|Wake Reason|   connectSuccess|                Fake Time|     Error|     Mute|
-    local eventA = createSingleEvent(        true,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,                        0,      true,     true/*mute*/);
-    local eventB = createSingleEvent(       false,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,                        0,      true,     true/*mute*/);
-    local eventC = createSingleEvent(       false,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,     LOWEST_FREQUENCY - 1,      true,     true/*mute*/);
-    local eventD = createSingleEvent(       false,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,     LOWEST_FREQUENCY + 1,      true,     true/*mute*/);
+    local eventA = createSingleEvent(        true,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,                        0,     false,     true/*mute*/);
+    local eventB = createSingleEvent(       false,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,                        0,     false,     true/*mute*/);
+    local eventC = createSingleEvent(       false,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,     LOWEST_FREQUENCY - 1,     false,     true/*mute*/);
+    local eventD = createSingleEvent(       false,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,     LOWEST_FREQUENCY + 1,     false,     true/*mute*/);
 
     //Device Results 
     ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
@@ -752,7 +762,6 @@ device.on("deviceResults", processDeviceResults);
 
 //MAKNIG THE EVENT LIST:
 //(node that exampleSequence resets the 'data last sent timestamp' to 0 so it's useful for clearing out the last results)
-
 
 exampleSequence();
 connectedOrConnectingAndSendingData();
