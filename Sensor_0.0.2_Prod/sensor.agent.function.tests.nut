@@ -456,14 +456,13 @@ function throwMainErrorFailedConnection(){
 const HIGH_FREQUENCY = 600;   //60 seconds * 10
 //const MEDIUM_FREQUENCY= 1800;  //60 seconds * 30
 //const LOW_FREQUENCY = 3600;    //60 seconds * 60
-//const LOWER_FREQUENCY = 6000; //60 seconds * 100
+const LOWER_FREQUENCY = 6000; //60 seconds * 100
 //const LOWEST_FREQUENCY = 7200;//60 seconds * 240
 
 //how it currently works:
 const HIGHEST_FREQUENCY = 600; //== HIGH_FREQUENCY
 const MEDIUM_FREQUENCY= 600;  //== HIGH_FREQUENCY
 const LOW_FREQUENCY = 600;    //== HIGH_FREQUENCY
-const LOWER_FREQUENCY = 600; //== HIGH_FREQUENCY
 const LOWEST_FREQUENCY = 600;//== HIGH_FREQUENCY
 
 
@@ -665,13 +664,13 @@ function testSendFrequencyLowestBattery(){
     local eventB = createSingleEvent(       false,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,                        0,     false,     true/*mute*/);
     local eventC = createSingleEvent(       false,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,     LOWEST_FREQUENCY - 1,     false,     true/*mute*/);
     local eventD = createSingleEvent(       false,    LOWER_BATTERY - 0.001,   WR_TIMER,             true,     LOWEST_FREQUENCY + 1,     false,     true/*mute*/);
-
+    
     //Device Results 
     ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
     local deviceResultsA = createDeviceResults(    600,     WR_TIMER,               0);
     local deviceResultsB = createDeviceResults(    600,     WR_TIMER,               1);
     local deviceResultsC = createDeviceResults(    600,     WR_TIMER,               2);
-    local deviceResultsD = createDeviceResults(    600,     WR_TIMER,               0);
+    local deviceResultsD = createDeviceResults(    600,     WR_TIMER,               3);
 
     //Sequence
     //////////////////
