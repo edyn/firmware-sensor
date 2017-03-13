@@ -32,6 +32,8 @@ const WR_NEW_FW = 6;
 const WR_BLINKUP = 9;
 const WR_SW_RESTART = 10; //Planned addition in os 36, gotta get ready, yo
 
+const DAY = 86400 //seconds
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //this is where we lego together the sequence of events and the expected results after every event//
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -243,14 +245,14 @@ function differentWakeReasonsSuccessfulConnectionAttempt(){
 
     //Events
     ///////////////////////////         Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error|     Mute|
-    local eventA = createSingleEvent(       false,      3.31,     WR_BOOT,              true,          0,     false,     true/*mute*/);
-    local eventB = createSingleEvent(       false,      3.31,    WR_TIMER,              true,          0,     false,     true/*mute*/);
-    local eventC = createSingleEvent(       false,      3.31, WR_SW_RESET,              true,          0,     false,     true/*mute*/);
-    local eventD = createSingleEvent(       false,      3.31,   WR_BUTTON,              true,          0,     false,     true/*mute*/);
-    local eventE = createSingleEvent(       false,      3.31,WR_NEW_SQUIRREL,           true,          0,     false,     true/*mute*/);
-    local eventF = createSingleEvent(       false,      3.31,WR_SQUIRREL_ERROR,         true,          0,     false,     true/*mute*/);
-    local eventG = createSingleEvent(       false,      3.31,   WR_NEW_FW,              true,          0,     false,     true/*mute*/);
-    local eventH = createSingleEvent(       false,      3.31,  WR_BLINKUP,              true,          0,     false,     true/*mute*/);
+    local eventA = createSingleEvent(       false,      3.31,     WR_BOOT,              true,    1 * DAY,     false,     true/*mute*/);
+    local eventB = createSingleEvent(       false,      3.31,    WR_TIMER,              true,    2 * DAY,     false,     true/*mute*/);
+    local eventC = createSingleEvent(       false,      3.31, WR_SW_RESET,              true,    3 * DAY,     false,     true/*mute*/);
+    local eventD = createSingleEvent(       false,      3.31,   WR_BUTTON,              true,    4 * DAY,     false,     true/*mute*/);
+    local eventE = createSingleEvent(       false,      3.31,WR_NEW_SQUIRREL,           true,    5 * DAY,     false,     true/*mute*/);
+    local eventF = createSingleEvent(       false,      3.31,WR_SQUIRREL_ERROR,         true,    6 * DAY,     false,     true/*mute*/);
+    local eventG = createSingleEvent(       false,      3.31,   WR_NEW_FW,              true,    7 * DAY,     false,     true/*mute*/);
+    local eventH = createSingleEvent(       false,      3.31,  WR_BLINKUP,              true,    8 * DAY,     false,     true/*mute*/);
     //this wakereason not supported yet:
     //local eventI = createSingleEvent(        true,         3.31,    WR_SW_RESTART             true,           0,      false,     true/*mute*/);
     
@@ -318,27 +320,27 @@ function differentWakeReasonsUnsuccessfulConnectionAttempt(){
 
     //Events
     ///////////////////////////         Connected|   Battery| Wake Reason|    connectSuccess|  Fake Time|    Error|     Mute|
-    local eventA = createSingleEvent(       false,      3.31,     WR_BOOT,             false,          0,    false,     true/*mute*/);
-    local eventB = createSingleEvent(       false,      3.31,    WR_TIMER,             false,          0,    false,     true/*mute*/);
-    local eventC = createSingleEvent(       false,      3.31, WR_SW_RESET,             false,          0,    false,     true/*mute*/);
-    local eventD = createSingleEvent(       false,      3.31,   WR_BUTTON,             false,          0,    false,     true/*mute*/);
-    local eventE = createSingleEvent(       false,      3.31,WR_NEW_SQUIRREL,          false,          0,    false,     true/*mute*/);
-    local eventF = createSingleEvent(       false,      3.31,WR_SQUIRREL_ERROR,        false,          0,    false,     true/*mute*/);
-    local eventG = createSingleEvent(       false,      3.31,   WR_NEW_FW,             false,          0,    false,     true/*mute*/);
-    local eventH = createSingleEvent(       false,      3.31,  WR_BLINKUP,             false,          0,    false,     true/*mute*/);
+    local eventA = createSingleEvent(       false,      3.31,     WR_BOOT,             false,    1 * DAY,    false,     true/*mute*/);
+    local eventB = createSingleEvent(       false,      3.31,    WR_TIMER,             false,    2 * DAY,    false,     true/*mute*/);
+    local eventC = createSingleEvent(       false,      3.31, WR_SW_RESET,             false,    3 * DAY,    false,     true/*mute*/);
+    local eventD = createSingleEvent(       false,      3.31,   WR_BUTTON,             false,    4 * DAY,    false,     true/*mute*/);
+    local eventE = createSingleEvent(       false,      3.31,WR_NEW_SQUIRREL,          false,    5 * DAY,    false,     true/*mute*/);
+    local eventF = createSingleEvent(       false,      3.31,WR_SQUIRREL_ERROR,        false,    6 * DAY,    false,     true/*mute*/);
+    local eventG = createSingleEvent(       false,      3.31,   WR_NEW_FW,             false,    7 * DAY,    false,     true/*mute*/);
+    local eventH = createSingleEvent(       false,      3.31,  WR_BLINKUP,             false,    8 * DAY,    false,     true/*mute*/);
     //this wakereason not supported yet:
     //local eventI = createSingleEvent(        true,         3.31,    WR_SW_RESTART             true,           0,      false,     true/*mute*/);
     
     //Device Results 
     ////////////////////////////////////     lastSleep|   wakeReason|  storedReadings|
-    local deviceResultsA = createDeviceResults(    600,      WR_BOOT,               0);
-    local deviceResultsB = createDeviceResults(    600,     WR_TIMER,               1);
-    local deviceResultsC = createDeviceResults(    600,  WR_SW_RESET,               0);
-    local deviceResultsD = createDeviceResults(    600,    WR_BUTTON,               2);
-    local deviceResultsE = createDeviceResults(    600,WR_NEW_SQUIRREL,             0);
-    local deviceResultsF = createDeviceResults(    600,WR_SQUIRREL_ERROR,           3);
-    local deviceResultsG = createDeviceResults(    600,    WR_NEW_FW,               0);
-    local deviceResultsH = createDeviceResults(    600,   WR_BLINKUP,               4);
+    local deviceResultsA = createDeviceResults(    600,      WR_BOOT,               1);
+    local deviceResultsB = createDeviceResults(    600,     WR_TIMER,               2);
+    local deviceResultsC = createDeviceResults(    600,  WR_SW_RESET,               3);
+    local deviceResultsD = createDeviceResults(    600,    WR_BUTTON,               4);
+    local deviceResultsE = createDeviceResults(    600,WR_NEW_SQUIRREL,             5);
+    local deviceResultsF = createDeviceResults(    600,WR_SQUIRREL_ERROR,           6);
+    local deviceResultsG = createDeviceResults(    600,    WR_NEW_FW,               7);
+    local deviceResultsH = createDeviceResults(    600,   WR_BLINKUP,               8);
     //this wakereason not supported yet:
     //local deviceResultsI = createDeviceResults(       600,        WR_SW_RESTART,         0);
 
