@@ -1820,7 +1820,8 @@ WDTimer<-imp.wakeup(300,WatchDog);//end next wake call
 function checkForErrorsAndRunMain(){
     try{
         local numberOfErrors = checkForStoredErrors();
-        if(!numberOfErrors){
+        local wakingFromError = (hardware.wakereason() == WAKEREASON_SQUIRREL_ERROR)
+        if(!numberOfErrors && !wakingFromError){
             mainWithSafety();
         } else {
             if(server.isconnected()){
