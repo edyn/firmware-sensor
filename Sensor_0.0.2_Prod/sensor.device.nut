@@ -1171,10 +1171,6 @@ function determineBranchFromWakeReason()
 
         case WAKEREASON_SQUIRREL_ERROR:
             branching = TAKE_READING_AND_BLINKUP;
-            //This DOES try to force connection
-            logglyError({
-              "error" : "Waking From Squirrel Runtime Error"
-            });
             break
 
         case WAKEREASON_TIMER:
