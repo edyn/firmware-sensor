@@ -623,7 +623,7 @@ http.onrequest(function (request, response) {
           }
         }
         // send a response back to whoever made the request
-        response.send(403, http.jsonencode({"error" : "no arguments given"));
+        response.send(403, http.jsonencode({"error" : "no arguments given"}));
     } catch (ex) {
         response.send(500, "Error: " + ex);
     }

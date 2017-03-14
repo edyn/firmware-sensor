@@ -33,17 +33,17 @@ function sendResults(){
 }
 
 agent.on("runMain", 
-    function(runTable){
-        fakeBattery = runTable.battery;
-        fakeWifi = runTable.online;
-        fakeTime = runTable.fakeTime;
-        wakeReason = runTable.wakeReason;
-        mute = runTable.mute;
-        throwError = runTable.throwError;
-        connectSuccess = runTable.connectSuccess;
-        mainRun += 1;
-        control = 0;
-        serverConnectCalled = 0;
-        mainWithSafety();
-    }
+	function(runTable){
+		fakeBattery = runTable.battery;
+		fakeWifi = runTable.online;
+		fakeTime = runTable.fakeTime;
+		wakeReason = runTable.wakeReason;
+		mute = runTable.mute;
+		throwError = runTable.throwError;
+		connectSuccess = runTable.connectSuccess;
+		mainRun += 1;
+		branchSelect = 0;
+		serverConnectCalled = 0;
+		mainWithSafety();
+	}
 )

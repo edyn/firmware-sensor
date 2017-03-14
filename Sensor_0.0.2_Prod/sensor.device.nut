@@ -50,7 +50,10 @@ const CONNECTION_TIME_ON_ERROR_WAKEUP = 30;
 const NV_SIZE_LIMIT = 2900; //bytes, value taken from valve code
 const STORED_ERRORS_MAX = 3; //stored errors
 
-const LOG_DETAILED_MOISTURE_DATA = false;
+const BLINKUP_TIME = 90;
+const I2C_MAXIMUM_TRIES = 6;
+
+const LOG_DETAILED_MOISTURE_DATA = 0;
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
@@ -74,7 +77,7 @@ nextWakeCall<-null;
 shallow<-false;
 whenWake<- 0;
 intlast<- 0;
-control<-0;
+branchSelect <- 0;
 intertime<-0;
 //0.0.2.2
 //Capacitance Sensing
@@ -678,6 +681,46 @@ class solar {
   }
 }
 
+const INVALID_SLEEP_TIME = 600.0;
+
+//function to simplify our deep sleep calls
+function deepSleepForTime(inputTime = INTERVAL_SENSOR_SAMPLE_S){
+    try{
+        if(inputTime < 1){
+            //10 minutes
+            inputTime = INVALID_SLEEP_TIME;
+        }
+        imp.onidle(function() {
+            try{
+                server.sleepfor(inputTime);
+            } catch(error){
+                //force connection:
+                logglyError({
+                    "error" : error,
+                    "function" : "deepSleepForTimeOnIdle",
+                    "message" : "Crystal likely damaged."
+                }, true); //this true is for forcedLogglyConnect
+                //below will throw an error: this catch only happens if server.sleepfor fails (look at the try)
+                imp.onidle(function() {
+                    server.disconnect();
+                    imp.wakeup(SLEEPFOR_ERROR_TIME, mainWithSafety);
+                });
+                return
+            }
+        });
+    } catch(error) {
+        logglyError({
+            "error" : error,
+            "function" : "deepSleepForTime",
+            "message" : "BAD error, deepsleepfortime has a bug!"
+        });
+        //this should be less dependent on external variables
+        imp.onidle(function() {
+            server.sleepfor(600.0);
+        });
+        return
+    }
+}
 
 // Power management
 class power {
@@ -904,7 +947,7 @@ function connect(callback, timeout) {
     if(nv.storedErrors.len()){
       sendStoredErrors();
     }
-    callback(SERVER_CONNECTED);
+    callback();
   }
   else {
     if (debug == true) server.log("Need to connect first");
@@ -917,7 +960,7 @@ function connect(callback, timeout) {
           if(nv.storedErrors.len()){
             sendStoredErrors();
           }
-          callback(connectionStatus)
+          callback()
         } catch(error) {
           server.error("\terror in callback from function 'connect'")
           logglyError({
@@ -969,7 +1012,7 @@ function isServerRefreshNeeded(lastSentData, currentData){
 
 
 // Callback for server status changes.
-function send_data(status) {
+function send_data() {
   // update last sent data (even on failure, so the next send attempt is not immediate)
   local power_manager_data=[];
   local nvDataSize = nv.data.len();
@@ -1038,18 +1081,6 @@ function send_data(status) {
         server.error("\tdid not send")
     }
   }
-
-  else{
-        server.log(sendFullRead)
-        server.log("NOT FULL RES")
-  }
-  if (ship_and_store == true) {
-    power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-  }
-  else {
-    // Sleep until next sensor sampling
-    power.enter_deep_sleep_running("Finished sending JSON data.");
-  }
 }
 
 function blinkAll(duration, count = 1) {
@@ -1084,63 +1115,88 @@ function toHexStr(firstByte="0",secondByte="0")
 function unitTest()
 {
 }
+
+const TAKE_READING_AND_BLINKUP = 1;
+const TAKE_READING_NO_BLINKUP = 2;
+
+
+
+
+function determineForcedConnectionFromWakeReason(){
+    wakeR = hardware.wakereason();
+    //I had a switch just like determineBranchFromWakeReason
+    //but I'm pretty sure you always want to try connection except for wake from timer:
+    if(wakeR == WAKEREASON_TIMER){
+      return false
+    } else {
+      return true
+    }
+}
+
 //0.0.1.2
-function startControlFlow()
+function determineBranchFromWakeReason()
 {
     wakeR=hardware.wakereason();
-    local branching=0;
+    local branching = "unknown";
     switch(wakeR)
     {
-//1
+        //Wake reasons with a blinkup phase
+
         case WAKEREASON_POWER_ON:
-            branching=1;
+            branching = TAKE_READING_AND_BLINKUP;
             break
+
+        case WAKEREASON_PIN1:
+            branching = TAKE_READING_AND_BLINKUP;
+            break
+
+
+        //Wake reasons that don't have a blinkup phase
+
         case WAKEREASON_SW_RESET:
-            branching=1;
+            branching = TAKE_READING_NO_BLINKUP;
             //This DOES try to force connection
             logglyError({
               "error" : "Waking From Software Reset (OS level Error, could be memory related)"
             });
             break
+
         case WAKEREASON_NEW_SQUIRREL:
-            branching=1;
+            branching = TAKE_READING_NO_BLINKUP;
             break
+
         case WAKEREASON_NEW_FIRMWARE:
-            branching=1;
+            branching = TAKE_READING_NO_BLINKUP;
             break
+
         case WAKEREASON_SQUIRREL_ERROR:
-            branching=2;
-            //This DOES try to force connection
-            logglyError({
-              "error" : "Waking From Squirrel Runtime Error"
-            }, true);
+            branching = TAKE_READING_AND_BLINKUP;
             break
 
-        //unlikely/impossible cases, but still 1
-        case WAKEREASON_SNOOZE:
-            branching=1;
-            break
-        case WAKEREASON_HW_RESET:
-            branching=1;
-            break
-
-//2
         case WAKEREASON_TIMER:
-            branching=2;
+            branching = TAKE_READING_NO_BLINKUP;
             break
 
-//3
-        case WAKEREASON_PIN1:
-            branching=3;
-            break
-
-//5
         case WAKEREASON_BLINKUP:
-            branching=5;
+            branching = TAKE_READING_NO_BLINKUP;
             break
-//Below this should NEVER happen, but is there to be safe
+
+        //unlikely/impossible cases (arbitrarily no blinkup)
+
+        case WAKEREASON_SNOOZE:
+            branching = TAKE_READING_NO_BLINKUP;
+            break
+
+        case WAKEREASON_HW_RESET:
+            branching = TAKE_READING_NO_BLINKUP;
+            break
+
         case null:
+            branching = TAKE_READING_NO_BLINKUP;
             server.error("\tBad Wakereason");
+            logglyError({
+              "error" : "wake reason is null"
+            });
             break
     }//endswitch
     return branching
@@ -1150,7 +1206,7 @@ function startControlFlow()
 //new interrupt handler, to prevent interruptPin() from running twice
 function interrupthandle()
 {
-    if(control!=3)
+    if(branchSelect != 3)
     {
         interruptPin();
     }
@@ -1165,7 +1221,7 @@ function interrupthandle()
 function interruptPin() {
 
     try{
-      control=4;
+      branchSelect = 4;
       hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
         //explanation of the below if statement:
         //Intertiem is recorded at the end of the interrupt
@@ -1209,21 +1265,35 @@ function interruptPin() {
     }//end catch
 }
 
-function blinkupFor(timer=90){
-    greenLed.configure();
-    blueLed.configure();
-    redLed.configure();
-    // Enable blinkup for 30s
+function allLedsOn(){
+    redLed.on();
+    greenLed.on();
+    blueLed.on();
+}
+
+function allLedsOff(){
+    greenLed.off();
+    redLed.off();
+    blueLed.off();
+}
+
+function blinkupLoop(duration = 90, count = 1, callbackOnCompletion = function(){deepSleepForTime(INTERVAL_SENSOR_SAMPLE_S)}){
+    if(count < duration){
+        imp.wakeup(1,
+            function(){
+                blinkupLoop(duration, count + 1, callbackOnCompletion)
+            }
+        )
+    } else {
+        allLedsOff();
+        callbackOnCompletion();
+    }
+}
+
+function blinkupFor(duration = 90, callback = function(){}){
+    allLedsOn();
     imp.enableblinkup(true);
-    blueLed.on()
-    redLed.on()
-    greenLed.on()
-    //change the sleep to 90
-    imp.sleep(timer);
-    blueLed.off()
-    redLed.off()
-    greenLed.off()
-    imp.enableblinkup(false);
+    blinkupLoop(duration, 0, callback)
 }
 
 //table size estimator, accurate 'to within 100 bytes' (not very accurate)
@@ -1453,7 +1523,108 @@ function sendStoredErrors(){
 //  logFreeNVMemory();
 //}
 
-function regularOperation(){
+function configureHardware(){
+
+    //Set pin to wake the device if it's sleeping
+    hardware.pin1.configure(DIGITAL_IN_WAKEUP, function(){});
+
+    //Set I2C clock speed
+    hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+
+    //LED configurations
+    greenLed.configure();
+    redLed.configure();
+    blueLed.configure();
+
+    //Sensor configurations
+    soil.configure();
+    solar.configure();
+    source.configure();
+
+    // Create PowerManager object
+    powerManager <- PowerManager(hardware.i2c89);
+    powerManager.setDefs();
+
+    //Create humidityTemperatureSensor object
+    humidityTemperatureSensor <- HumidityTemperatureSensor();
+
+    //Configure Capacitive sensing:
+    configCapSense();
+
+}
+
+function samplePowerManager(){
+    try{
+        powerManager.sample();
+        imp.sleep(0.1);
+        if(powerManager.reg_3==null){
+            local counterI2C=1;
+            while(powerManager.reg_3 == null && counterI2C < I2C_MAXIMUM_TRIES){
+                //arbitrary, possibly unnecessary sleeps that might make it more
+                //stable
+                //"check redundancies twice"
+
+                server.log("POWER MANAGER FAIL # " + counterI2C);
+                server.log(powerManager.reg_3)
+                imp.sleep(0.01);
+                hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+                imp.sleep(0.1);
+                powerManager.sample();
+                imp.sleep(0.1);
+                counterI2C+=1;
+            }
+            if(powerManager.reg_3==null){
+                logglyError({
+                    "message" : "temp/hum sample fail",
+                    "timestamp" : time()
+                })
+            }
+        }else{
+            imp.sleep(0.1)
+        };
+    }
+    catch(error){
+        server.error("\tLTC SAMPLING ERROR");
+    }
+}
+
+function sampleTemperatureAndHumidity(){
+    try{
+        humidityTemperatureSensor.sample();
+        if(humidityTemperatureSensor.humidity == 0 || humidityTemperatureSensor.temperature == 32){
+            local counterI2C = 1;
+            while((humidityTemperatureSensor.humidity == 0 || humidityTemperatureSensor.temperature == 32) && counterI2C < I2C_MAXIMUM_TRIES){
+                //arbitrary, possibly unnecessary sleeps that might make it more stable
+                //"check redundancies twice"
+                server.log("HUMIDITY TEMPERATURE FAIL # " + counterI2C)
+                server.log(humidityTemperatureSensor.humidity)
+                server.log(humidityTemperatureSensor.temperature)
+                imp.sleep(0.01);
+                hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+                imp.sleep(0.1);
+                humidityTemperatureSensor.sample();
+                imp.sleep(0.1);
+                counterI2C+=1;
+            }
+            if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32){
+                logglyError({
+                    "message" : "temp/hum sample fail",
+                    "timestamp" : time()
+                })
+            }
+        }
+    } catch(error){
+        server.error("\tHum/Temp Error");
+        logglyError({
+          "message" : "sampleTemperatureAndHumidity error",
+          "error" : error,
+          "timestamp" : time()
+        })
+    }
+}
+
+
+function takeReading(){
 
       if (debug == true) server.log("Device booted.");
       if (debug == true) server.log("Device's unique id: " + hardware.getdeviceid());
@@ -1468,44 +1639,7 @@ function regularOperation(){
       // Register the disconnect handler
       server.onunexpecteddisconnect(disconnectHandler);
 
-      //set the pin interrupt
-      hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
-
-      ///
-      // End of event handlers
-      ///
-
-      ////////////////////
-      // Configurations //
-      ////////////////////
-
-      hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-
-      //LED configurations
-      greenLed.configure();
-      redLed.configure();
-      blueLed.configure();
-
-      // sensor configurations
-      soil.configure();
-      solar.configure();
-      source.configure();
-
-      // Create PowerManager object
-      powerManager <- PowerManager(hardware.i2c89);
-      powerManager.setDefs();
-
-      //Create humidityTemperatureSensor object
-      humidityTemperatureSensor <- HumidityTemperatureSensor();
-
-      //Configure Capacitive sensing:
-      configCapSense();
-
       server.log("Memory free after configurations: " + imp.getmemoryfree());
-
-      ///
-      // End of Configurations
-      ///
 
       if (ship_and_store == true) {
         power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
@@ -1525,64 +1659,11 @@ function regularOperation(){
       capSense(true);
 
       lastLastReading=lastLastReading*(0.666)
-      powerManager.sample();
-      try{
-      imp.sleep(0.1);
-      if(powerManager.reg_3==null){
-          local counterI2C=1;
-          while(powerManager.reg_3==null && counterI2C<6){
-              //arbitrary, possibly unnecessary sleeps that might make it more
-              //stable
-              //"check redundancies twice"
 
-              server.log("POWER MANAGER FAIL # " + counterI2C);
-              server.log(powerManager.reg_3)
-              imp.sleep(0.01);
-              hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-              imp.sleep(0.1);
-              powerManager.sample();
-              imp.sleep(0.1);
-              counterI2C+=1;
-          }
-          //will show up only when it's probably true:
-          if(powerManager.reg_3==null){
-            server.error("\tPossible damage to the LTC or I2C busses.");
-          }
-      }else{
-          imp.sleep(0.1)
-      };
-      }
-      catch(error){
-          server.error("\tLTC SAMPLING ERROR");
-      }
+      samplePowerManager();
 
-      //server.log("PM PASS");
-      humidityTemperatureSensor.sample();
-      try{
-        if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32){
-            local counterI2C=1;
-            while((humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32) && counterI2C<6){
-                //arbitrary, possibly unnecessary sleeps that might make it more stable
-                //"check redundancies twice"
-                server.log("HUMIDITY TEMPERATURE FAIL # " + counterI2C)
-
-                server.log(humidityTemperatureSensor.humidity)
-                server.log(humidityTemperatureSensor.temperature)
-                imp.sleep(0.01);
-                hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-                imp.sleep(0.1);
-                humidityTemperatureSensor.sample();
-                imp.sleep(0.1);
-                counterI2C+=1;
-            }
-            //will show up only when it's probably true:
-            if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32){
-              server.error("\tPossible damage to the Humidity/Temperature Sensor or I2C busses.");
-            }
-        }
-      } catch(error){
-        server.error("\tHum/Temp Error");
-      }
+      sampleTemperatureAndHumidity();
+      
 
       //server.log("Humidity/Temperature Pass")
       server.log("Memory free after sampling: " + imp.getmemoryfree());
@@ -1593,58 +1674,46 @@ function regularOperation(){
         // store sensor data in non-volatile storage
         //suspend charging
         powerManager.suspendCharging();
-        local batvol = source.voltage();
         //uncomment this sleep to get the light reading value change:
         imp.sleep(0.1);
         local newReading = collectReadingData();
-        saveReadingToNV(newReading);
 
         //resume charging
         powerManager.resumeCharging();
 
-      // End Saving
-      //Begin Sending
-
-        //feature 0.2 important
-        //Send sensor data
-        if (isServerRefreshNeeded(nv.data_sent, nv.data.top())) {
-          if (debug == true) server.log("Server refresh needed");
-          if(server.isconnected()){
-              send_data();
-          } else {
-              //TODO: THIS IS NOT SAFE (no try/catch):
-              connect(send_data, TIMEOUT_SERVER_S);
-          }
-                // if (debug == true) server.log("Sending location information
-                // without prompting.");
-            // connect(send_loc, TIMEOUT_SERVER_S);
-        }
-
-        // ///
-        // all the important time-sensitive decisions based on current state
-        // go here
-        // ///
-
-        // // checking source voltage not necessary in the first pass
-        // // since power will be cut to the imp below Vout of 3.1 V
-        // if (source.voltage() < 3.19) {
-        //   power.enter_deep_sleep_running("Low system voltage.");
-        // }
-        // if temperature is too hot
-        // if temperatuer is too cold
-
-        else {
-          server.log("Not time to send");
-          if (ship_and_store == true) {
-            power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-          }
-          else {
-            // not time to send. sleep until next sensor sampling.
-            power.enter_deep_sleep_running("Not time yet");
-          }
-        }
+        //TODO: right now, because of  the way all of this is structured, we save reading to nv
+        //In the future we should return it. 
+        //We sacrifice *a little* nv memory for no reason because of this.
+        saveReadingToNV(newReading);
+        return
     }
     //end regularOperation
+
+
+function sendOrSaveReading(forcedConnection = false, inputCallback = function(){}){
+
+    //Send sensor data
+    local serverRefresh = isServerRefreshNeeded(nv.data_sent, nv.data.top())
+
+    //this will always evaluate true if the device is already connected.
+    if (forcedConnection || serverRefresh) {  
+        //TODO: THIS IS NOT SAFE (no try/catch):
+        connect(
+            function(){
+                if(server.isconnected()){
+                    sendStoredErrors();
+                    send_data();
+                    inputCallback();
+                } else {
+                    inputCallback();
+                }
+            }
+        , TIMEOUT_SERVER_S);
+    } else {
+        inputCallback();
+    }
+}
+
 
 
 // create non-volatile storage if it doesn't exist
@@ -1660,65 +1729,37 @@ if (!("nv" in getroottable() && "data" in nv)) {
     };
 }
 
+//TODO:
+//determine forced connection function needs to be made
+//more try/catches in async functions
+
+
+
 function main() {
-    hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
 
     //used for functional tests:
     server.log("main");
 
-    if(control==0){
-      control=startControlFlow();
-      //1 = cold boot (0), software reset (2), new squirrel code AKA new impOS //version (4), squirrel error (5), firmware upgrade (6) and default case //(shouldn't happen)
-      //2 = wake from deep sleep (1)
-      //3 = pinWakeup (3)
-      //4 = interrupt has run before
-      //5 = blinkUp Successful (9)
-    }//end control 0
-    hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
-    if(control==1){
-        if(server.isconnected()){
-            //might be able to remove this sleep all together
-            imp.sleep(1)
-            regularOperation()
-        }
+    local branchSelect = determineBranchFromWakeReason();
+    local forceConnectionAttempt = determineForcedConnectionFromWakeReason();
 
-    //blinkupfor should happen before regular operation, but we can fix
-    //that later
-        blinkupFor(blinkupTime)
-    }
+    configureHardware();
+    takeReading();
+    if(branchSelect == TAKE_READING_AND_BLINKUP){
+        sendOrSaveReading(forceConnectionAttempt);
+        blinkupFor(BLINKUP_TIME, function(){deepSleepForTime(INTERVAL_SENSOR_SAMPLE_S)});
 
-    else if(control==2){
-        regularOperation()
-    }
-    //3 =Pin Wakeup, do some configurations
-    else if(control==3){
-      hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-      source.configure();
-      local counterI2C=0;
-      powerManager <- PowerManager(hardware.i2c89);
-      greenLed.configure();
-      blueLed.configure();
-      redLed.configure();
-      //blueLed.blink(1,3);
-      hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
-      interruptPin();
-
-    }//end control 3
-    //control 5 is blinkup
-    else if (control==5){
-        //TODO: review how blinkup is handled, it's pretty weird
-        if(server.isconnected()){
-            logglyLog({"message: " : "New Blinkup"});
-            blueLed.configure()
-            //blueLed.blink(2,2)
-            server.log("Is connected")
-            regularOperation()
-        } else {
-            blueLed.configure()
-            //blueLed.blink(1,4)
-            server.log("not connected")
-            blinkupFor(blinkupTime)
-        }
+    } else if (branchSelect == TAKE_READING_NO_BLINKUP){
+        sendOrSaveReading(forceConnectionAttempt, function(){deepSleepForTime(INTERVAL_SENSOR_SAMPLE_S)});
+    //None of the above, Error:
+    } else {
+      //should never happen but we'll log it
+      logglyError({
+          "message" : "invalid branch",
+          "branch" : branchSelect, 
+          "timestamp" : time()
+      });
+      sendOrSaveReading(true, function(){deepSleepForTime(INTERVAL_SENSOR_SAMPLE_S)});
     }
 }//end main
 
@@ -1772,38 +1813,41 @@ function mainWithSafety(){
 }
 
 WDTimer<-imp.wakeup(300,WatchDog);//end next wake call
-
-try{
-    local numberOfErrors = checkForStoredErrors();
-    if(!numberOfErrors){
-        main();
-    } else {
-        if(server.isconnected()){
-            //adding a little safety:
-            try{
-                sendStoredErrors();
-                mainWithSafety();
-            } catch (error){
-                server.log("error in sendStoredErrors: " + error);
-            }
+function checkForErrorsAndRunMain(){
+    try{
+        local numberOfErrors = checkForStoredErrors();
+        local wakingFromError = (hardware.wakereason() == WAKEREASON_SQUIRREL_ERROR)
+        if(!numberOfErrors && !wakingFromError){
+            mainWithSafety();
         } else {
-            server.connect(function(connectionStatus){
+            if(server.isconnected()){
                 //adding a little safety:
                 try{
                     sendStoredErrors();
                 } catch (error){
                     server.log("error in sendStoredErrors: " + error);
-                } 
+                }
                 mainWithSafety();
-            }, CONNECTION_TIME_ON_ERROR_WAKEUP); 
+            } else {
+                server.connect(function(connectionStatus){
+                    //adding a little safety:
+                    try{
+                        sendStoredErrors();
+                    } catch (error){
+                        server.log("error in sendStoredErrors: " + error);
+                    } 
+                    mainWithSafety();
+                }, CONNECTION_TIME_ON_ERROR_WAKEUP); 
+            }
         }
+    } catch (error) {
+        logglyError({
+            "message" : "error in main!", 
+            "error" : error,
+            "timestamp" : time()
+        });
+        //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
+        power.enter_deep_sleep_running("error in main");
     }
-} catch (error) {
-    logglyError({
-        "message" : "error in main!", 
-        "error" : error,
-        "timestamp" : time()
-    });
-    //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
-    power.enter_deep_sleep_running("error in main");
 }
+checkForErrorsAndRunMain();
