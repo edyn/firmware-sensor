@@ -1824,10 +1824,10 @@ function checkForErrorsAndRunMain(){
                 //adding a little safety:
                 try{
                     sendStoredErrors();
-                    mainWithSafety();
                 } catch (error){
                     server.log("error in sendStoredErrors: " + error);
                 }
+                mainWithSafety();
             } else {
                 server.connect(function(connectionStatus){
                     //adding a little safety:
