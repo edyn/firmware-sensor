@@ -300,16 +300,16 @@ class blueLed {
   static pin = hardware.pin5;
 
   function configure() {
-  pin.configure(PWM_OUT, 1.0/400.0, 0.0);
+    pin.configure(DIGITAL_OUT);
     pin.write(1.0);
   }
   
   function on() {
-    pin.write(0.0);
+    pin.write(0);
   }
   
   function off() {
-    pin.write(1.0);
+    pin.write(1);
   }
   function pulse() {
     local blueLedState = 1.0;
@@ -1289,7 +1289,7 @@ function regularOperation()
       // Event handlers
       ///
       // Register the disconnect handler
-      server.onunexpecteddisconnect(disconnectHandler);
+      //server.onunexpecteddisconnect(disconnectHandler);
 
       //set the pin interrupt
       hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
@@ -1508,8 +1508,8 @@ function main() {
         nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false};   
     }
 
-    //the cost of each reading is 24 seconds (8 lora communications at 3 seconds each)
-    WDTimer<-imp.wakeup(60 + nv.data.len() * 25,WatchDog);//end naxt wake call
+    //the cost of each reading is 36 seconds (8 lora communications at 4.5 seconds each)
+    WDTimer<-imp.wakeup(60 + nv.data.len() * 36,WatchDog);//end next wake call
 
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
     if(control==0)
@@ -1723,14 +1723,19 @@ function connectLORAAndSendReadings(){
     loraCommConfig();
     addConfigurationToLORAQueue();
     addAllReadingsToLORAQueue();
+    imp.enableblinkup(false);   
+    blueLed.off()
+    server.log("starting LORA send commands loop")
     loraSendATInstructionLoop(0);
 }
 
 function loraSendATInstructionLoop(index){
+    
+    imp.sleep(1.5)
     if(index < ATInstructionsList.len()){
         local executeInstruction = ATInstructionsList[index];
         lora.write(executeInstruction.cmd + "\r");
-        server.log("timeout for instruction " + executeInstruction.cmd + " : " + executeInstruction.timeout)
+        server.log("Sending " + executeInstruction.cmd + " : " + executeInstruction.timeout)
         imp.wakeup(executeInstruction.timeout, function(){loraCompleteATInstructionLoop(index)});
     } else {
       power.enter_deep_sleep_running("finished AT command set")
@@ -1750,6 +1755,7 @@ function loraCompleteATInstructionLoop(index){
         loraSendATInstructionLoop(index + 1);
     } else {
         server.log("FAILURE FOR AT INSTRUCTION " + currentInstruction.cmd);
+        redLed.blink(0.2,1)
         server.log("EXPECTED: " + currentInstruction.success);
         server.log("BUFFER: " +loraCommBuffer);
         power.enter_deep_sleep_running("failed AT instructions");
@@ -1767,7 +1773,6 @@ try{
         if(hardware.wakereason() == 0){
             imp.enableblinkup(true);
             blueLed.configure()
-            blueLed.on()
             imp.wakeup(5, main);
         } else {
             main();
