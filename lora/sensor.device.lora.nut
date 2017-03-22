@@ -21,9 +21,9 @@
 const TIMEOUT_SERVER_S = 10; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 
-const INTERVAL_SENSOR_SAMPLE_S = 600; // sample sensors this often
-const INTERVAL_SLEEP_FAILED_S = 600; // sample sensors this often
-const INTERVAL_SLEEP_SHIP_STORE_S = 600;
+const INTERVAL_SENSOR_SAMPLE_S = 5; // sample sensors this often
+const INTERVAL_SLEEP_FAILED_S = 5; // sample sensors this often
+const INTERVAL_SLEEP_SHIP_STORE_S = 5;
 const POLL_ITERATION_MAX = 5; // maximum number of iterations for sensor polling loop
 // const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
 // New setting now that we're recording register values
@@ -35,6 +35,7 @@ const TZ_OFFSET = -25200; // 7 hours for PDT
 //(is that even really a problem? probably not.)
 const blinkupTime = 0.1;
 
+server.disconnect()
 const LORA_STORED_READINGS_MAX = 3;
 
 //Loggly Timeout Variable:
@@ -42,7 +43,7 @@ const logglyConnectTimeout = 20;
 debug <- false; // How much logging do we want?
 trace <- false; // How much logging do we want?
 coding <- false; // Do you need live data right now?
-demo <- false; // Should we send data really fast?
+demo <- false; // Sh ould we send data really fast?
 ship_and_store <- false; // Directly go to ship and store?
 firstPress<-false;
 // offline logging
@@ -301,7 +302,7 @@ class blueLed {
 
   function configure() {
     pin.configure(DIGITAL_OUT);
-    pin.write(1.0);
+    pin.write(0);
   }
   
   function on() {
@@ -333,6 +334,7 @@ class blueLed {
   function blink(duration, count = 1) {
     while (count > 0) {
       count -= 1;
+      server.log("BLUEONA")
       blueLed.on();
       imp.sleep(duration);
       blueLed.off();
@@ -722,7 +724,6 @@ class power {
     if (debug == true) server.log("Deep sleep (failed) call because: "+reason)
     imp.onidle(function() {
         server.log("Starting deep sleep (failed). " + reason);
-        blueLed.on();
         if(imp.rssi()){
             server.sleepfor(INTERVAL_SLEEP_FAILED_S);
         } else {
@@ -961,8 +962,8 @@ function is_server_refresh_needed(data_last_sent, data_current) {
   }
   else if (data_current.b > 3.35) send_interval_s = high_frequency;   // battery high
   else if (data_current.b > 3.3) send_interval_s = high_frequency;  // battery medium
-  else if (data_current.b > 3.21) send_interval_s = high_frequency;  // battery getting low
-  else if (data_current.b > 3.18) {
+  else if (data_current.b > 3.2999) send_interval_s = high_frequency;  // battery getting low
+  else if (data_current.b > 3.2998) {
     send_interval_s = lower_frequency; // battery low
     server.log("Low Vout from LTC4156.");
   }
@@ -1073,11 +1074,10 @@ function send_data(status) {
 function blinkAll(duration, count = 1) {
   while (count > 0) {
     count -= 1;
-    blueLed.on();
     redLed.on();
     greenLed.on();
     imp.sleep(duration);
-    blueLed.off();
+    //blueLed.off();
     redLed.off();
     greenLed.off();
     if (count > 0) {
@@ -1260,16 +1260,14 @@ function interruptPin() {
 function blinkupFor(timer=90)
 {      
     greenLed.configure();
-    blueLed.configure();
     redLed.configure();
     // Enable blinkup for 30s
     imp.enableblinkup(true);
-    blueLed.on()
     redLed.on()
     greenLed.on()
     //change the sleep to 90
     imp.sleep(timer);
-    blueLed.off()
+    //blueLed.off()
     redLed.off()
     greenLed.off()
     imp.enableblinkup(false);
@@ -1277,7 +1275,6 @@ function blinkupFor(timer=90)
 
 function regularOperation()
     {
-      
       if (debug == true) server.log("Device booted.");
       if (debug == true) server.log("Device's unique id: " + hardware.getdeviceid());
       server.log("Device firmware version: " + imp.getsoftwareversion());
@@ -1307,8 +1304,6 @@ function regularOperation()
       //LED configurations
       greenLed.configure();
       redLed.configure();
-      blueLed.configure();
-        
       // sensor configurations
       soil.configure();
       solar.configure();
@@ -1347,6 +1342,7 @@ function regularOperation()
       
       capSense(true);
 
+imp.sleep(1)
       lastLastReading=lastLastReading*(0.666)
       powerManager.sample();
       try{
@@ -1410,6 +1406,7 @@ function regularOperation()
       catch(error)
       {server.log("Hum/Temp Error");}
         
+       // blueLed.off()
       //server.log("Humidity/Temperature Pass")
       server.log("Memory free after sampling: " + imp.getmemoryfree());
        
@@ -1507,9 +1504,9 @@ function main() {
     if (!("nv" in getroottable() && "data" in nv)) {
         nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false};   
     }
-
+ 
     //the cost of each reading is 36 seconds (8 lora communications at 4.5 seconds each)
-    WDTimer<-imp.wakeup(60 + nv.data.len() * 36,WatchDog);//end next wake call
+    WDTimer<-imp.wakeup(60 + (1 + nv.data.len()) * 50,WatchDog);//end next wake call
 
     hardware.pin1.configure(DIGITAL_IN_WAKEUP, interrupthandle);
     if(control==0)
@@ -1545,6 +1542,7 @@ function main() {
       local counterI2C=0;
       powerManager <- PowerManager(hardware.i2c89);
       greenLed.configure();
+      server.log("CONFIGA")
       blueLed.configure();
       redLed.configure();
       //blueLed.blink(1,3);
@@ -1559,6 +1557,7 @@ function main() {
         if(server.isconnected())
         {   
             logglyLog({"message: " : "New Blinkup"});
+      server.log("CONFIGB")
             blueLed.configure()
             //blueLed.blink(2,2)
             server.log("Is connected")
@@ -1566,6 +1565,7 @@ function main() {
         }
         else
         {
+      server.log("CONFIGC")
             blueLed.configure()
             //blueLed.blink(1,4)
             server.log("not connected")
@@ -1659,16 +1659,18 @@ function addConfigurationToLORAQueue(){
     //THIS INSTRUCTION ALWAYS FAILS AND NEVER GETS WHAT IT SHULD RETURN?!?! lower the baud???
     //well, it actually always succeeds but what it communicates back to the imp is always misinterpreted
     //so it's not important at all but it wouldn't pass a unit test
-    addATInstructionToLORAQueue("AT+NK=0,27:64:F6:63:A1:EF:1B:5F:66:28:17:59:73:5E:C1:E3", "Set Network Key:", "fail", 0.25);
+    //addATInstructionToLORAQueue("AT+JOIN", "Successfully joined network", "fail", 10);
+    
+    addATInstructionToLORAQueue("AT+NK=0,02:E2:DC:92:42:A5:63:9B:98:15:1A:21:62:12:A4:7D", "Set Network Key:", "fail", 0.25);
     addATInstructionToLORAQueue("AT+TXDR=10", "OK", "fail", 0.25);
-    addATInstructionToLORAQueue("AT+TXP=20", "OK", "fail", 0.25);
+    addATInstructionToLORAQueue("AT+TXP=10", "OK", "fail", 0.25);
     addATInstructionToLORAQueue("AT+ANT=0", "OK", "fail", 0.25);
     addATInstructionToLORAQueue("AT+NJM=1", "OK", "fail", 0.25);
     addATInstructionToLORAQueue("AT+JD=5", "OK", "fail", 0.25);
-    addATInstructionToLORAQueue("AT&W", "OK", "fail", 0.5);
+    addATInstructionToLORAQueue("AT&W", "OK", "fail", 3.5);
     addATInstructionToLORAQueue("AT+JOIN", "Successfully joined network", "fail", 10);
     //a timeout of 1 or lower usually fails, 3 usually succeeds, could change based on distance to gateway:
-    addATInstructionToLORAQueue("AT+SEND C" + nv.data.len().tostring(), "OK", "fail", 3);
+    addATInstructionToLORAQueue("AT+SEND C" + nv.data.len().tostring(), "OK", "fail", 6);
 }
 
 function loraData() {
@@ -1692,9 +1694,9 @@ function addAllReadingsToLORAQueue(){
 
 function addSendToLoraQueueWithLenLim(letter = "C", inputReading = "onnected"){
     if(inputReading.len() <= 10){
-        addATInstructionToLORAQueue("AT+SEND " + letter + inputReading, "OK", "fail", 3);
+        addATInstructionToLORAQueue("AT+SEND " + letter + inputReading, "OK", "fail", 6);
     } else {
-        addATInstructionToLORAQueue("AT+SEND " + letter + inputReading.slice(0,10), "OK", "fail", 3);
+        addATInstructionToLORAQueue("AT+SEND " + letter + inputReading.slice(0,10), "OK", "fail", 6);
     }
 }
 
@@ -1721,17 +1723,23 @@ function addReadingToLORAQueue(inputReading){
 
 function connectLORAAndSendReadings(){
     loraCommConfig();
+    
+    //if(server.isconnected())
+    //server.disconnect()
     addConfigurationToLORAQueue();
     addAllReadingsToLORAQueue();
     imp.enableblinkup(false);   
+    blueLed.configure()
     blueLed.off()
     server.log("starting LORA send commands loop")
+    //required or first command fails
+    imp.sleep(3)
     loraSendATInstructionLoop(0);
 }
 
 function loraSendATInstructionLoop(index){
     
-    imp.sleep(1.5)
+        //imp.sleep(3)
     if(index < ATInstructionsList.len()){
         local executeInstruction = ATInstructionsList[index];
         lora.write(executeInstruction.cmd + "\r");
@@ -1750,6 +1758,7 @@ function loraCompleteATInstructionLoop(index){
                 nv.data.remove(0);
             }
         }
+        greenLed.blink(0.2,1)
         server.log("AT INSTRUCTION " + currentInstruction.cmd + " SUCCESS");
         loraCommBuffer = "";
         loraSendATInstructionLoop(index + 1);
@@ -1772,7 +1781,6 @@ try{
         //on cold boot do a blinkup, otherwise forget it.
         if(hardware.wakereason() == 0){
             imp.enableblinkup(true);
-            blueLed.configure()
             imp.wakeup(5, main);
         } else {
             main();
