@@ -703,7 +703,7 @@ function interpretPDU(inputPDUString){
         local convertedCapacitance = (1/(inputPDUString.slice(1,inputPDUString.len()).tofloat()));
         server.log("capacitance converted to:")
         server.log(convertedCapacitance)
-        globalLORAReading.wakeData[0].capacitance <- (1/(inputPDUString.slice(1,inputPDUString.len()).tofloat()))
+        globalLORAReading.wakeData[0].capacitance <- convertedCapacitance
     } else if(firstChar == "S") {
         send_data_json_node(globalLORAReading);
     }
