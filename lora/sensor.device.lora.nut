@@ -34,7 +34,7 @@ const TZ_OFFSET = -25200; // 7 hours for PDT
 //BLINKUP TIME NEEDS TO BE LOW OR LORA SEND WILL FAIL IF THERE'S A BLINKUP PERIOD
 //(is that even really a problem? probably not.)
 const blinkupTime = 0.1;
-
+const ONE_DAY = 86400;
 server.disconnect()
 const LORA_STORED_READINGS_MAX = 3;
 
@@ -1062,13 +1062,11 @@ function send_data(status) {
         server.log(sendFullRead)
         server.log("NOT FULL RES")
   }
-  if (ship_and_store == true) {
-    power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-  }
-  else {
-    // Sleep until next sensor sampling
-    power.enter_deep_sleep_running("Finished sending JSON data.");
-  }
+  imp.wakeup(0.5,function() {
+      imp.onidle(function() {
+          server.sleepfor(3600.0);
+      });
+  });
 }
 
 function blinkAll(duration, count = 1) {
@@ -1465,35 +1463,13 @@ imp.sleep(1)
         
         //feature 0.2 important
         //Send sensor data
-        if (is_server_refresh_needed(nv.data_sent, nv.data.top())) {
-          if (debug == true) server.log("Server refresh needed");
-          connectLORAAndSendReadings();
-            // if (debug == true) server.log("Sending location information without prompting.");
-            // connect(send_loc, TIMEOUT_SERVER_S);
+        local lastWifiConnection = time() - nv.lastConnectionTime
+        if(lastWifiConnection > ONE_DAY){
+            connect(send_data, TIMEOUT_SERVER_S);
+        } else {
+            connectLORAAndSendReadings();
         }
         
-        // ///
-        // all the important time-sensitive decisions based on current state go here
-        // ///
-        
-        // // checking source voltage not necessary in the first pass
-        // // since power will be cut to the imp below Vout of 3.1 V
-        // if (source.voltage() < 3.19) {
-        //   power.enter_deep_sleep_running("Low system voltage.");
-        // }
-        // if temperature is too hot
-        // if temperatuer is too cold
-          
-        else {
-          server.log("Not time to send");
-          if (ship_and_store == true) {
-            power.enter_deep_sleep_ship_store("Hardcoded ship and store mode active.");
-          }
-          else {
-            // not time to send. sleep until next sensor sampling.
-            power.enter_deep_sleep_running("Not time yet");
-          }
-        }
     }
     //end regularOperation
 
@@ -1774,24 +1750,18 @@ function loraCompleteATInstructionLoop(index){
 }
 
 
+
+function logData
+
 try{
-    if(server.isconnected()){
-        logglyLog({
-            "message" : "LORA booting up and connected", 
-            "wakereason" : hardware.wakereason()
-        });
-        //on cold boot do a blinkup, otherwise forget it.
-        if(hardware.wakereason() == 0){
-            imp.enableblinkup(true);
-            imp.wakeup(5, main);
-        } else {
-            main();
-        }
-    } else {
-        main();
+    if (!("nv" in getroottable() && "data" in nv)) {
+        nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false, lastConnectionTime = time()};   
     }
+    main();
 } catch(error){
     server.log ("error in loggly log function for LORA bootup: " + error)
 }
+
+
 
 
