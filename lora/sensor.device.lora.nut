@@ -1663,7 +1663,7 @@ function addConfigurationToLORAQueue(){
     
     addATInstructionToLORAQueue("AT+NK=0,02:E2:DC:92:42:A5:63:9B:98:15:1A:21:62:12:A4:7D", "Set Network Key:", "fail", 0.25);
     addATInstructionToLORAQueue("AT+TXDR=10", "OK", "fail", 0.25);
-    addATInstructionToLORAQueue("AT+TXP=10", "OK", "fail", 0.25);
+    addATInstructionToLORAQueue("AT+TXP=3", "OK", "fail", 0.25);
     addATInstructionToLORAQueue("AT+ANT=0", "OK", "fail", 0.25);
     addATInstructionToLORAQueue("AT+NJM=1", "OK", "fail", 0.25);
     addATInstructionToLORAQueue("AT+JD=5", "OK", "fail", 0.25);
