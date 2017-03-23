@@ -84,7 +84,7 @@ loggly <- Loggly(logglyKey, {
     "limit" : 20 //arbitrary
 })
 
-const SCHEMA_VERSION = "0.1"
+const SCHEMA_VERSION = "0.1";
 
 // TODO: Dustin, this was missing an 's' for a long time.
 // What do you think the implications were?
@@ -642,6 +642,7 @@ function intToHexString(intValue) {
 http.onrequest(function(request, response){
   try 
   {
+      server.log("RECEIVED REQUEST")
     // decode the json - if it's invalid json an error will be thrown
     local data = http.jsondecode(request.body);
     if("PDU" in data){
@@ -677,6 +678,7 @@ send_data_json_node(globalLORAReading)
 function interpretPDU(inputPDUString){
     local firstChar = inputPDUString.slice(0,1)
     server.log(firstChar)
+    server.log(inputPDUString)
     if(firstChar == "C"){
         server.log("CONNECTED INTERPRET")
         local numberOfReadings = inputPDUString.slice(1,inputPDUString.len()).tointeger()
@@ -698,7 +700,10 @@ function interpretPDU(inputPDUString){
     } else if(firstChar == "L") {
         globalLORAReading.wakeData[0].light <- inputPDUString.slice(1,inputPDUString.len()).tointeger()
     } else if(firstChar == "c") {
-        globalLORAReading.wakeData[0].capacitance <- inputPDUString.slice(1,inputPDUString.len()).tofloat()
+        local convertedCapacitance = (1/(inputPDUString.slice(1,inputPDUString.len()).tofloat()));
+        server.log("capacitance converted to:")
+        server.log(convertedCapacitance)
+        globalLORAReading.wakeData[0].capacitance <- (1/(inputPDUString.slice(1,inputPDUString.len()).tofloat()))
     } else if(firstChar == "S") {
         send_data_json_node(globalLORAReading);
     }
