@@ -208,7 +208,7 @@ function capSense(ModeSelect=true){
     timeDiffTwo=indexeNeg-kneeIndex
     highread=maxVSoil
     //debugs
-    if(true){
+    if(false){
       server.log("Last Sample:")
       server.log(lastreading)
       server.log("MaxVSoil:")
@@ -1453,7 +1453,7 @@ imp.sleep(1)
               l = solar.voltage(),
               m = lastLastReading*(3.0/65536.0),
               b = source.voltage(),
-              c = timeDiffTwo*(1.0/samplerHzA),
+              c = (1/(timeDiffTwo*(1.0/samplerHzA))).tointeger(),
               r = imp.rssi()
               });
               //server.log("DEVICE SIDE CAPACITANCE:"+nv.data.top().c);
@@ -1499,11 +1499,13 @@ imp.sleep(1)
 
 
 function main() {
+
     //for lora we want 120 seconds from when main begins
     // create non-volatile storage if it doesn't exist
     if (!("nv" in getroottable() && "data" in nv)) {
         nv<-{data = [], data_sent = null, running_state = true, PMRegB=[0x00,0x00],PMRegC=[0x00,0x00],pastConnect=false};   
     }
+    nv.data = []
  
     //the cost of each reading is 36 seconds (8 lora communications at 4.5 seconds each)
     WDTimer<-imp.wakeup(60 + (1 + nv.data.len()) * 50,WatchDog);//end next wake call
@@ -1753,7 +1755,7 @@ function loraSendATInstructionLoop(index){
 function loraCompleteATInstructionLoop(index){
     local currentInstruction = ATInstructionsList[index];
     if(loraCommBuffer.find(currentInstruction.success) != null){
-        if(currentInstruction.cmd.slice(0.1) == "S") {
+        if(currentInstruction.cmd.slice(0,1) == "S") {
             if(nv.data.len()){
                 nv.data.remove(0);
             }
