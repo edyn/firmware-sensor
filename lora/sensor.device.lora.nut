@@ -1451,7 +1451,7 @@ imp.sleep(1)
               l = solar.voltage(),
               m = lastLastReading*(3.0/65536.0),
               b = source.voltage(),
-              c = (1/(timeDiffTwo*(1.0/samplerHzA))).tointeger(),
+              c = (1000000.0 * timeDiffTwo*(1.0/samplerHzA)).tointeger(),
               w = hardware.wakereason(),
               r = imp.rssi()
               });

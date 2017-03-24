@@ -718,7 +718,7 @@ function interpretPDU(inputPDUString){
     } else if(firstChar == "L") {
         globalLORAReading.wakeData[0].light <- inputPDUString.slice(1,inputPDUString.len()).tointeger()
     } else if(firstChar == "c") {
-        local convertedCapacitance = (1/(inputPDUString.slice(1,inputPDUString.len()).tofloat()));
+        local convertedCapacitance = (inputPDUString.slice(1,inputPDUString.len()).tofloat()) / 1000000.0;
         server.log("capacitance converted to:")
         server.log(convertedCapacitance)
         globalLORAReading.wakeData[0].capacitance <- convertedCapacitance
