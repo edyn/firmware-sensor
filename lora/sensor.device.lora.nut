@@ -34,7 +34,7 @@ const TZ_OFFSET = -25200; // 7 hours for PDT
 //BLINKUP TIME NEEDS TO BE LOW OR LORA SEND WILL FAIL IF THERE'S A BLINKUP PERIOD
 //(is that even really a problem? probably not.)
 const blinkupTime = 0.1;
-const ONE_DAY = 86400;
+const ONE_DAY = 600;
 server.disconnect()
 const LORA_STORED_READINGS_MAX = 3;
 
