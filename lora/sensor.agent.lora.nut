@@ -497,8 +497,16 @@ function processRegularData(inputData){
         local newPoint = {};
         newPoint.timestamp <- point.ts;
         newPoint.battery <- point.b;
-        newPoint.humidity <- point.h;
-        newPoint.temperature <- point.t;
+        if(point.h < 100){
+            newPoint.humidity <- point.h;
+        } else {
+            newPoint.humidity = globalLORAReading.wakeData[0].humidity;
+        }
+        if(point.t < 60){
+            newPoint.temperature <- point.t;
+        } else {
+            newPoint.temperature = globalLORAReading.wakeData[0].temperature;
+        }
         newPoint.electrical_conductivity <- point.m;
         newPoint.light <- point.l;
         newPoint.capacitance <- point.c;
@@ -673,7 +681,7 @@ function PDUToString(inputPDU){
     return outputString
 }
 
-send_data_json_node(globalLORAReading)
+//send_data_json_node(globalLORAReading)
 
 function interpretPDU(inputPDUString){
     local firstChar = inputPDUString.slice(0,1)
@@ -692,9 +700,19 @@ function interpretPDU(inputPDUString){
     } else if(firstChar == "B") {
         globalLORAReading.wakeData[0].battery <- inputPDUString.slice(1,inputPDUString.len()).tofloat()
     } else if(firstChar == "H") {
-        globalLORAReading.wakeData[0].humidity <- inputPDUString.slice(1,inputPDUString.len()).tofloat()
+        local tempHumidity = inputPDUString.slice(1,inputPDUString.len()).tofloat();
+        if(tempHumidity < 100){
+            globalLORAReading.wakeData[0].humidity <- tempHumidity;
+        } else {
+            logglyLog({"message" : "LORA rejection of humidity for being too high", "humidity" : tempHumidity});
+        }
     } else if(firstChar == "t") {
-        globalLORAReading.wakeData[0].temperature <- inputPDUString.slice(1,inputPDUString.len()).tofloat()
+        local tempTemperature = inputPDUString.slice(1,inputPDUString.len()).tofloat();
+        if(tempTemperature < 60){
+            globalLORAReading.wakeData[0].temperature <- inputPDUString.slice(1,inputPDUString.len()).tofloat()
+        } else {
+            logglyLog({"message" : "LORA rejection of temperature for being too high", "temperature" : tempTemperature});
+        }
     } else if(firstChar == "M") {
         globalLORAReading.wakeData[0].electrical_conductivity <- inputPDUString.slice(1,inputPDUString.len()).tofloat()
     } else if(firstChar == "L") {
