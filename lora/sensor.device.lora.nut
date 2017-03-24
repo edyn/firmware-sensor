@@ -1452,6 +1452,7 @@ imp.sleep(1)
               m = lastLastReading*(3.0/65536.0),
               b = source.voltage(),
               c = (1/(timeDiffTwo*(1.0/samplerHzA))).tointeger(),
+              w = hardware.wakereason(),
               r = imp.rssi()
               });
               //server.log("DEVICE SIDE CAPACITANCE:"+nv.data.top().c);
@@ -1750,8 +1751,6 @@ function loraCompleteATInstructionLoop(index){
 }
 
 
-
-function logData
 
 try{
     if (!("nv" in getroottable() && "data" in nv)) {
