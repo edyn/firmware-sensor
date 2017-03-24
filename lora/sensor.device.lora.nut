@@ -18,12 +18,12 @@
 // - give up when the device doesn't see wifi
 ////////////////////////////////////////////////////////////
 
-const TIMEOUT_SERVER_S = 10; // timeout for wifi connect and send
+const TIMEOUT_SERVER_S = 20; // timeout for wifi connect and send
 server.setsendtimeoutpolicy(RETURN_ON_ERROR, WAIT_TIL_SENT, TIMEOUT_SERVER_S);
 
-const INTERVAL_SENSOR_SAMPLE_S = 5; // sample sensors this often
-const INTERVAL_SLEEP_FAILED_S = 5; // sample sensors this often
-const INTERVAL_SLEEP_SHIP_STORE_S = 5;
+const INTERVAL_SENSOR_SAMPLE_S = 600; // sample sensors this often
+const INTERVAL_SLEEP_FAILED_S = 600; // sample sensors this often
+const INTERVAL_SLEEP_SHIP_STORE_S = 600;
 const POLL_ITERATION_MAX = 5; // maximum number of iterations for sensor polling loop
 // const NV_ENTRIES_MAX = 40; // maximum NV entry space is about 55, based on testing
 // New setting now that we're recording register values
@@ -34,7 +34,7 @@ const TZ_OFFSET = -25200; // 7 hours for PDT
 //BLINKUP TIME NEEDS TO BE LOW OR LORA SEND WILL FAIL IF THERE'S A BLINKUP PERIOD
 //(is that even really a problem? probably not.)
 const blinkupTime = 0.1;
-const ONE_DAY = 600;
+const ONE_DAY = 86400;
 server.disconnect()
 const LORA_STORED_READINGS_MAX = 3;
 
