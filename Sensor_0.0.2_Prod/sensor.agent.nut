@@ -86,7 +86,7 @@ function serverLogTable(inputTable, level){
     } catch(error) {
         //using library definition rather than logglyLog function
         loggly.error({
-          "message" : "Error in serverLogTable",
+          "msg" : "Error in serverLogTable",
           "error" : error,
           "tableAsJson" : http.jsonencode(inputTable)
         })
@@ -94,7 +94,7 @@ function serverLogTable(inputTable, level){
 }
 
 
-function logglyLog(logTable = {"message" : "empty log table passed to logglyLog"}, level = "Log", serverLog = true){
+function logglyLog(logTable = {"msg" : "empty log table passed to logglyLog"}, level = "Log", serverLog = true){
     try{
         if(type(logTable) != type({})){
             loggly.warn({"agentWarning" : "non-table passed to logglyLog"});
@@ -146,7 +146,7 @@ function recordBackendSettings(){
             server.error("\tFailed to save backend settings to firebase")
             logglyLog(
                 {
-                    "message" : "Failed to save backend settings",
+                    "msg" : "Failed to save backend settings",
                     "statuscode" : res.statuscode,
                     "agentURL" :  http.agenturl()
                 }, "Warning");
@@ -171,7 +171,7 @@ function loadBackendSettings(){
             server.error("\tFailed to load backend settings " + res.statuscode)
             logglyLog(
                 {
-                    "message" : "Failed to load backend settings",
+                    "msg" : "Failed to load backend settings",
                     "statuscode" :res.statuscode,
                     "agentURL" :  http.agenturl()
                 }, "Warning");
@@ -266,7 +266,7 @@ function send_data_json_node(data) {
     logglyLog(logglyWarnTable, "Warning");
   } else {
     logglyLog({
-      "message": "Readings sent successfully to Postgres database"
+      "msg": "Readings sent successfully to Postgres database"
     }, "Log");
     server.log("Readings sent successfully to Postgres database");
   }
@@ -487,7 +487,7 @@ function processAndSendDeviceData(deviceData){
     } catch (error) {
         logglyLog({
             "function" : "processAndSendDeviceData",
-            "message" : "a sub function may have failed",
+            "msg" : "a sub function may have failed",
             "error" : error
         }, "Error");
     }

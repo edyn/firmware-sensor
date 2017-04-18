@@ -698,7 +698,7 @@ function deepSleepForTime(inputTime = INTERVAL_SENSOR_SAMPLE_S){
                 logglyError({
                     "error" : error,
                     "function" : "deepSleepForTimeOnIdle",
-                    "message" : "Crystal likely damaged."
+                    "msg" : "Crystal likely damaged."
                 }, true); //this true is for forcedLogglyConnect
                 //below will throw an error: this catch only happens if server.sleepfor fails (look at the try)
                 imp.onidle(function() {
@@ -712,7 +712,7 @@ function deepSleepForTime(inputTime = INTERVAL_SENSOR_SAMPLE_S){
         logglyError({
             "error" : error,
             "function" : "deepSleepForTime",
-            "message" : "BAD error, deepsleepfortime has a bug!"
+            "msg" : "BAD error, deepsleepfortime has a bug!"
         });
         //this should be less dependent on external variables
         imp.onidle(function() {
@@ -814,7 +814,7 @@ function forcedLogglyConnect(state, logTable, logLevel){
         logglyError({
             "error" : error,
             "function" : "forcedLogglyConnect",
-            "message" : "failure when trying to force device to connect and send to loggly"
+            "msg" : "failure when trying to force device to connect and send to loggly"
         });
         power.enter_deep_sleep_failed("Error in forced loggly connect");
     }
@@ -964,7 +964,7 @@ function connect(callback, timeout) {
         } catch(error) {
           server.error("\terror in callback from function 'connect'")
           logglyError({
-              "message" : "Error in connect's callback function",
+              "msg" : "Error in connect's callback function",
               "Error" : error
           });
           //reason doesn't matter, and we're using deep sleep running just because it's 10 minutes
@@ -1383,7 +1383,7 @@ function saveReadingToNV(reading){
         logglyError({
             "error" : error,
             "function" : "saveReadingToNV",
-            "message" : "Error saving a reading to NV on failed connection"
+            "msg" : "Error saving a reading to NV on failed connection"
         });
         power.enter_deep_sleep_running("error in saving nv reading to table")
     }
@@ -1516,7 +1516,7 @@ function sendStoredErrors(){
 //        local newReading = {"ts" : time(), "ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD" : "ABCD"}
 //        saveReadingToNV(newReading);
 //  } else if (roll < 0.75) {
-//        pushError({"message" : "ABCD", "a" : "b", "c" : "d", "e" : "f" , "g" : "h"})
+//        pushError({"msg" : "ABCD", "a" : "b", "c" : "d", "e" : "f" , "g" : "h"})
 //  } else {
 //        pushError({"ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD" : "ABCD"});
 //  }
@@ -1575,7 +1575,7 @@ function samplePowerManager(){
             }
             if(powerManager.reg_3==null){
                 logglyError({
-                    "message" : "temp/hum sample fail",
+                    "msg" : "temp/hum sample fail",
                     "timestamp" : time()
                 })
             }
@@ -1608,7 +1608,7 @@ function sampleTemperatureAndHumidity(){
             }
             if(humidityTemperatureSensor.humidity==0 || humidityTemperatureSensor.temperature==32){
                 logglyError({
-                    "message" : "temp/hum sample fail",
+                    "msg" : "temp/hum sample fail",
                     "timestamp" : time()
                 })
             }
@@ -1616,7 +1616,7 @@ function sampleTemperatureAndHumidity(){
     } catch(error){
         server.error("\tHum/Temp Error");
         logglyError({
-          "message" : "sampleTemperatureAndHumidity error",
+          "msg" : "sampleTemperatureAndHumidity error",
           "error" : error,
           "timestamp" : time()
         })
@@ -1755,7 +1755,7 @@ function main() {
     } else {
       //should never happen but we'll log it
       logglyError({
-          "message" : "invalid branch",
+          "msg" : "invalid branch",
           "branch" : branchSelect, 
           "timestamp" : time()
       });
@@ -1801,7 +1801,7 @@ function mainWithSafety(){
             main();
         } catch (error){
             logglyError({
-                "message" : "error in main on forced connect!", 
+                "msg" : "error in main on forced connect!", 
                 "error" : error,
                 "timestamp" : time
             });
@@ -1842,7 +1842,7 @@ function checkForErrorsAndRunMain(){
         }
     } catch (error) {
         logglyError({
-            "message" : "error in main!", 
+            "msg" : "error in main!", 
             "error" : error,
             "timestamp" : time()
         });
