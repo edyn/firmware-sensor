@@ -1371,8 +1371,9 @@ function saveReadingToNV(reading){
         local nvSize = estimateSize(nv);
         local saveReadingTable = {}
         saveReadingTable = clone(reading);
+        local enoughMemoryForReading = trimStoredNVReadingsEvenly(readingSize);
         //trim the nv table if there isn't enough room:
-        if(trimStoredNVReadingsEvenly(readingSize)){
+        if(enoughMemoryForReading){
             nv.data.append(saveReadingTable);
         } else {
             //can't log this in any way dealing the the NV table safely
@@ -1433,7 +1434,8 @@ function pushError(errorTable){
     local numberStoredErrors = nv.storedErrors.len();
     //less than maximum number stored are in the nv table:
     //trim the nv readings if there isn't enough room since errors are more important:
-    if(trimStoredNVReadingsEvenly(estimateSize(errorTable))){
+    local enoughMemoryForError = trimStoredNVReadingsEvenly(estimateSize(errorTable));
+    if(enoughMemoryForError){
         if(numberStoredErrors < STORED_ERRORS_MAX){
             nv.storedErrors.append(errorTable);
         } else {
